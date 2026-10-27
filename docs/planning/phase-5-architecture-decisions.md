@@ -135,7 +135,9 @@ the consent, memory and deletion screens.
 - *Tools that take a learner ID:* isolation would then depend on the
   model passing the right one.
 - *Giving agents write tools:* every write comes from a learner's click or
-  from code that checks evidence (ADR-008).
+  from code that checks evidence (ADR-008). The one action tool,
+  `request_replan`, only queues a run whose result still passes the
+  critic and code (ADR-018).
 
 ### ADR-007: Four agents, with the critic's checks repeated in code
 
@@ -143,13 +145,15 @@ the consent, memory and deletion screens.
 
 | Agent | Input | Tools |
 |---|---|---|
-| Shiori (chat) | The learner's question | MCP-backbone read tools; Juku's server (this learner) |
+| Shiori (chat) | The learner's question | MCP-backbone read tools; Juku's server (this learner), including `request_replan` |
 | Keiko (planner) | The week's facts and the engine's candidates | Juku's server (this learner, this run) |
 | Nikki (writer) | The facts and Keiko's approved plan | none |
 | Tadashi (critic) | An output and exactly what its author was given | none |
 
 - The weekly pipeline runs per active learner: facts → Keiko → Tadashi →
   Nikki → Tadashi.
+- **Code orchestrates the crew**, in a fixed order. No agent decides which
+  agent runs next.
 - Tadashi lists each issue with a severity. An output passes only if there's
   no high-severity issue (Phase 2, AG1).
 - **Code runs the high-severity checks itself too:**
@@ -347,9 +351,13 @@ hour.
   silently when the app restarts.
 - *A hosted scheduler:* another account.
 
-### ADR-015: Quality is measured offline first, then in a closed loop
+### ADR-015: Evaluation-driven development: tasks first, then a closed loop
 
 **Decision:**
+- **Tasks before agents.** Each agent's eval tasks and fixtures are
+  committed before its code, and fail against a stub. The agent is then
+  built until they pass. Git history shows the order (Phase 1, EDD1). The
+  same holds for each guardrail: its test comes first.
 - **Offline:**
   - about 40 chat tasks;
   - about 15 memory tasks;
@@ -373,6 +381,8 @@ hour.
 - *A model as judge for headline numbers:* it costs budget, and it's
   another unverified claim.
 - *Ratings alone:* too few and too biased.
+- *Writing the evals after the agent works:* the tasks would then be
+  shaped by what the agent already does.
 
 ### ADR-016: Hosting is Docker Compose on the shared server
 
@@ -409,6 +419,117 @@ Arthur isn't counted.
 
 **Why:** credible real-use numbers are the point.
 
+### ADR-018: Agent identity and delegated authorization, in a small testable form
+
+**Decision:**
+- **Each agent is its own identity:** its own gateway key and allow-list.
+  No key is shared.
+- **Every call carries a delegation chain.** It is a short-lived token,
+  signed by the app, with claims modelled on OAuth 2.0 Token Exchange
+  (RFC 8693):
+  - the learner, pseudonymous, as the subject;
+  - the nested `act` chain of agents;
+  - the purpose and run;
+  - the allowed tools;
+  - the audience (the Juku MCP server);
+  - the expiry.
+
+  It travels in the MCP request's `_meta`, never as the gateway's
+  credential.
+- **Delegation only narrows.** The one multi-hop path is learner → Shiori
+  → (`request_replan`) → Keiko → Juku MCP server. Each hop:
+  - may only drop tools;
+  - may only shorten the expiry;
+  - keeps the same learner.
+
+  More than 2 agent hops is refused.
+- **Checked at both ends:** the Juku MCP server verifies the whole chain.
+  The gateway checks (Should, in the gateway repo) that the chain's last
+  actor is the agent whose key made the call.
+- **Visible:** every hop is logged with its chain, and the learner's "who
+  accessed my data" page lists agent, tool and time.
+- **Before fixing the details,** spike 6 reads the MCP authorization spec
+  current at build time. Arthur notes that a July 2026 revision tightened
+  it.
+
+**Why:**
+- "Who is this agent, and what may it do for whom" has no settled standard
+  yet, and multi-hop delegation is the unsolved part.
+- Juku has a real multi-hop path, small enough to make every rule
+  testable: narrowing, expiry, depth, audience, replay, actor binding.
+- Using RFC 8693's shape means the tokens could later come from a real
+  authorization server without changing the checks.
+
+**Rejected:**
+- *One app key for all agents:* the audit log couldn't say which agent
+  acted.
+- *Long-lived keys per learner:* they can't express purpose or narrowing,
+  and they're hard to revoke cleanly.
+- *A full OAuth authorization server now:* another service to run and
+  secure, for a single app. The claims are shaped so one can replace the
+  app's signer later.
+- *An agent-to-agent protocol (A2A) between the crew:* they run in one
+  process. A chain inside the MCP call is enough, and it's easier to test.
+- *Waiting for a standard:* the problem exists now, and a small, tested
+  version is the portfolio point.
+
+### ADR-019: Guardrails are code with tests, in one rule file
+
+**Decision:**
+- Every limit lives in a committed rule file (`guardrails.yaml`), or in
+  the gateway's policy file for tools. That covers spend caps, data scope,
+  delegation depth, allowed memory categories, report checks and privacy
+  floors.
+- Code reads it at start-up. Each rule has a test that fails when the rule
+  is removed (mutation-checked).
+- The table in Phase 2 maps each rule to where it's enforced and how it's
+  tested.
+
+**Why:** the move is from policy documents to limits enforced in code.
+One file makes the governance readable, and the tests make it true.
+
+**Rejected:**
+- *Rules described in docs only:* nothing checks them.
+- *A guard model as the main line of defence:* one more probabilistic
+  claim. The gateway's detector is one layer; the hard limits are code.
+- *Rules scattered as constants:* they can't be read or reviewed as a
+  whole.
+
+### ADR-020: A safety eval on Juku's own attack surfaces
+
+**Decision:**
+- About 15 attack tasks:
+  - injection planted in a fixture copy of Tatoeba sentences;
+  - cross-learner reads;
+  - planting false or forbidden memory through chat;
+  - widening a delegation;
+  - calling a tool outside an agent's list.
+- The prediction is committed first. The suite is run with the gullible
+  scripted agent, with and without the gateway ($0), then once with the
+  real model (about $0.12, with Arthur's OK).
+
+**Why:** agent safety is the fastest-growing agent research topic. Juku
+has real surfaces: Tatoeba is written by the public, and memory and
+delegation are new attack paths. It reuses the gateway project's method,
+so the two results can be read together.
+
+**Rejected:**
+- *Reusing the gateway's generic suite only:* it doesn't touch memory or
+  delegation.
+- *Planting attacks in the live data:* real learners would see them.
+
+### ADR-021: Memory, not continual learning (settled)
+
+**Decision:**
+- Juku claims memory: facts about each learner, with evidence, that the
+  learner can inspect.
+- It doesn't claim continual learning. The models' weights never change,
+  and "learning from feedback" means the feedback job drafting prompt
+  changes that Arthur approves.
+
+**Why:** continual learning is still research, and claiming it would
+overstate the work to the audience this portfolio is for.
+
 ### Later (Could), recorded so they aren't re-decided
 
 - **The text speaking partner (X3):**
@@ -425,7 +546,7 @@ Arthur isn't counted.
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | The repo name | `jlpt-learning-agents` |
-| 3 | The alert contact point (ADR-009) | A Telegram bot that messages only you |
-| 4 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits |
-| 5 | The gateway's per-key rate limit (ADR-012) | Build it in the gateway repo before launch |
-| 6 | Launch timing against the December JLPT | Don't rush. If it's ready after about 20 November, run December as an uncounted soft launch, and start the counted window in early January towards the July 2027 exam |
+| 2 | The alert contact point (ADR-009) | A Telegram bot that messages only you |
+| 3 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits |
+| 4 | The gateway's per-key rate limit and actor check (ADR-012, ADR-018) | Build both in the gateway repo before launch |
+| 5 | Launch timing against the December JLPT | Don't rush. If it's ready after about 20 November, run December as an uncounted soft launch, and start the counted window in early January towards the July 2027 exam |
