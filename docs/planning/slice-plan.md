@@ -31,10 +31,18 @@ tasks and fixtures are committed first and fail against a stub. Then the
 code is written until they pass. Each guardrail's test comes before the
 guardrail. Git history is the evidence (Phase 1, EDD1).
 
+**Fitness functions (ADR-023)** join CI as their slice lands:
+- FF1–FF3 and FF6 with the learning engine and the pipeline;
+- FF4 and FF5 from slice 1;
+- FF7 with the pipeline;
+- FF8 and FF9 with slice 3.
+
+From then on, a red fitness function blocks the merge.
+
 | Slice | Delivers | Done when | Model cost |
 |---|---|---|---|
-| **1. Data** | Load scripts with pinned versions and checksums; the "about the data" page with licences; views and schema comments; row counts committed | One command rebuilds the dictionary database; licences checked | $0 |
-| **2. Learning engine** | Known words, coverage, quizzes (generation and grading) and the recommender, with fixture learners and tests (mutation-checked) | Exact outputs match the fixtures | $0 |
+| **1. Data** | Load scripts with pinned versions and checksums; the dictionary update policy (pinned version, mapping removed entries); the "about the data" page with licences; views and schema comments; row counts committed; CI with FF4 and FF5 | One command rebuilds the dictionary database; licences checked | $0 |
+| **2. Learning engine** | The data design from the scale path (event table partitioned by month, incremental summaries, `cohort_id`, timezones); input normalization; known words, coverage, quizzes (generation and grading) and Susumu, the recommender, with fixture learners and tests (mutation-checked); a synthetic 5,000-learner database for FF1 | Exact outputs match the fixtures; FF1–FF3 green | $0 |
 | **3. Juku's MCP server, identity and guardrails** | The scoped tools, including `get_memory` and `request_replan`; per-agent identities; delegation tokens and their checks; `guardrails.yaml` and its tests; spans | The cross-learner suite (M7) and the delegation suite (ID2) pass, and are mutation-checked: removing any check makes a test fail. Every guardrail has its test (G1) | $0 |
 | **4. Memory** | The notes table, evidence checks, allowed categories, consolidation, and the "Shiori ingat…" page | Fixtures: a note without evidence, with someone else's evidence, or in a forbidden category is refused; a stale note lapses | $0 |
 | **5. Thin app** | Pages, consent, 18+, invite codes, Hapus data saya, ratings, the budget guard; chat with a scripted model (record and replay) and the citation check | Deletion cascades everywhere; per-call records and traces hold no content; the guard stops at each cap; a fabricated citation is flagged | $0 |
@@ -43,6 +51,7 @@ guardrail. Git history is the evidence (Phase 1, EDD1).
 | **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for a week, with two weekly reports | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
 | **9. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; the weekly review: failures become tasks, then fixes, then reruns | The window closes on its date, whatever the numbers | the pools below, plus ~$0.60 of reruns |
 | **10. Evidence and write-up** | Evidence SQL and outputs; the privacy check; the case study, JOURNEY and a portfolio entry (EN, JA, ID); text deletion scheduled for 60 days later | Every number traces to a file; the privacy check passes | $0 |
+| **Should** | The load test (Locust, 5,000 synthetic learners, scripted model) and its FF10 baseline | Numbers published, labelled as a measurement of the design | $0 |
 | **Should** | Reading practice, the pace planner, the mistakes queue, the feedback job | Built before launch if they fit; otherwise during the window behind a flag, with the switch-on date recorded so metrics aren't mixed silently | $0, except the feedback job (~$0.01 a week, from the reserve) |
 
 Slices 1–6 are local and free, so they can be built before the budget

@@ -60,3 +60,4 @@ prerequisites in the [slice plan](docs/planning/slice-plan.md) are met.
 - [Phase 2: requirements, constraints and privacy](docs/planning/phase-2-requirements-constraints.md)
 - [Phase 5: architecture decisions](docs/planning/phase-5-architecture-decisions.md)
 - [Slice plan and cost model](docs/planning/slice-plan.md)
+- [Scale path: built for ten, designed for thousands](docs/planning/scale-path.md)
