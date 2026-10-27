@@ -5,9 +5,9 @@ rest are recommendations, open until he agrees (see the end).
 
 ```
                        ┌─────────────── gateway (auth, per-agent allow-lists, detection, audit) ───────────────┐
-browser ─► Shiori app ─┤                                                                                         │
+browser ─► Juku app ─┤                                                                                         │
  (thin)    (FastAPI)   ├─► MCP-backbone ─► dict DB (JMdict, KANJIDIC2, Tatoeba, JLPT lists; read-only login)   │
-   ▲          │        └─► Shiori MCP server (learner-scoped, read-only) ─► app DB (progress, memory) + dict DB │
+   ▲          │        └─► Juku MCP server (learner-scoped, read-only) ─► app DB (progress, memory) + dict DB │
    │          │                                                                                                 │
    │          ├─ chat agent "Shiori" ── tool loop ──► Sumopod (gpt-5-mini)
    │          └─ weekly pipeline (cron): facts (SQL) ─► Hana (plan) ─► Rin ─► Kenta (report) ─► Rin ─► code approves
@@ -17,7 +17,7 @@ browser ─► Shiori app ─┤                                                
 
 ### ADR-001: The users are Indonesian JLPT learners in a study group (settled)
 
-**Decision:** adults preparing for N5–N3, recruited from a study group
+**Decision:** adults preparing for N5–N2, recruited from a study group
 Arthur joins as a member. He is studying Japanese himself; his use is
 recorded separately.
 
@@ -106,7 +106,7 @@ the consent, memory and deletion screens.
 - *A single-page app:* more front end than this needs.
 - *Direct database access from agents:* it skips the stack being shown.
 
-### ADR-006: Shiori's own MCP server, scoped by session, read-only
+### ADR-006: Juku's own MCP server, scoped by session, read-only
 
 **Decision:**
 - A small MCP server in this repo for the learner's data: progress,
@@ -143,8 +143,8 @@ the consent, memory and deletion screens.
 
 | Agent | Input | Tools |
 |---|---|---|
-| Shiori (chat) | The learner's question | MCP-backbone read tools; Shiori's server (this learner) |
-| Hana (planner) | The week's facts and the engine's candidates | Shiori's server (this learner, this run) |
+| Shiori (chat) | The learner's question | MCP-backbone read tools; Juku's server (this learner) |
+| Hana (planner) | The week's facts and the engine's candidates | Juku's server (this learner, this run) |
 | Kenta (writer) | The facts and Hana's approved plan | none |
 | Rin (critic) | An output and exactly what its author was given | none |
 
@@ -380,7 +380,7 @@ hour.
 | Container | Contents | Memory cap |
 |---|---|---|
 | `app` | FastAPI app and pipeline workers. Non-root, read-only filesystem, `cap_drop: ALL` | 256 MB |
-| `shiori-mcp` | Shiori's MCP server | 128 MB |
+| `juku-mcp` | Juku's MCP server | 128 MB |
 | `db` | `postgres:16` with two databases: `app` (progress, memory, records, `monitoring`) and `dict`. Each login reaches only what it needs | 384 MB |
 | `grafana` | Grafana OSS, provisioned from files | 256 MB |
 
@@ -416,7 +416,7 @@ Arthur isn't counted.
   - text only, because voice recordings are sensitive and costly;
   - built only if spend is under plan at week 2.
 - **A quiz as an MCP App (X4):** inside a learner's own assistant. It
-  needs OAuth on Shiori's MCP server; after the window.
+  needs OAuth on Juku's MCP server; after the window.
 - **The group digest (X1) and WhatsApp delivery (X2):** after the window.
 
 ## Open for Arthur

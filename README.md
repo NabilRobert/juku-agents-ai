@@ -1,8 +1,15 @@
-# Shiori
+# Juku
 
-栞 (*shiori*): a bookmark, or a small guidebook.
+塾 (*juku*): a Japanese cram school, where staff coach students towards an
+exam.
 
-An agentic learning platform for Indonesian adults studying for the JLPT.
+An agentic learning platform for Indonesian adults studying for the JLPT,
+levels N5 to N2. Its staff is a small crew of agents:
+- **Shiori**, the lead: the one learners talk to, and the keeper of their memory;
+- **Hana:** plans each week;
+- **Kenta:** writes the reports;
+- **Rin:** the critic.
+
 It follows the pattern of
 [Pitstop](https://github.com/NabilRobert/pitstop-crew-public), this time
 for learning Japanese:

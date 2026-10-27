@@ -1,8 +1,16 @@
 # Phase 1: Problem Brief
 
-**Project:** Shiori (栞, a bookmark, or a small guidebook), an agentic
-learning platform for Indonesian adults studying for the JLPT
-(Japanese-Language Proficiency Test). It follows the pattern of
+**Project:** Juku (塾, a Japanese cram school, where staff coach students
+towards an exam), an agentic learning platform for Indonesian adults
+studying for the JLPT (Japanese-Language Proficiency Test), levels N5 to
+N2. Its staff is a small crew of agents:
+- **Shiori** (栞, a bookmark): the lead, whom learners talk to, and the
+  keeper of their memory;
+- **Hana:** plans each week;
+- **Kenta:** writes the reports;
+- **Rin:** the critic.
+
+It follows the pattern of
 [Pitstop](https://github.com/NabilRobert/pitstop-crew-public), this time
 for learning Japanese:
 - **Facts in code:** SQL and deterministic code compute each learner's
@@ -56,7 +64,7 @@ Indonesian progress reports, the positioning below changes.
 
 | Party | Who | Wants |
 |---|---|---|
-| **Learners (primary)** | Indonesian adults (18+) preparing for N5–N3, in a study group Arthur joins as a member (he is studying Japanese himself) | To know what they know, what to study next and whether they're on pace, with correct answers in Indonesian |
+| **Learners (primary)** | Indonesian adults (18+) preparing for N5–N2, in a study group Arthur joins as a member (he is studying Japanese himself) | To know what they know, what to study next and whether they're on pace, with correct answers in Indonesian |
 | **Arthur (builder, also a learner)** | Uses it himself | Evidence for the portfolio, and a tool he uses. His use is recorded separately and **excluded from every adoption number** |
 | **Reviewer / hiring team** | Japan-style employers | Proof that agents and the tools hold up with real users: numbers from records, failures and their fixes, privacy handled with care |
 
@@ -89,18 +97,18 @@ app with AI) is common, so the idea isn't what is being shown. What is:
      never published unchecked.
 3. **Least privilege for agents, enforced by MCP and the gateway.**
    - Each agent has its own gateway key and tool allow-list.
-   - A learner's data is reached only through Shiori's own MCP server,
+   - A learner's data is reached only through Juku's own MCP server,
      whose tools are bound to that learner's session. An agent working for
      one learner cannot read another's data, whatever it asks for.
 4. **Agent memory you can see, check and delete.**
    - Long-term memory is a central agent topic of 2026, and the common
      complaint is that it's opaque.
-   - Shiori's memory is Postgres tables, not a hidden vector store:
+   - The agents' memory is Postgres tables, not a hidden vector store:
      - **what the learner knows**, computed from their activity;
      - **what happened**, the activity itself;
      - **short agent notes** on how they learn, such as "often confuses
        on and kun readings".
-   - Agents read it only through Shiori's MCP server. They can only
+   - Agents read it only through Juku's MCP server. They can only
      *propose* a note, and code accepts it only with evidence: the
      activity rows that support it.
    - The learner sees every item, with its evidence, and can remove it.
@@ -176,7 +184,7 @@ Arthur's own use is excluded from A1–A4 and L1–L2.
 | MEM4 | Reports that state something contradicted by newer activity (stale memory) | **0**: high severity for the critic and in code |
 | MEM5 | Reports whose plan uses the learner's memory (cites a mistake, a note or a recent activity row) | Reported |
 
-**Learning (reported, never claimed as caused by Shiori)**
+**Learning (reported, never claimed as caused by Juku)**
 
 | # | Metric | Target |
 |---|---|---|
@@ -186,7 +194,7 @@ Arthur's own use is excluded from A1–A4 and L1–L2.
 **Tool health (monitoring)**
 
 Per MCP tool, on both servers (MCP-backbone's `list_tables`,
-`describe_table`, `sample_rows`, `run_query`; Shiori's own tools), per
+`describe_table`, `sample_rows`, `run_query`; Juku's own tools), per
 agent and per hop (app → gateway → server → database). The sources are
 the gateway's and MCP-backbone's audit logs, the app's per-call records
 and the traces.
@@ -199,7 +207,7 @@ and the traces.
 | M4 | Recovery: failed `run_query` calls followed by a successful corrected query in the same turn | Reported |
 | M5 | Outputs with one unbroken trace across all hops | ≥ 95% |
 | M6 | Time from an outage, a missed scheduled run or a budget stop to Arthur being told | ≤ 15 min, tested on purpose before launch |
-| M7 | Attempts to reach another learner's data through Shiori's MCP server | 0 succeed (tested before launch; refusals logged) |
+| M7 | Attempts to reach another learner's data through Juku's MCP server | 0 succeed (tested before launch; refusals logged) |
 
 **Failures and change**
 
@@ -223,14 +231,16 @@ recruiting. It doesn't stretch the window or count Arthur.
 ## Non-goals (current pass)
 
 - **No course and no tutor.** It doesn't teach grammar lessons or grade
-  free writing.
+  free writing. At N2 the exam leans more on grammar and reading, and Juku
+  covers that only through vocabulary, kanji and reading practice. The
+  write-up says so.
 - **No full spaced-repetition scheduler.** The mistakes queue uses simple
   Leitner boxes in code. SM-2-style scheduling is out of scope.
 - **No voice.** The speaking partner, if built, is text only (Phase 2,
   Could). Voice recordings are sensitive data and costly to process.
 - **No copyrighted study material.** No official JLPT past papers or
   textbook content; only openly licensed data.
-- **No claims about results.** "Users passed the exam" or "Shiori improved
+- **No claims about results.** "Users passed the exam" or "Juku improved
   learning" can't be attributed, so they aren't claimed (L1 and L2 are
   descriptive).
 - **No open sign-up.** Access is by invite code, so cost and abuse stay
@@ -240,11 +250,14 @@ recruiting. It doesn't stretch the window or count Arthur.
 
 ## Decisions (settled with Arthur, 2026-10-27)
 
-1. **Users:** Indonesian JLPT learners (N5–N3) in a study group, chosen
+1. **Users:** Indonesian JLPT learners (N5–N2; widened from N5–N3 at
+   Arthur's request, since N2 is the level many Japanese employers ask
+   for) in a study group, chosen
    over a developer community's resource directory and a workplace data
    assistant (Phase 5, ADR-001).
 2. **Product:** an agentic learning platform on Pitstop's pattern, named
-   **Shiori**.
+   **Juku**, with Shiori as its lead agent (renamed from "Shiori as the
+   product" the same day, at Arthur's request).
 3. **Focus:** the agents and MCP tools under real use. Tool monitoring is
    in scope here, because Project 6 deliberately stops at traces.
 4. **Data:** open dictionary datasets (JMdict, KANJIDIC2, radical data,
@@ -258,7 +271,7 @@ recruiting. It doesn't stretch the window or count Arthur.
    4. the group digest and WhatsApp;
    5. a text speaking partner (worth it if there's room).
 7. **Trend angle:** inspectable agent memory (checked against 2026
-   sources, 2026-10-27). Running a Shiori quiz as an MCP App inside a
+   sources, 2026-10-27). Running a Juku quiz as an MCP App inside a
    learner's own assistant is a later Could.
 8. **Budget:** $5 in total, a per-key cap of about $4.50, not topped up
    until building starts.

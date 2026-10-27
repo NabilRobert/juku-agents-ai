@@ -18,11 +18,11 @@ to start sooner.
 | # | Question | Method | Pass | Time |
 |---|---|---|---|---|
 | 1 | How big is the dictionary in Postgres, and how long does it take to load? | Load JMdict, KANJIDIC2 and Tatoeba into a local `postgres:16`; record row counts, disk size and load time | Under 1 GB on disk; a repeatable load | 2 h |
-| 2 | Do the recommender and i+1 queries fit the limits? | Run them in Shiori's MCP server prototype with 0, 100 and 500 known words; time them | Under 200 ms each, at every size | 1 h |
+| 2 | Do the recommender and i+1 queries fit the limits? | Run them in Juku's MCP server prototype with 0, 100 and 500 known words; time them | Under 200 ms each, at every size | 1 h |
 | 3 | Does Grafana fit? | Grafana OSS with a provisioned Postgres data source and one dashboard; read its idle memory | Idle well under 256 MB. Otherwise, fall back to cron alerts (ADR-009) | 1 h |
 | 4 | How cleanly do the JLPT lists and Tatoeba's index map to JMdict? | Match by spelling and reading; count ambiguous and unmatched entries, and the share of sentences that are fully indexed | Counted and reported; rules for the ambiguous ones written down | 1.5 h |
 | 5 | Does Sumopod report cached input tokens? | Read the usage fields in existing harness logs (no new calls) | Answered either way; the cost model is updated | 15 min |
-| 6 | Does session-bound identity hold through the gateway? | Prototype Shiori's MCP server with a signed per-learner token; call it through a local gateway as learner A, and try for B's rows every way possible | Every attempt at B fails and is logged | 2 h |
+| 6 | Does session-bound identity hold through the gateway? | Prototype Juku's MCP server with a signed per-learner token; call it through a local gateway as learner A, and try for B's rows every way possible | Every attempt at B fails and is logged | 2 h |
 
 ## Slices
 
@@ -30,7 +30,7 @@ to start sooner.
 |---|---|---|---|
 | **1. Data** | Load scripts with pinned versions and checksums; the "about the data" page with licences; views and schema comments; row counts committed | One command rebuilds the dictionary database; licences checked | $0 |
 | **2. Learning engine** | Known words, coverage, quizzes (generation and grading) and the recommender, with fixture learners and tests (mutation-checked) | Exact outputs match the fixtures | $0 |
-| **3. Shiori's MCP server** | The scoped, read-only tools, including `get_memory`; signed session tokens; spans | The cross-learner test suite passes (M7), and is mutation-checked: removing the scope check makes a test fail | $0 |
+| **3. Juku's MCP server** | The scoped, read-only tools, including `get_memory`; signed session tokens; spans | The cross-learner test suite passes (M7), and is mutation-checked: removing the scope check makes a test fail | $0 |
 | **4. Memory** | The notes table, evidence checks, allowed categories, consolidation, and the "Shiori ingat…" page | Fixtures: a note without evidence, with someone else's evidence, or in a forbidden category is refused; a stale note lapses | $0 |
 | **5. Thin app** | Pages, consent, 18+, invite codes, Hapus data saya, ratings, the budget guard; chat with a scripted model (record and replay) and the citation check | Deletion cascades everywhere; per-call records and traces hold no content; the guard stops at each cap; a fabricated citation is flagged | $0 |
 | **6. Pipeline and monitoring** | Hana, Kenta and Rin with scripted models; code approval; the facts-only fallback; cron; the run records and Run Inspector; Grafana and alerts | A planted bad number, an off-level word and a stale claim are each blocked in code; each alert fired on purpose and received | $0 |
@@ -54,7 +54,7 @@ before slice 7.
 with this model for $0.534, about **$0.0027 a question**, including schema
 exploration and tool calls.
 
-**Most of Shiori costs nothing.** Quizzes, recommendations, reading, the
+**Most of Juku costs nothing.** Quizzes, recommendations, reading, the
 plan and the memory page make no model call. The model is used for chat
 and the weekly report only.
 
@@ -74,7 +74,7 @@ basis.
 
 | Step | Input | Output | Cost |
 |---|---|---|---|
-| Hana: three calls, reading the facts and memory through Shiori's MCP server | ~13,500 | ~1,000 | $0.0054 |
+| Hana: three calls, reading the facts and memory through Juku's MCP server | ~13,500 | ~1,000 | $0.0054 |
 | Rin reviews the plan | ~4,000 | ~400 | $0.0018 |
 | Kenta writes the report | ~5,000 | ~1,200 | $0.0037 |
 | Rin reviews the report | ~4,000 | ~400 | $0.0018 |

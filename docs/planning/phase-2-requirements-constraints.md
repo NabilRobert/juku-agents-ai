@@ -6,9 +6,9 @@ build goes in slices ([slice plan](slice-plan.md)).
 ## Core scenario
 
 1. **Joining.** A learner in the study group gets a personal invite code
-   from Arthur. They open Shiori and read a one-screen consent notice in
+   from Arthur. They open Juku and read a one-screen consent notice in
    Indonesian. They confirm they're 18 or older, then pick a nickname,
-   their target level (N5–N3) and, optionally, their exam date.
+   their target level (N5–N2) and, optionally, their exam date.
 2. **Studying** during the week (no model call, $0):
    - **Rekomendasi:** 10 words to learn next, each with its reason.
    - **Kuis:** a short quiz on meanings and readings, generated and graded
@@ -18,7 +18,7 @@ build goes in slices ([slice plan](slice-plan.md)).
      the exam date.
 3. **Asking.** They ask the chat, in Indonesian: "kenapa saya selalu salah
    baca 生?", "apa bedanya 見る dan 観る?". The chat agent looks up their
-   progress through Shiori's MCP server and the dictionary through
+   progress through Juku's MCP server and the dictionary through
    MCP-backbone, then answers with citations. The app checks each
    citation against the rows returned.
 4. **The weekly report.** Each Sunday evening, a scheduled pipeline runs
@@ -65,7 +65,7 @@ build goes in slices ([slice plan](slice-plan.md)).
   learners with exact expected outputs (Phase 1, E1). The tests are
   mutation-checked.
 
-**Shiori's MCP server (the learner's data)**
+**Juku's MCP server (the learner's data)**
 - **SM1.** A small MCP server in this repo exposing **read-only**,
   learner-scoped tools: `get_progress`, `get_mistakes`, `recommend_words`,
   `find_reading_sentences`, `get_plan`, `get_recent_activity`,
@@ -119,14 +119,14 @@ build goes in slices ([slice plan](slice-plan.md)).
   - mark it wrong, which counts towards MEM3;
   - unmark a known word.
 - **MEM-R6.** Agents read memory only through `get_memory` and the other
-  scoped tools on Shiori's MCP server.
+  scoped tools on Juku's MCP server.
 
 **Agents**
 
 | Agent (names proposed) | Role | Tools through the gateway |
 |---|---|---|
-| **Shiori** (chat) | Answers on demand, in Indonesian, with citations | MCP-backbone read tools (dictionary); Shiori's server, scoped to this learner |
-| **Hana** (planner) | Picks next week's focus (words, kanji and mistakes to review) **only from candidates the engine computed**, says why, and may propose notes (MEM-R2) | Shiori's server, scoped to this learner and run |
+| **Shiori** (chat) | Answers on demand, in Indonesian, with citations | MCP-backbone read tools (dictionary); Juku's server, scoped to this learner |
+| **Hana** (planner) | Picks next week's focus (words, kanji and mistakes to review) **only from candidates the engine computed**, says why, and may propose notes (MEM-R2) | Juku's server, scoped to this learner and run |
 | **Kenta** (writer) | Writes the weekly report (≤ 300 words, Indonesian) from the facts and Hana's plan | none: works only from what it is given |
 | **Rin** (critic) | Reviews Hana's and Kenta's outputs against the facts they were given, listing issues with a severity | none |
 
@@ -261,9 +261,9 @@ build goes in slices ([slice plan](slice-plan.md)).
     outside that set.
   - Limited to 1 conversation of 10 turns a day per learner, from the chat
     pool, and only if spend is under plan at week 2.
-- **X4. A quiz as an MCP App.** Shiori's quiz, offered as an interactive
+- **X4. A quiz as an MCP App.** Juku's quiz, offered as an interactive
   MCP App, so a learner can take it inside their own Claude or ChatGPT.
-  It needs OAuth on Shiori's MCP server and its own consent wording.
+  It needs OAuth on Juku's MCP server and its own consent wording.
   Considered only after the window.
 
 ## Privacy
@@ -314,7 +314,7 @@ by SM2.
 - Chat text, reports and run-record content: deleted 60 days after the
   measurement window closes. After that, only anonymised aggregates
   remain.
-- Learning-engine data: kept while the learner keeps using Shiori; deleted
+- Learning-engine data: kept while the learner keeps using Juku; deleted
   after 90 days of inactivity, with notice on the page beforehand.
 - Per-call records and metrics: kept without text; the learner ID is
   removed at the 60-day point.
@@ -381,7 +381,7 @@ by SM2.
 | | Item |
 |---|---|
 | **Must** | LE1–LE3, LE7: progress, quizzes, the recommender, with fixtures |
-| **Must** | SM1–SM5: Shiori's MCP server, scoped by session, read-only, behind the gateway |
+| **Must** | SM1–SM5: Juku's MCP server, scoped by session, read-only, behind the gateway |
 | **Must** | MEM-R1–R6: structured memory, evidence-checked notes, learning-only categories, consolidation, the "Shiori ingat…" page |
 | **Must** | AG1–AG3, AG5: the weekly pipeline with critic and code approval, scheduling with a dead-man's switch, run records, the cited chat |
 | **Must** | UI1–UI3; D1–D3; M1, M4–M6; B1–B3 |
@@ -394,7 +394,7 @@ by SM2.
 | **Should** | EV3: case study, JOURNEY, portfolio entry |
 | **Should** | The gateway's per-key rate limit (built in the gateway repo; Arthur's call) |
 | **Could** | X1: the group digest; X2: WhatsApp delivery; X3: the text speaking partner |
-| **Could** | X4: a Shiori quiz as an MCP App, so a learner can use it inside their own assistant. It needs OAuth on Shiori's MCP server, and its own consent wording |
+| **Could** | X4: a Juku quiz as an MCP App, so a learner can use it inside their own assistant. It needs OAuth on Juku's MCP server, and its own consent wording |
 | **Could** | gpt-5-nano as a cheaper fallback near a pool's end, measured as a "what changed" |
 | **Won't** | Voice, open sign-up, full spaced repetition, free-writing grading, copyrighted material, a mobile app |
 
@@ -406,7 +406,7 @@ About 5–6 weeks of building, then the 4-week window:
 |---|---|
 | Data | 2 days |
 | The learning engine (Must parts) | 3–4 days |
-| Shiori's MCP server | 2–3 days |
+| Juku's MCP server | 2–3 days |
 | The thin app with consent and deletion | 3–4 days |
 | The agent pipeline and scheduling | 4–5 days |
 | Memory (notes, checks, consolidation, the page) | 2–3 days |
