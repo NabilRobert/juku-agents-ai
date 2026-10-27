@@ -646,7 +646,7 @@ overstate the work to the audience this portfolio is for.
 
 | # | Decision | Settled as |
 |---|---|---|
-| 1 | The repo name | `jlpt-learning-agents`. Arthur renames the folder before anything goes to GitHub |
+| 1 | The repo name | `juku-agents`. Arthur renames the folder before anything goes to GitHub |
 | 2 | The alert contact point (ADR-009) | A Telegram bot that messages only Arthur |
 | 3 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits; otherwise cron alerts |
 | 4 | The gateway's per-key rate limit and actor check (ADR-012, ADR-018) | Both built in the gateway repo before launch, as gateway work |

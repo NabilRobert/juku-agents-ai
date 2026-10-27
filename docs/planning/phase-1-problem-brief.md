@@ -317,7 +317,7 @@ recruiting. It doesn't stretch the window or count Arthur.
 8. **Budget:** $5 in total, a per-key cap of about $4.50, not topped up
    until building starts.
 9. **Settled from the open list:**
-   - the repo is `jlpt-learning-agents`;
+   - the repo is `juku-agents` (Arthur's choice);
    - Telegram alerts to Arthur;
    - Grafana if it fits;
    - the gateway's rate limit and actor check;
