@@ -530,6 +530,76 @@ so the two results can be read together.
 **Why:** continual learning is still research, and claiming it would
 overstate the work to the audience this portfolio is for.
 
+### ADR-022: Built for ten, designed for thousands
+
+**Decision:**
+- **Now:** only what is cheap today and expensive to change later. That
+  means the data design in the [scale path](scale-path.md):
+  - a narrow event table, partitioned by month;
+  - incremental summaries;
+  - text apart from metrics, with expiry;
+  - `cohort_id`, timezones, `bigint` keys with random public IDs;
+  - stateless services;
+  - idempotent runs.
+- **Later:** growth uses existing tools, not our own builds. That covers:
+  - LiteLLM Proxy for cost, limits and fallbacks;
+  - Procrastinate for the weekly queue;
+  - PgBouncer, Valkey, Keycloak, Cloudflare, the OpenTelemetry
+    Collector with VictoriaMetrics, Vector, and Langfuse.
+
+  Each is named against the bottleneck it answers.
+- **The only scale claim** is the load test ($0, scripted model), stated
+  as a measurement of the design.
+
+**Why:**
+- Evaluators ask "would this survive growth?". The honest answer is a
+  data design that already would, and a named path for the rest.
+- The pressure at scale is model cost and provider limits, not data. The
+  doc says so with unit economics: about $0.10 a learner a month now, and
+  about $0.06 with batch reports and caching.
+
+**Rejected:**
+- *Building the scaled stack now:* more services than a small shared
+  server should run, for users who don't exist yet.
+- *Ignoring scale:* the data design is a one-way door, and changing it
+  later means migrating real learners' history.
+- *Building our own queue, model proxy or auth server:* mature tools
+  exist, and owning them is the wrong use of the time.
+
+### ADR-023: Anti-regression by fitness functions, plus the harness gate
+
+**Decision:**
+- **Deterministic fitness functions** in CI on every commit, at $0:
+  - query plans on a synthetic 5,000-learner database;
+  - hot paths reading summaries only;
+  - incremental state matching a full recompute;
+  - migration linting;
+  - MCP tool schemas as snapshot contracts, kept strict-mode valid;
+  - prompt and context token ceilings, counted offline;
+  - idempotent runs;
+  - the guardrail, delegation and isolation suites;
+  - no content in records or traces.
+- **Before releases:** a load-test comparison.
+- **For agent quality:** the harness regression gate, on every prompt,
+  tool or model change.
+- Thresholds live in `guardrails.yaml`, so raising one is a reviewed
+  change.
+
+**Why:**
+- "Evolutionary architecture" is the name for designing so change doesn't
+  quietly undo the design. Fitness functions are how it's enforced.
+- The harness gate, by its own published results, missed some expected
+  regressions at about 40 tasks. Deterministic checks catch what
+  statistics at that size can't.
+- The tool-schema contract carries over the lesson of the upstream
+  strict-schema issue.
+
+**Rejected:**
+- *Relying on the harness gate alone:* too little statistical power at
+  this size.
+- *Manual review only:* it doesn't scale, and it misses slow drift.
+- *Load tests on every commit:* too slow. They run before releases.
+
 ### Later (Could), recorded so they aren't re-decided
 
 - **The text speaking partner (X3):**
