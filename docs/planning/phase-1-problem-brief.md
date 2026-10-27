@@ -52,6 +52,14 @@ are prepared for him.
 
 ## Positioning: what makes this one different
 
+**The subject is the MCP tools under real use, not the app.** The app is
+kept thin on purpose: a chat page, consent and a budget guard. The work
+and the evidence are about how the tools behave when real people's
+questions reach them through the gateway: which tools get called, how
+often they fail or are refused, how many calls an answer takes, and what
+changed when they were improved. Tool monitoring is therefore a core
+requirement, not an add-on.
+
 The idea (a study chatbot) is common, so the idea isn't what is being
 shown. What is:
 1. **Real users, with published numbers.** People, sessions, return rate,
@@ -93,12 +101,27 @@ after launch. Arthur's own use is excluded from A1–A4.
 | Q4 | User rating: thumbs-up share of rated answers, plus the rating rate | ≥ 75% up |
 | Q5 | Latency, end to end | p50 ≤ 15 s, p95 ≤ 40 s (the harness measured a 13 s median on Pagila with the same model) |
 
+**Tool health (monitoring)**
+
+Reported per MCP tool (`list_tables`, `describe_table`, `sample_rows`,
+`run_query`) and per hop (app → gateway → MCP-backbone → database), from
+the gateway's and MCP-backbone's audit logs and the traces.
+
+| # | Metric | Target |
+|---|---|---|
+| M1 | Calls, error rate and p50/p95 latency per tool, per week | Reported; error rate ≤ 2% per tool, excluding refusals that were correct |
+| M2 | Refusals by layer: SQL validator, cost check, row cap, gateway policy, injection detector | Every refusal categorised; each detector flag reviewed by hand as a true or false positive |
+| M3 | Tool calls per answer, and the share spent exploring the schema rather than answering | Reported weekly; at least one change that measurably lowers it (counts towards F2) |
+| M4 | Recovery: share of failed `run_query` calls followed by a corrected query that succeeds in the same turn | Reported |
+| M5 | End-to-end traceability: share of answers with one unbroken trace across all hops | ≥ 95% |
+| M6 | Alerting: time from an outage or a budget stop to Arthur being told | ≤ 15 min, checked by a deliberate test before launch |
+
 **Failures and change**
 
 | # | Metric | Target |
 |---|---|---|
 | F1 | Every failure is categorised: error, timeout, gateway block, budget stop, uncited answer, thumbs-down | 100% categorised |
-| F2 | "What changed" write-ups: a failure category from real use → a new eval task → a fix → before/after on Q1 and on the live metric | ≥ 2 |
+| F2 | "What changed" write-ups: a failure category from real use → a new eval task → a fix → before/after on Q1 and on the live metric. At least one is a tool-level change (a tool description, a read-only view, a schema comment), not a prompt tweak | ≥ 2 |
 
 **Cost and safety**
 
@@ -139,6 +162,9 @@ recruiting, rather than stretching the window or counting Arthur.
    until building starts.
 5. **Start:** only after the open server-security follow-ups are cleared
    and the gateway is pushed.
+6. **Focus:** the MCP tools under real use. Tool monitoring (per-tool
+   metrics, dashboards and alerts) is in scope here, because Project 6
+   deliberately stops at traces (Phase 5, ADR-008).
 
 ## Open questions (for Phase 2)
 
