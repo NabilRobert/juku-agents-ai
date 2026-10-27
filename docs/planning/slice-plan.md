@@ -9,7 +9,7 @@ to start sooner.
 |---|---|---|
 | P1 | The open server-security follow-ups are cleared: key rotations, and key-only SSH on the second server | Arthur |
 | P2 | The gateway is pushed | Arthur |
-| P3 | The model budget is topped up ($5), and the new key is created with its cap (about $4.50) | Arthur, when building starts |
+| P3 | The model budget is topped up ($5), and a new key is created with its cap (about $4.50) | Arthur, when building starts |
 | P4 | A subdomain for the app and one for the dashboard | Arthur |
 | P5 | Arthur has joined a JLPT study group as a member (any time; joining isn't building) | Arthur |
 
@@ -17,90 +17,117 @@ to start sooner.
 
 | # | Question | Method | Pass | Time |
 |---|---|---|---|---|
-| 1 | How big is the dictionary in Postgres, and how long does it take to load? | Load JMdict and KANJIDIC2 into a local `postgres:16`; record row counts, disk size and load time | Under 1 GB on disk; the load script is repeatable | 2 h |
-| 2 | Does the recommender query pass MCP-backbone's validator and cost check? | Run the R2 query through a local MCP-backbone with 0, 100 and 500 known IDs | Accepted at every size; well under the cost limit | 1 h |
-| 3 | Does Grafana fit? | Grafana OSS with a provisioned Postgres data source and one dashboard; read its idle memory | Idle well under 256 MB. Otherwise, fall back to cron alerts (ADR-008) | 1 h |
-| 4 | How cleanly do JLPT lists map to JMdict entries? | Match a community list by spelling and reading; count ambiguous and unmatched entries | Counted and reported; rules for the ambiguous ones written down | 1 h |
+| 1 | How big is the dictionary in Postgres, and how long does it take to load? | Load JMdict, KANJIDIC2 and Tatoeba into a local `postgres:16`; record row counts, disk size and load time | Under 1 GB on disk; a repeatable load | 2 h |
+| 2 | Do the recommender and i+1 queries fit the limits? | Run them in Shiori's MCP server prototype with 0, 100 and 500 known words; time them | Under 200 ms each, at every size | 1 h |
+| 3 | Does Grafana fit? | Grafana OSS with a provisioned Postgres data source and one dashboard; read its idle memory | Idle well under 256 MB. Otherwise, fall back to cron alerts (ADR-009) | 1 h |
+| 4 | How cleanly do the JLPT lists and Tatoeba's index map to JMdict? | Match by spelling and reading; count ambiguous and unmatched entries, and the share of sentences that are fully indexed | Counted and reported; rules for the ambiguous ones written down | 1.5 h |
 | 5 | Does Sumopod report cached input tokens? | Read the usage fields in existing harness logs (no new calls) | Answered either way; the cost model is updated | 15 min |
+| 6 | Does session-bound identity hold through the gateway? | Prototype Shiori's MCP server with a signed per-learner token; call it through a local gateway as learner A, and try for B's rows every way possible | Every attempt at B fails and is logged | 2 h |
 
 ## Slices
 
 | Slice | Delivers | Done when | Model cost |
 |---|---|---|---|
-| **1. Data** | Load scripts with pinned versions and checksums; the "about the data" page with licences; views and schema comments (D4); row counts committed | One command rebuilds the dictionary database from the downloads; licences checked | $0 |
-| **2. Recommender** | The precomputed tables, the R2 query, fixture learners and tests (mutation-checked) | Exact top-10 output matches the fixtures; spike 2's limits hold | $0 |
-| **3. Thin app** | Chat with a scripted model (record and replay, no paid calls); consent, 18+, invite codes, nicknames; the citation check; ratings; Hapus data saya; the budget guard | Tests pass: deletion cascades; per-call records and traces hold no content; the guard stops at each cap; the citation check flags a fabricated ID | $0 |
-| **4. Monitoring** | Per-call records; Grafana dashboards and alert rules from committed files; the heartbeat; the gateway audit import with chain verification | Each alert fired on purpose and received; a dashboard row leads to its trace; no panel can show a user | $0 |
-| **5. Eval and baseline** | The ~40-task set in agent-eval-harness, with gold answers from SQL; the rubric for Q3; a baseline run, and a run choosing the reasoning effort | Q1 ≥ 90% (the launch gate). **First paid run, with Arthur's OK** | ~$0.60 |
-| **6. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of MCP-backbone for this app; Arthur uses it for a week | Alert delivery tested on the server (Phase 1, M6); one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
-| **7. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; a weekly review turns failures into tasks, fixes and reruns | The window closes on its date, whatever the numbers | user pool ≤ $2.50, plus ~$0.60 of reruns |
-| **8. Evidence and write-up** | Evidence SQL and outputs; the privacy check; the case study, JOURNEY and a portfolio entry (EN, JA, ID); text deletion scheduled for 60 days later | Every number traces to a file; the privacy check passes | $0 |
+| **1. Data** | Load scripts with pinned versions and checksums; the "about the data" page with licences; views and schema comments; row counts committed | One command rebuilds the dictionary database; licences checked | $0 |
+| **2. Learning engine** | Known words, coverage, quizzes (generation and grading) and the recommender, with fixture learners and tests (mutation-checked) | Exact outputs match the fixtures | $0 |
+| **3. Shiori's MCP server** | The scoped, read-only tools, including `get_memory`; signed session tokens; spans | The cross-learner test suite passes (M7), and is mutation-checked: removing the scope check makes a test fail | $0 |
+| **4. Memory** | The notes table, evidence checks, allowed categories, consolidation, and the "Shiori ingat…" page | Fixtures: a note without evidence, with someone else's evidence, or in a forbidden category is refused; a stale note lapses | $0 |
+| **5. Thin app** | Pages, consent, 18+, invite codes, Hapus data saya, ratings, the budget guard; chat with a scripted model (record and replay) and the citation check | Deletion cascades everywhere; per-call records and traces hold no content; the guard stops at each cap; a fabricated citation is flagged | $0 |
+| **6. Pipeline and monitoring** | Hana, Kenta and Rin with scripted models; code approval; the facts-only fallback; cron; the run records and Run Inspector; Grafana and alerts | A planted bad number, an off-level word and a stale claim are each blocked in code; each alert fired on purpose and received | $0 |
+| **7. Evals and baseline** | About 40 chat tasks and 15 memory tasks in agent-eval-harness; pipeline fixtures for 10 learners; rubrics for the hand checks; a baseline run, and a run choosing the reasoning effort | Q1 ≥ 90% and MEM1 ≥ 90%: the launch gate. **First paid runs, with Arthur's OK** | ~$1.05 |
+| **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for a week, with two weekly reports | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
+| **9. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; the weekly review: failures become tasks, then fixes, then reruns | The window closes on its date, whatever the numbers | the pools below, plus ~$0.60 of reruns |
+| **10. Evidence and write-up** | Evidence SQL and outputs; the privacy check; the case study, JOURNEY and a portfolio entry (EN, JA, ID); text deletion scheduled for 60 days later | Every number traces to a file; the privacy check passes | $0 |
+| **Should** | Reading practice, the pace planner, the mistakes queue, the feedback job | Built before launch if they fit; otherwise during the window behind a flag, with the switch-on date recorded so metrics aren't mixed silently | $0, except the feedback job (~$0.01 a week, from the reserve) |
 
-Slices 1–4 are local and free, so they can be done before the budget
-exists. The paid work starts at slice 5.
+Slices 1–6 are local and free, so they can be built before the budget
+exists. The paid work starts at slice 7.
 
 ## Cost model
 
 **Prices:** gpt-5-mini through Sumopod costs $0.25 per million input
 tokens and $2.00 per million output tokens. Source: the harness's
 `prices.yaml`, from Sumopod's pricing table, checked 2026-10-23. Recheck
-before slice 5.
+before slice 7.
 
-**The measured basis:** agent-eval-harness ran 200 agent tasks over
-Pagila with this model for $0.534, about **$0.0027 a question**, including
-schema exploration and tool calls.
+**The measured basis:** agent-eval-harness ran 200 agent tasks over Pagila
+with this model for $0.534, about **$0.0027 a question**, including schema
+exploration and tool calls.
 
-**The estimate for one chat question here** (assumed, then checked in
-slice 5):
+**Most of Shiori costs nothing.** Quizzes, recommendations, reading, the
+plan and the memory page make no model call. The model is used for chat
+and the weekly report only.
+
+**One chat question** (an estimate, checked in slice 7):
 
 | Part | Tokens |
 |---|---|
 | System prompt, with a compact schema summary | ~2,000 |
-| Three model calls per question (explore, query, answer); input re-sent and growing each call | ~12,000 input in total |
+| Three model calls (look up, query, answer), with input re-sent and growing each call | ~12,000 input in total |
 | Tool calls, reasoning, and an Indonesian answer of about 400 tokens | ~1,100 output in total |
 | **Cost** | 12,000 × $0.25/M + 1,100 × $2.00/M ≈ **$0.0052** |
 
 The planning figure is **$0.005 a question**, about twice the measured
-basis, to allow for longer Indonesian explanations.
+basis.
 
-**A session** is about 4 chat questions: ~48k input and ~4.4k output, about
-**$0.02**. Recommendations from the button cost $0.
+**One weekly report** (an estimate):
+
+| Step | Input | Output | Cost |
+|---|---|---|---|
+| Hana: three calls, reading the facts and memory through Shiori's MCP server | ~13,500 | ~1,000 | $0.0054 |
+| Rin reviews the plan | ~4,000 | ~400 | $0.0018 |
+| Kenta writes the report | ~5,000 | ~1,200 | $0.0037 |
+| Rin reviews the report | ~4,000 | ~400 | $0.0018 |
+| Revisions (about 30% of outputs, one each) | | | ~$0.0012 |
+| **Total** | | | **~$0.014** |
+
+The planning figure is **$0.015 a report**.
+
+**A session** mixes free activity with about 2 chat questions: **~$0.01**.
 
 **The budget:**
 
 | Line | Calculation | Cost |
 |---|---|---|
-| Baseline eval + reasoning-effort choice (slice 5) | 40 tasks × 2 epochs + 40 × 1, × $0.005 | $0.60 |
-| Smoke tests and dogfood (slice 6) | ~80 questions × $0.005 | $0.40 |
+| Baseline chat eval | 40 tasks × 2 epochs × $0.005 | $0.40 |
+| Reasoning-effort choice | 40 tasks × 1 × $0.005 | $0.20 |
+| Pipeline fixtures | 10 learners × 2 runs × $0.015 | $0.30 |
+| Memory tasks | 15 × 2 × $0.005 | $0.15 |
+| Smoke tests and dogfood | ~50 questions and 2 reports, with retries | $0.40 |
 | Weekly reruns during the window | 3 × 40 tasks × $0.005 | $0.60 |
-| Reserve (price change, retries, an estimate that's too low) | | $0.40 |
-| **User pool** (the B1 hard stop) | $4.50 − $2.00 | **$2.50** = 500 questions ≈ 125 sessions |
+| Reserve (price change, retries, a low estimate, the feedback job) | | $0.35 |
+| **Fixed total** | | **$2.40** |
+| **Reports pool** (reserved) | 60 reports × $0.015 | **$0.90** |
+| **Chat pool** (the B1 hard stop) | $4.50 − $2.40 − $0.90 | **$1.20** ≈ 240 questions |
 | **Key cap** | | **$4.50** |
 | Left on the account, never reachable by the key | $5.00 − $4.50 | $0.50 |
 
-**Expected use against the pool:**
+**Expected use:**
 
-| Case | Sessions | User cost | Total spend |
-|---|---|---|---|
-| Floor (Phase 1, A3) | 30 | $0.60 | $2.60 |
-| Target | 80 (e.g. 10 users, ~2 sessions a week, tapering) | $1.60 | $3.60 |
-| High | 180 (15 users × 3 a week × 4 weeks) | capped at $2.50 (125 sessions) | $4.50 |
+| Case | Learners | Reports | Chat questions | User spend | Total |
+|---|---|---|---|---|---|
+| Floor | 5 | 15 | 60 | $0.53 | $2.93 |
+| Target | 10, ~80 sessions | 40 | 160 | $1.40 | $3.80 |
+| High | 15, ~180 sessions | 60 | 360, **capped at 240** | $2.10 | $4.50 |
 
-- **In the high case, the hard stop ends chat early, and that is counted as
-  a finding,** not hidden. The Rekomendasi button keeps working at $0.
-- **Daily caps** (B1): 20 questions per user a day (at most $0.10 per
-  person per day) and $0.20 a day in total (about 10 sessions). The pool's
-  hard stop is the binding limit over the window; the daily caps stop a
-  single bad day, such as a leaked code, from draining it.
+- **In the high case, chat stops before the window ends,** and that is
+  reported as a finding. Reports and every $0 feature carry on.
+- **Daily chat caps** (B1): 20 questions per learner (at most $0.10 a
+  person a day), and $0.20 a day in total. The pool's hard stop binds over
+  the window; the daily caps stop one bad day, such as a leaked code, from
+  draining it.
+- **The speaking partner (Could)** draws on the chat pool at about $0.015
+  a conversation. It is switched on only if chat spend is under plan at
+  week 2.
 
 **Levers if spend runs high**, each measured, not assumed:
 1. Put the compact schema in the system prompt, so fewer calls go to
-   `describe_table`. This is also an M3 change.
-2. Prompt caching on the repeated system prompt, if spike 5 shows Sumopod
-   serves cached input (cached reads are a tenth of the price).
-3. Send "what should I learn" questions to the button path.
-4. gpt-5-nano as a fallback near the pool's end (Could; 91% vs 96% on
+   `describe_table` (also an M3 change).
+2. Prompt caching on repeated prompts, if spike 5 shows Sumopod serves
+   cached input at a tenth of the price.
+3. Route "what should I learn" questions to the $0 recommender.
+4. gpt-5-nano as a fallback near a pool's end (Could; 91% vs 96% on
    Pagila).
 
-The cost per question, per session and in total is published from the
-records, next to this estimate, including where the estimate was wrong.
+Cost per question, per report, per session and in total is published from
+the records, next to these estimates, including where they were wrong.
