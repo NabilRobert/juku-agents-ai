@@ -103,7 +103,7 @@ the consent, memory and deletion screens.
 **Rejected:**
 - *An agent framework (LangChain, LlamaIndex, CrewAI and the like):* it
   hides the loop being measured.
-- *A single-page app:* more front end than this needs.
+- *A single-page app:* more front end than this needs (ADR-024).
 - *Direct database access from agents:* it skips the stack being shown.
 
 ### ADR-006: Juku's own MCP server, scoped by session, read-only
@@ -600,6 +600,37 @@ overstate the work to the audience this portfolio is for.
 - *Manual review only:* it doesn't scale, and it misses slow drift.
 - *Load tests on every commit:* too slow. They run before releases.
 
+### ADR-024: The frontend is server-rendered, lazy, and held to a budget
+
+**Decision:**
+- Jinja2 pages with htmx for partial updates.
+- Vite building one small bundle per page, with dynamic imports for the
+  heavy pieces.
+- Lazy images, and lists loaded 20 at a time.
+- System fonts for Japanese, and `<ruby>` for furigana.
+- Tailwind, with unused classes stripped.
+- Caddy's compression and immutable caching.
+- **The budget:** ≤ 100 KB of JavaScript per page; LCP ≤ 2.5 s, INP ≤ 200 ms
+  and CLS ≤ 0.1 on mobile. Enforced by Lighthouse CI (FF12), and watched
+  in real use through `web-vitals` sent to our own endpoint.
+
+**Why:**
+- The learners are on mid-range Android phones and mobile data.
+- Server-rendered pages are fast on first load, and the app is thin by
+  design.
+- A Japanese web font alone can be several megabytes; system fonts cost
+  nothing.
+- A budget checked in CI is the same anti-regression idea as the fitness
+  functions.
+
+**Rejected:**
+- *A Vue or React single-page app:* a large first download and client
+  routing, for a handful of simple pages.
+- *Next.js or Nuxt:* a second runtime (Node) next to the Python app, for
+  no gain here.
+- *A full Japanese web font:* megabytes, for glyphs the phone already has.
+- *A third-party real-user monitoring service:* data leaving our server.
+
 ### Later (Could), recorded so they aren't re-decided
 
 - **The text speaking partner (X3):**
@@ -611,12 +642,12 @@ overstate the work to the audience this portfolio is for.
   needs OAuth on Juku's MCP server; after the window.
 - **The group digest (X1) and WhatsApp delivery (X2):** after the window.
 
-## Open for Arthur
+## Settled with Arthur (2026-10-27: "go with your recommendations", "rush")
 
-| # | Decision | Recommendation |
+| # | Decision | Settled as |
 |---|---|---|
-| 1 | The repo name | `jlpt-learning-agents` |
-| 2 | The alert contact point (ADR-009) | A Telegram bot that messages only you |
-| 3 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits |
-| 4 | The gateway's per-key rate limit and actor check (ADR-012, ADR-018) | Build both in the gateway repo before launch |
-| 5 | Launch timing against the December JLPT | Don't rush. If it's ready after about 20 November, run December as an uncounted soft launch, and start the counted window in early January towards the July 2027 exam |
+| 1 | The repo name | `jlpt-learning-agents`. Arthur renames the folder before anything goes to GitHub |
+| 2 | The alert contact point (ADR-009) | A Telegram bot that messages only Arthur |
+| 3 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits; otherwise cron alerts |
+| 4 | The gateway's per-key rate limit and actor check (ADR-012, ADR-018) | Both built in the gateway repo before launch, as gateway work |
+| 5 | Time budget and launch timing | As fast as possible: about 3–4 weeks of building in parallel tracks, once the gates are cleared. Launch as soon as the launch gate passes, with the counted window starting at launch even if it spans the December exam (Phase 2, Time budget) |

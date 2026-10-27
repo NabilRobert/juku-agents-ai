@@ -136,6 +136,7 @@ what statistics at this sample size can't.
 | FF8 | **Guardrails, delegation and isolation** | Security | Any test in G1, ID2 or M7 fails | Every commit |
 | FF9 | **No content in records or traces** | Privacy | A planted question text shows up in per-call records, spans or the audit log | Every commit |
 | FF10 | **Load** | Scale | The $0 path's p95 at N synthetic learners is worse than the recorded baseline by more than 20% | Before each release, and on demand (Locust, $0) |
+| FF12 | **Frontend budget** (Lighthouse CI, mobile profile) | Speed on learners' phones | Over 100 KB of JavaScript on a page, or LCP > 2.5 s, INP > 200 ms or CLS > 0.1 | Every commit |
 | FF11 | **Agent quality** (harness regression gate) | Quality | The harness reports a regression on the chat, memory or pipeline task sets | On every prompt, tool or model change, scripted parts at $0. The paid run needs Arthur's OK |
 
 The thresholds are recorded in `guardrails.yaml`, next to the other

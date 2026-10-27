@@ -277,6 +277,46 @@ test that fails when the rule is removed (Phase 1, G1).
 - **UI3.** A thumbs up or down on chat answers and reports, with an
   optional reason chosen from a list.
 
+**Frontend performance (lazy loading and a performance budget)**
+
+Learners use mid-range Android phones on mobile data, so the frontend is
+built to a budget and checked in CI (ADR-024).
+- **FE1. Server-rendered HTML first.** Pages arrive ready to read. htmx
+  (about 14 KB) handles the partial updates: quiz answers, ratings,
+  "mark known", loading more history. No single-page framework.
+- **FE2. Load only what a page needs.** Vite builds one small bundle per
+  page, so the chat's streaming code loads only on Chat. Heavy pieces
+  load on demand with dynamic `import()`. Everything below the fold is
+  lazy: images use `loading="lazy"`, and long lists (chat history,
+  "Shiori ingat…", reports) load 20 at a time.
+- **FE3. Japanese fonts without the megabytes.** Japanese text uses the
+  system font stack (Hiragino, Noto Sans CJK, Yu Gothic, Meiryo), so no
+  multi-megabyte web font is downloaded. If a web font is ever needed, it
+  is Noto Sans JP from Google Fonts, which is split into unicode-range
+  slices, with `font-display: swap`.
+- **FE4. Readings as real markup.** Furigana uses `<ruby>`, so it is
+  accessible and needs no script.
+- **FE5. Fast delivery.** zstd and gzip compression, and HTTP/2 and 3, from
+  Caddy. Hashed asset names with a one-year immutable cache. Tailwind
+  CSS, with unused classes stripped at build. Icons in one inline SVG
+  sprite.
+- **FE6. Nothing waits on the model unless it has to.**
+  - Reports are pre-written.
+  - Quizzes come 10 items at a time, with the next batch prefetched.
+  - The $0 pages never call a model.
+  - Chat streams (AG5).
+- **FE7. The budget (CI fails over it):**
+  - ≤ 100 KB of JavaScript per page and ≤ 30 KB of CSS, compressed;
+  - LCP ≤ 2.5 s, INP ≤ 200 ms and CLS ≤ 0.1 on Lighthouse's mobile
+    profile.
+
+  Checked by Lighthouse CI on every commit (fitness function FF12).
+- **FE8. Real-user measurement, privately.** The `web-vitals` library
+  reports LCP, INP and CLS to the app's own endpoint: page type and value
+  only, no learner ID or content. The p75 values go on a Grafana panel.
+- **FE9 (Could): offline quizzes.** A service worker (Workbox) caches the
+  shell and the next quiz batch for patchy connections.
+
 **Japanese input**
 - **JI1.** Input is normalised before lookup: full- and half-width forms,
   romaji to kana, and kana variants (jaconv). Words are tokenized and
@@ -485,7 +525,8 @@ by SM2.
 - **Footprint:** a small shared server, so every container has a memory
   cap. Grafana's idle memory and the MCP server's are measured and
   published.
-- **Latency:** chat p50 ≤ 15 s and p95 ≤ 40 s; the $0 pages under 1 s.
+- **Latency:** chat p50 ≤ 15 s and p95 ≤ 40 s; the $0 pages under 1 s,
+  within the frontend budget (FE7).
   Reports are written ahead of time, so they load at once.
 - **Availability:** best effort, but every outage and missed run is noticed
   (M5) and counted.
@@ -516,7 +557,10 @@ by SM2.
 - **Outreach is Arthur's:** joining the group, posting, sending codes.
   Drafts are prepared for him.
 - **Timing:** the December 2026 JLPT (confirm the date on jlpt.jp) drives
-  study. A launch after mid-November mostly measures the post-exam lull.
+  study. Arthur's call is to rush: launch as soon as the launch gate
+  passes. The counted window starts at launch, even if it spans the exam,
+  and the write-up marks the exam date on every weekly chart, so a
+  post-exam dip is read for what it is.
 
 ## Must / Should / Could
 
@@ -530,6 +574,7 @@ by SM2.
 | **Must** | SAF-R1 and SAF-R2 with the scripted agent; evaluation-driven order (each agent's tasks committed before its code) |
 | **Must** | The data design in the scale path (events, summaries, separate text, `cohort_id`, timezones); fitness functions FF1–FF9 and FF11 in CI |
 | **Must** | AG6 (a learner in distress); JI1 (input normalization); the dictionary update policy; "Unduh data saya"; the processing-abroad wording |
+| **Must** | FE1–FE7: server-rendered pages with htmx, per-page bundles and lazy loading, system Japanese fonts, `<ruby>`, compression and caching, the performance budget in CI |
 | **Must** | AG1–AG3, AG5: the weekly pipeline with critic and code approval, scheduling with a dead-man's switch, run records, the cited chat |
 | **Must** | UI1–UI3; D1–D3; M1, M4–M6; B1–B3 |
 | **Must** | Privacy as above: consent, 18+, stored/not stored, retention, self-serve deletion, public-evidence check |
@@ -541,28 +586,37 @@ by SM2.
 | **Should** | EV3: case study, JOURNEY, portfolio entry |
 | **Should** | The gateway's per-key rate limit and its actor check (ID-R4), built in the gateway repo; Arthur's call |
 | **Should** | ID-R6: the "Siapa yang mengakses datamu" page; SAF-R2 once with the real model |
-| **Should** | JI2 (fuzzy search); streamed answers; FF10 and the load test (Locust, 5,000 synthetic learners, $0); self-hosted error tracking (GlitchTip) |
+| **Should** | FE8 (real-user web vitals); JI2 (fuzzy search); streamed answers; FF10 and the load test (Locust, 5,000 synthetic learners, $0); self-hosted error tracking (GlitchTip) |
 | **Could** | X1: the group digest; X2: WhatsApp delivery; X3: the text speaking partner |
 | **Could** | X4: a Juku quiz as an MCP App, so a learner can use it inside their own assistant. It needs OAuth on Juku's MCP server, and its own consent wording |
+| **Could** | FE9: offline quizzes with a service worker |
 | **Could** | gpt-5-nano as a cheaper fallback near a pool's end, measured as a "what changed" |
 | **Won't** | Voice, open sign-up, full spaced repetition, free-writing grading, copyrighted material, a mobile app |
 
-## Rough effort
+## Time budget: as fast as possible (Arthur, 2026-10-27)
 
-About 7–8 weeks of building, then the 4-week window:
+About **3–4 weeks of building** once the gates are cleared, then the
+4-week window. It's compressed by:
+1. **Running independent tracks in parallel** (separate Claude Code
+   sessions, one set of files each);
+2. **Using existing tools** rather than building our own (scale path);
+3. **Dogfooding with pipeline runs triggered on demand** instead of
+   waiting for two Sundays;
+4. **Building the Should items behind flags during the window**, with each
+   switch-on date recorded.
 
-| Work | Estimate |
+| Week | Work |
 |---|---|
-| Data | 2 days |
-| The learning engine (Must parts) | 3–4 days |
-| Juku's MCP server | 2–3 days |
-| The thin app with consent and deletion | 3–4 days |
-| The agent pipeline and scheduling | 4–5 days |
-| Memory (notes, checks, consolidation, the page) | 2–3 days |
-| Identity and delegation, the guardrail tests, the attack suite | 3 days |
-| The scale-path data design, fitness functions, and the "now" gaps (export, distress, normalization, timezones, dictionary updates) | 3 days |
-| Monitoring and alerts | 2 days |
-| Eval set and pipeline fixtures | 2 days |
-| Deploy and dogfood | 3 days, mostly waiting on server steps |
-| The Should items | another 4–5 days, built if they fit before launch; otherwise during the window, behind a flag, so they don't change the metrics mid-window unannounced |
-| Evidence and write-up | 3 days |
+| 0 (2 days) | Spikes 1–6, in parallel |
+| 1–2 | Four parallel tracks: **A** data and the learning engine; **B** Juku's MCP server, identity, delegation and guardrails; **C** the thin app, consent, privacy and the frontend; **D** monitoring, CI and fitness functions. The eval tasks and fixtures are written first in each track |
+| 2–3 | **E:** the agent pipeline and memory, which need A and B; the chat; the attack suite |
+| 3 | The paid evals (launch gate), the deploy through Arthur, dogfooding with on-demand runs |
+| 4 | Launch, as soon as the launch gate passes |
+
+**What rushing doesn't change:**
+- the gates before building;
+- the guardrail, isolation and delegation tests;
+- the privacy Musts;
+- the launch gate (Q1 and MEM1 ≥ 90%);
+- Arthur's OK on each paid run;
+- the honesty rule.
