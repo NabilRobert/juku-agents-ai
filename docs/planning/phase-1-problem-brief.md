@@ -13,6 +13,9 @@ for learning Japanese:
   and code decides approval.
 - **On demand:** an agentic chat that can see the learner's progress
   answers questions about words, kanji and their mistakes.
+- **Memory:** the agents' long-term memory of each learner is structured
+  and inspectable. The learner can see everything Shiori remembers about
+  them, and correct or delete any of it ("Shiori ingat…").
 
 All knowledge of Japanese comes from open dictionary data in Postgres,
 reached only through MCP tools. It is the seventh portfolio piece and the
@@ -89,9 +92,25 @@ app with AI) is common, so the idea isn't what is being shown. What is:
    - A learner's data is reached only through Shiori's own MCP server,
      whose tools are bound to that learner's session. An agent working for
      one learner cannot read another's data, whatever it asks for.
-4. **A closed loop.** A failure found in real use becomes a harness task,
+4. **Agent memory you can see, check and delete.**
+   - Long-term memory is a central agent topic of 2026, and the common
+     complaint is that it's opaque.
+   - Shiori's memory is Postgres tables, not a hidden vector store:
+     - **what the learner knows**, computed from their activity;
+     - **what happened**, the activity itself;
+     - **short agent notes** on how they learn, such as "often confuses
+       on and kun readings".
+   - Agents read it only through Shiori's MCP server. They can only
+     *propose* a note, and code accepts it only with evidence: the
+     activity rows that support it.
+   - The learner sees every item, with its evidence, and can remove it.
+   - Memory quality is measured, using the categories the memory
+     benchmarks (LongMemEval, LoCoMo) use: noticing when a fact changed,
+     reasoning about time, and saying "I don't know" when memory has
+     nothing.
+5. **A closed loop.** A failure found in real use becomes a harness task,
    then a fix, then a measured before/after.
-5. **Deterministic learning engine.** These are code, so they're testable
+6. **Deterministic learning engine.** These are code, so they're testable
    to the exact row and cost no model call:
    - **progress:** coverage of each level's words and kanji;
    - **quizzes:** generated and graded in code;
@@ -146,6 +165,16 @@ Arthur's own use is excluded from A1–A4 and L1–L2.
 | E1 | Offline: exact output for committed fixture learners (recommender top 10, quiz grading, i+1 sentences, pace), checked by tests | 100%. A change to any rule updates its fixtures in the same commit |
 | E2 | Uptake: share of recommended words marked known or saved within 7 days | Reported as is |
 | E3 | Share of activity served with no model call (quizzes, reading, recommendations, plan) | Reported, with cost and latency against the chat path |
+
+**Memory**
+
+| # | Metric | Target |
+|---|---|---|
+| MEM1 | Offline: about 15 memory tasks in the benchmark categories (a fact that changed, such as a word marked known and then missed twice; time, such as "what did I miss last week?"; and abstention when memory has nothing), with gold answers from fixture learners | ≥ 90% |
+| MEM2 | Notes proposed by agents that code rejects for missing or wrong evidence | Reported; every rejection categorised |
+| MEM3 | Notes that learners remove or mark wrong: a proxy for memory precision | ≤ 20%, reported per week |
+| MEM4 | Reports that state something contradicted by newer activity (stale memory) | **0**: high severity for the critic and in code |
+| MEM5 | Reports whose plan uses the learner's memory (cites a mistake, a note or a recent activity row) | Reported |
 
 **Learning (reported, never claimed as caused by Shiori)**
 
@@ -228,9 +257,12 @@ recruiting. It doesn't stretch the window or count Arthur.
    3. the exam planner and mistakes queue;
    4. the group digest and WhatsApp;
    5. a text speaking partner (worth it if there's room).
-7. **Budget:** $5 in total, a per-key cap of about $4.50, not topped up
+7. **Trend angle:** inspectable agent memory (checked against 2026
+   sources, 2026-10-27). Running a Shiori quiz as an MCP App inside a
+   learner's own assistant is a later Could.
+8. **Budget:** $5 in total, a per-key cap of about $4.50, not topped up
    until building starts.
-8. **Start:** only after the open server-security follow-ups are cleared
+9. **Start:** only after the open server-security follow-ups are cleared
    and the gateway is pushed.
 
 ## Open questions
