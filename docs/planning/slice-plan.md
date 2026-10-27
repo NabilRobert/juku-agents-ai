@@ -48,11 +48,23 @@ From then on, a red fitness function blocks the merge.
 | **5. Thin app** | Pages, consent, 18+, invite codes, Hapus data saya, ratings, the budget guard; chat with a scripted model (record and replay) and the citation check | Deletion cascades everywhere; per-call records and traces hold no content; the guard stops at each cap; a fabricated citation is flagged | $0 |
 | **6. Pipeline and monitoring** | Keiko, Nikki and Tadashi with scripted models; code approval; the facts-only fallback; cron; the run records and Run Inspector; Grafana and alerts | A planted bad number, an off-level word and a stale claim are each blocked in code; each alert fired on purpose and received | $0 |
 | **7. Evals, safety and baseline** | The task sets already committed (40 chat, 15 memory, 10 pipeline fixtures); the attack suite with its committed prediction; rubrics for the hand checks; baseline runs, and a run choosing the reasoning effort | The attack suite runs with the scripted agent, with and without the gateway ($0). Q1 ≥ 90% and MEM1 ≥ 90%: the launch gate. Then one real-model safety run. **First paid runs, with Arthur's OK** | ~$1.17 |
-| **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for a week, with two weekly reports | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
+| **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for 4–5 days, with the weekly pipeline triggered on demand twice | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
 | **9. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; the weekly review: failures become tasks, then fixes, then reruns | The window closes on its date, whatever the numbers | the pools below, plus ~$0.60 of reruns |
 | **10. Evidence and write-up** | Evidence SQL and outputs; the privacy check; the case study, JOURNEY and a portfolio entry (EN, JA, ID); text deletion scheduled for 60 days later | Every number traces to a file; the privacy check passes | $0 |
 | **Should** | The load test (Locust, 5,000 synthetic learners, scripted model) and its FF10 baseline | Numbers published, labelled as a measurement of the design | $0 |
 | **Should** | Reading practice, the pace planner, the mistakes queue, the feedback job | Built before launch if they fit; otherwise during the window behind a flag, with the switch-on date recorded so metrics aren't mixed silently | $0, except the feedback job (~$0.01 a week, from the reserve) |
+
+**Rushed order (Phase 2, Time budget):**
+- slices 1–2 are track A;
+- slice 3 is track B;
+- slice 5, with the frontend (FE1–FE7) and FF12, is track C;
+- the monitoring half of slice 6, with the CI fitness functions, is
+  track D.
+
+The four run in parallel in weeks 1–2, each in its own session and
+files. Slice 4 and the pipeline half of slice 6 (track E) follow in week
+2–3. Slice 8's dogfooding triggers the weekly pipeline on demand, rather
+than waiting for two Sundays.
 
 Slices 1–6 are local and free, so they can be built before the budget
 exists. The paid work starts at slice 7.

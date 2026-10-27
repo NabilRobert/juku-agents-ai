@@ -254,6 +254,7 @@ and the traces.
 | SAF1 | The attack suite, about 15 tasks: attacks with effect, with the gateway and without, scripted "gullible" agent | Predicted and committed before the run, as in the gateway project; reported against the prediction |
 | SAF2 | The same suite, run once with the real model | Reported as is |
 | FF | Fitness functions (scale path, FF1–FF9 and FF11) passing on every commit to `main` | 100%. A raised threshold is a visible, reviewed change |
+| FE | Frontend budget (≤ 100 KB of JavaScript per page; LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1 on mobile), in CI; plus real-user p75 (Should) | Met on every commit to `main`; the real-user p75 published |
 | LT | The load test: the $0 path at 5,000 synthetic learners (Should) | p95 published, labelled as a measurement of the design, not of real use |
 
 **Honesty rule, committed in advance:** if adoption lands below the
@@ -315,16 +316,22 @@ recruiting. It doesn't stretch the window or count Arthur.
    an MCP App is a later Could.
 8. **Budget:** $5 in total, a per-key cap of about $4.50, not topped up
    until building starts.
-9. **Start:** only after the open server-security follow-ups are cleared
+9. **Settled from the open list:**
+   - the repo is `jlpt-learning-agents`;
+   - Telegram alerts to Arthur;
+   - Grafana if it fits;
+   - the gateway's rate limit and actor check;
+   - **time budget: as fast as possible**, launching as soon as the
+     launch gate passes (Phase 5, settled table).
+10. **Start:** only after the open server-security follow-ups are cleared
    and the gateway is pushed.
 
 ## Open questions
 
 - **The study group:** which group(s) Arthur joins and recruits from.
-- **Launch timing against the exam:** the December 2026 JLPT (first Sunday
-  of December; confirm the date on jlpt.jp) drives study beforehand. A
-  launch after mid-November mostly measures the post-exam lull (Phase 5,
-  open decisions).
+- **The exam date:** the December 2026 JLPT (first Sunday of December;
+  confirm it on jlpt.jp). Launch timing is settled ("rush"). The window may
+  span the exam, and the charts mark it.
 
 ## Cost of doing nothing
 
