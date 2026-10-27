@@ -61,3 +61,4 @@ prerequisites in the [slice plan](docs/planning/slice-plan.md) are met.
 - [Phase 5: architecture decisions](docs/planning/phase-5-architecture-decisions.md)
 - [Slice plan and cost model](docs/planning/slice-plan.md)
 - [Scale path: built for ten, designed for thousands](docs/planning/scale-path.md)
+- [Standard checks: verify at every step](docs/planning/standard-checks.md)

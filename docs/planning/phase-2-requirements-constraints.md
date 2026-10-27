@@ -613,6 +613,10 @@ About **3–4 weeks of building** once the gates are cleared, then the
 | 3 | The paid evals (launch gate), the deploy through Arthur, dogfooding with on-demand runs |
 | 4 | Launch, as soon as the launch gate passes |
 
+**Checks are standard procedure** ([standard-checks.md](standard-checks.md)).
+Every step ends with its checks, and a failed check stops the step. That
+is how a rushed build stays safe.
+
 **What rushing doesn't change:**
 - the gates before building;
 - the guardrail, isolation and delegation tests;

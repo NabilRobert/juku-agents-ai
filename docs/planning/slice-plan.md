@@ -31,6 +31,15 @@ tasks and fixtures are committed first and fail against a stub. Then the
 code is written until they pass. Each guardrail's test comes before the
 guardrail. Git history is the evidence (Phase 1, EDD1).
 
+**Standard checks:** every step follows
+[standard-checks.md](standard-checks.md):
+- `make check` on every commit;
+- the end-of-slice list;
+- the specific checks wherever something can go wrong;
+- the lists before paid runs, server steps and publishing.
+
+A failed check stops the step.
+
 **Fitness functions (ADR-023)** join CI as their slice lands:
 - FF1–FF3 and FF6 with the learning engine and the pipeline;
 - FF4 and FF5 from slice 1;
