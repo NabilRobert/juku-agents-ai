@@ -3,12 +3,16 @@
 **Project:** Juku (塾, a Japanese cram school, where staff coach students
 towards an exam), an agentic learning platform for Indonesian adults
 studying for the JLPT (Japanese-Language Proficiency Test), levels N5 to
-N2. Its staff is a small crew of agents:
-- **Shiori** (栞, a bookmark): the lead, whom learners talk to, and the
-  keeper of their memory;
-- **Hana:** plans each week;
-- **Kenta:** writes the reports;
-- **Rin:** the critic.
+N2. Its staff is a small crew of agents, each named with a pun on its
+job (as Pitstop's were):
+
+| Name | Pun | Job |
+|---|---|---|
+| **Shiori** | 栞, a bookmark: it keeps your place | The lead: the one learners talk to, and the keeper of their memory |
+| **Keiko** | 稽古 *keiko*, practice; and an echo of 計画 *keikaku*, a plan | Plans each week |
+| **Nikki** | 日記 *nikki*, a diary (N4 vocabulary) | Writes the weekly report: your study diary |
+| **Tadashi** | 正しい *tadashii*, correct (N4 vocabulary) | The critic: makes sure it's *tadashii* |
+| **Susumu** (code, not an agent) | おすすめ *osusume*, a recommendation; 進む *susumu*, to advance | The word recommender: it recommends, so you move on |
 
 It follows the pattern of
 [Pitstop](https://github.com/NabilRobert/pitstop-crew-public), this time

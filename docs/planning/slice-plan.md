@@ -33,7 +33,7 @@ to start sooner.
 | **3. Juku's MCP server** | The scoped, read-only tools, including `get_memory`; signed session tokens; spans | The cross-learner test suite passes (M7), and is mutation-checked: removing the scope check makes a test fail | $0 |
 | **4. Memory** | The notes table, evidence checks, allowed categories, consolidation, and the "Shiori ingat…" page | Fixtures: a note without evidence, with someone else's evidence, or in a forbidden category is refused; a stale note lapses | $0 |
 | **5. Thin app** | Pages, consent, 18+, invite codes, Hapus data saya, ratings, the budget guard; chat with a scripted model (record and replay) and the citation check | Deletion cascades everywhere; per-call records and traces hold no content; the guard stops at each cap; a fabricated citation is flagged | $0 |
-| **6. Pipeline and monitoring** | Hana, Kenta and Rin with scripted models; code approval; the facts-only fallback; cron; the run records and Run Inspector; Grafana and alerts | A planted bad number, an off-level word and a stale claim are each blocked in code; each alert fired on purpose and received | $0 |
+| **6. Pipeline and monitoring** | Keiko, Nikki and Tadashi with scripted models; code approval; the facts-only fallback; cron; the run records and Run Inspector; Grafana and alerts | A planted bad number, an off-level word and a stale claim are each blocked in code; each alert fired on purpose and received | $0 |
 | **7. Evals and baseline** | About 40 chat tasks and 15 memory tasks in agent-eval-harness; pipeline fixtures for 10 learners; rubrics for the hand checks; a baseline run, and a run choosing the reasoning effort | Q1 ≥ 90% and MEM1 ≥ 90%: the launch gate. **First paid runs, with Arthur's OK** | ~$1.05 |
 | **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for a week, with two weekly reports | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
 | **9. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; the weekly review: failures become tasks, then fixes, then reruns | The window closes on its date, whatever the numbers | the pools below, plus ~$0.60 of reruns |
@@ -74,10 +74,10 @@ basis.
 
 | Step | Input | Output | Cost |
 |---|---|---|---|
-| Hana: three calls, reading the facts and memory through Juku's MCP server | ~13,500 | ~1,000 | $0.0054 |
-| Rin reviews the plan | ~4,000 | ~400 | $0.0018 |
-| Kenta writes the report | ~5,000 | ~1,200 | $0.0037 |
-| Rin reviews the report | ~4,000 | ~400 | $0.0018 |
+| Keiko: three calls, reading the facts and memory through Juku's MCP server | ~13,500 | ~1,000 | $0.0054 |
+| Tadashi reviews the plan | ~4,000 | ~400 | $0.0018 |
+| Nikki writes the report | ~5,000 | ~1,200 | $0.0037 |
+| Tadashi reviews the report | ~4,000 | ~400 | $0.0018 |
 | Revisions (about 30% of outputs, one each) | | | ~$0.0012 |
 | **Total** | | | **~$0.014** |
 

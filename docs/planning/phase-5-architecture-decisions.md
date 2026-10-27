@@ -10,7 +10,7 @@ browser ─► Juku app ─┤                                                  
    ▲          │        └─► Juku MCP server (learner-scoped, read-only) ─► app DB (progress, memory) + dict DB │
    │          │                                                                                                 │
    │          ├─ chat agent "Shiori" ── tool loop ──► Sumopod (gpt-5-mini)
-   │          └─ weekly pipeline (cron): facts (SQL) ─► Hana (plan) ─► Rin ─► Kenta (report) ─► Rin ─► code approves
+   │          └─ weekly pipeline (cron): facts (SQL) ─► Keiko (plan) ─► Tadashi ─► Nikki (report) ─► Tadashi ─► code approves
    │
    └── Arthur only: Grafana (tool and pipeline health, alerts), Run Inspector; traces to Project 6's Jaeger
 ```
@@ -144,13 +144,13 @@ the consent, memory and deletion screens.
 | Agent | Input | Tools |
 |---|---|---|
 | Shiori (chat) | The learner's question | MCP-backbone read tools; Juku's server (this learner) |
-| Hana (planner) | The week's facts and the engine's candidates | Juku's server (this learner, this run) |
-| Kenta (writer) | The facts and Hana's approved plan | none |
-| Rin (critic) | An output and exactly what its author was given | none |
+| Keiko (planner) | The week's facts and the engine's candidates | Juku's server (this learner, this run) |
+| Nikki (writer) | The facts and Keiko's approved plan | none |
+| Tadashi (critic) | An output and exactly what its author was given | none |
 
-- The weekly pipeline runs per active learner: facts → Hana → Rin →
-  Kenta → Rin.
-- Rin lists each issue with a severity. An output passes only if there's
+- The weekly pipeline runs per active learner: facts → Keiko → Tadashi →
+  Nikki → Tadashi.
+- Tadashi lists each issue with a severity. An output passes only if there's
   no high-severity issue (Phase 2, AG1).
 - **Code runs the high-severity checks itself too:**
   - every number is in the facts;
@@ -162,7 +162,8 @@ the consent, memory and deletion screens.
   So the critic can miss something without a bad report going out.
 - After 2 revisions, a facts-only template report is published instead,
   and counted.
-- The names are proposals; Arthur may rename them.
+- The names are puns on each job, chosen with Arthur (Phase 1). The
+  deterministic recommender is called Susumu.
 
 **Why:** this is Pitstop's critic, with one lesson applied: "code decides
 approval" now also covers the checks a model can miss.
@@ -424,7 +425,6 @@ Arthur isn't counted.
 | # | Decision | Recommendation |
 |---|---|---|
 | 1 | The repo name | `jlpt-learning-agents` |
-| 2 | The agents' names (Hana, Kenta, Rin) | Keep them; they're easy for Indonesian and Japanese readers alike |
 | 3 | The alert contact point (ADR-009) | A Telegram bot that messages only you |
 | 4 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits |
 | 5 | The gateway's per-key rate limit (ADR-012) | Build it in the gateway repo before launch |

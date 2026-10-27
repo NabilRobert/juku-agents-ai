@@ -123,15 +123,15 @@ build goes in slices ([slice plan](slice-plan.md)).
 
 **Agents**
 
-| Agent (names proposed) | Role | Tools through the gateway |
+| Agent | Role | Tools through the gateway |
 |---|---|---|
 | **Shiori** (chat) | Answers on demand, in Indonesian, with citations | MCP-backbone read tools (dictionary); Juku's server, scoped to this learner |
-| **Hana** (planner) | Picks next week's focus (words, kanji and mistakes to review) **only from candidates the engine computed**, says why, and may propose notes (MEM-R2) | Juku's server, scoped to this learner and run |
-| **Kenta** (writer) | Writes the weekly report (≤ 300 words, Indonesian) from the facts and Hana's plan | none: works only from what it is given |
-| **Rin** (critic) | Reviews Hana's and Kenta's outputs against the facts they were given, listing issues with a severity | none |
+| **Keiko** (planner) | Picks next week's focus (words, kanji and mistakes to review) **only from candidates the engine computed**, says why, and may propose notes (MEM-R2) | Juku's server, scoped to this learner and run |
+| **Nikki** (writer) | Writes the weekly report (≤ 300 words, Indonesian) from the facts and Keiko's plan | none: works only from what it is given |
+| **Tadashi** (critic) | Reviews Keiko's and Nikki's outputs against the facts they were given, listing issues with a severity | none |
 
-- **AG1. The pipeline** runs per learner: facts → Hana → Rin → Kenta → Rin.
-  - An output passes only if Rin reports no high-severity issue. High
+- **AG1. The pipeline** runs per learner: facts → Keiko → Tadashi → Nikki → Tadashi.
+  - An output passes only if Tadashi reports no high-severity issue. High
     severity means any of:
     - a number not in the facts;
     - a word that isn't among the candidates, or not at the stated level;
@@ -152,7 +152,7 @@ build goes in slices ([slice plan](slice-plan.md)).
   `critic_reviews`, plus a Run Inspector page for Arthur only. It shows
   each run's facts, every model call, each review and the decision.
 - **AG4. Feedback job (Should).** Weekly, it reads recurring patterns in
-  Rin's issues and drafts prompt changes for Arthur. **Nothing is ever
+  Tadashi's issues and drafts prompt changes for Arthur. **Nothing is ever
   applied automatically.**
 - **AG5. Chat:**
   - Answers state facts only from tool results, with citations in a fixed
