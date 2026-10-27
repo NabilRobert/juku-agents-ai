@@ -22,19 +22,24 @@ to start sooner.
 | 3 | Does Grafana fit? | Grafana OSS with a provisioned Postgres data source and one dashboard; read its idle memory | Idle well under 256 MB. Otherwise, fall back to cron alerts (ADR-009) | 1 h |
 | 4 | How cleanly do the JLPT lists and Tatoeba's index map to JMdict? | Match by spelling and reading; count ambiguous and unmatched entries, and the share of sentences that are fully indexed | Counted and reported; rules for the ambiguous ones written down | 1.5 h |
 | 5 | Does Sumopod report cached input tokens? | Read the usage fields in existing harness logs (no new calls) | Answered either way; the cost model is updated | 15 min |
-| 6 | Does session-bound identity hold through the gateway? | Prototype Juku's MCP server with a signed per-learner token; call it through a local gateway as learner A, and try for B's rows every way possible | Every attempt at B fails and is logged | 2 h |
+| 6 | Does the delegation chain hold through the gateway? | First, read the MCP authorization spec current at build time (Arthur notes a July 2026 revision). Prototype Juku's MCP server with a signed token in `_meta`, through a local gateway. Try: another learner's rows; a widened scope; an expired, replayed or wrong-audience token; a chain 3 hops deep; Keiko's key carrying Shiori's chain | The gateway passes `_meta` through unchanged; every attempt fails and is logged | 3 h |
 
 ## Slices
+
+**Evaluation-driven order (ADR-015):** in every slice, the tests, eval
+tasks and fixtures are committed first and fail against a stub. Then the
+code is written until they pass. Each guardrail's test comes before the
+guardrail. Git history is the evidence (Phase 1, EDD1).
 
 | Slice | Delivers | Done when | Model cost |
 |---|---|---|---|
 | **1. Data** | Load scripts with pinned versions and checksums; the "about the data" page with licences; views and schema comments; row counts committed | One command rebuilds the dictionary database; licences checked | $0 |
 | **2. Learning engine** | Known words, coverage, quizzes (generation and grading) and the recommender, with fixture learners and tests (mutation-checked) | Exact outputs match the fixtures | $0 |
-| **3. Juku's MCP server** | The scoped, read-only tools, including `get_memory`; signed session tokens; spans | The cross-learner test suite passes (M7), and is mutation-checked: removing the scope check makes a test fail | $0 |
+| **3. Juku's MCP server, identity and guardrails** | The scoped tools, including `get_memory` and `request_replan`; per-agent identities; delegation tokens and their checks; `guardrails.yaml` and its tests; spans | The cross-learner suite (M7) and the delegation suite (ID2) pass, and are mutation-checked: removing any check makes a test fail. Every guardrail has its test (G1) | $0 |
 | **4. Memory** | The notes table, evidence checks, allowed categories, consolidation, and the "Shiori ingat…" page | Fixtures: a note without evidence, with someone else's evidence, or in a forbidden category is refused; a stale note lapses | $0 |
 | **5. Thin app** | Pages, consent, 18+, invite codes, Hapus data saya, ratings, the budget guard; chat with a scripted model (record and replay) and the citation check | Deletion cascades everywhere; per-call records and traces hold no content; the guard stops at each cap; a fabricated citation is flagged | $0 |
 | **6. Pipeline and monitoring** | Keiko, Nikki and Tadashi with scripted models; code approval; the facts-only fallback; cron; the run records and Run Inspector; Grafana and alerts | A planted bad number, an off-level word and a stale claim are each blocked in code; each alert fired on purpose and received | $0 |
-| **7. Evals and baseline** | About 40 chat tasks and 15 memory tasks in agent-eval-harness; pipeline fixtures for 10 learners; rubrics for the hand checks; a baseline run, and a run choosing the reasoning effort | Q1 ≥ 90% and MEM1 ≥ 90%: the launch gate. **First paid runs, with Arthur's OK** | ~$1.05 |
+| **7. Evals, safety and baseline** | The task sets already committed (40 chat, 15 memory, 10 pipeline fixtures); the attack suite with its committed prediction; rubrics for the hand checks; baseline runs, and a run choosing the reasoning effort | The attack suite runs with the scripted agent, with and without the gateway ($0). Q1 ≥ 90% and MEM1 ≥ 90%: the launch gate. Then one real-model safety run. **First paid runs, with Arthur's OK** | ~$1.17 |
 | **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for a week, with two weekly reports | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
 | **9. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; the weekly review: failures become tasks, then fixes, then reruns | The window closes on its date, whatever the numbers | the pools below, plus ~$0.60 of reruns |
 | **10. Evidence and write-up** | Evidence SQL and outputs; the privacy check; the case study, JOURNEY and a portfolio entry (EN, JA, ID); text deletion scheduled for 60 days later | Every number traces to a file; the privacy check passes | $0 |
@@ -93,9 +98,10 @@ The planning figure is **$0.015 a report**.
 | Reasoning-effort choice | 40 tasks × 1 × $0.005 | $0.20 |
 | Pipeline fixtures | 10 learners × 2 runs × $0.015 | $0.30 |
 | Memory tasks | 15 × 2 × $0.005 | $0.15 |
+| Safety eval, real model, once | ~15 attack tasks × ~1.6 calls × $0.005 | $0.12 |
 | Smoke tests and dogfood | ~50 questions and 2 reports, with retries | $0.40 |
 | Weekly reruns during the window | 3 × 40 tasks × $0.005 | $0.60 |
-| Reserve (price change, retries, a low estimate, the feedback job) | | $0.35 |
+| Reserve (price change, retries, a low estimate, the feedback job) | | $0.23 |
 | **Fixed total** | | **$2.40** |
 | **Reports pool** (reserved) | 60 reports × $0.015 | **$0.90** |
 | **Chat pool** (the B1 hard stop) | $4.50 − $2.40 − $0.90 | **$1.20** ≈ 240 questions |

@@ -30,6 +30,16 @@ remembers about them, with its evidence, and can remove it.
 All knowledge of Japanese comes from open dictionaries (JMdict, KANJIDIC2,
 Tatoeba), reached only through MCP tools.
 
+It puts the 2026 agent topics to work where they fit:
+- every agent has its own identity, and delegation chains (learner →
+  agent → agent → tool) can only narrow;
+- guardrails are code, each with a test;
+- evals are written before the agents;
+- a safety eval targets Juku's own attack surfaces;
+- a written map shows where humans decide.
+
+It claims memory, not continual learning.
+
 It is the seventh piece of a portfolio, and the first with real users. The
 subject is the agents and MCP tools under real use; the app is kept thin.
 It runs on the same stack as the others:
