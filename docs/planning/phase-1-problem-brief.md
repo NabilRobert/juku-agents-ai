@@ -75,6 +75,20 @@ shown. What is:
 3. **A closed loop.** A failure found in real use becomes a harness task,
    then a fix, then a measured before/after. The "what changed" is shown
    with data, the way Pitstop showed its failures.
+4. **A word recommender you can check.** "What should I learn next?" is
+   answered by a deterministic, explainable ranking, not by the model's
+   taste (Phase 5, ADR-009):
+   - **i+1:** words at the learner's level that use at most one kanji
+     they don't know yet;
+   - **ranking:** how common the word is, and how many other words at that
+     level its new kanji unlocks (its leverage);
+   - **a stated reason** with each suggestion, such as "1 new kanji, 日,
+     which appears in 34 other N5 words".
+
+   It lives as precomputed, read-only tables in the dictionary database,
+   so it is served through the same audited MCP tools, its exact output
+   is testable, and a "Rekomendasi" button can fetch it with no model
+   call.
 
 ## Success metrics
 
@@ -100,6 +114,14 @@ after launch. Arthur's own use is excluded from A1–A4.
 | Q3 | Meaning: share of a weekly random sample of 20 answers that Arthur judges correct and well explained in Indonesian (rubric committed before launch) | ≥ 85% |
 | Q4 | User rating: thumbs-up share of rated answers, plus the rating rate | ≥ 75% up |
 | Q5 | Latency, end to end | p50 ≤ 15 s, p95 ≤ 40 s (the harness measured a 13 s median on Pagila with the same model) |
+
+**Recommendations**
+
+| # | Metric | Target |
+|---|---|---|
+| R1 | Offline: exact top-10 output for a committed set of fixture learners (a level plus known words), checked by tests and a harness task | 100% match; any change to the ranking updates the fixtures in the same commit |
+| R2 | Uptake: share of recommended words a user marks "known" or saves within 7 days | Reported as is (small numbers; no target) |
+| R3 | Button path vs chat path: share of recommendations served without a model call, and their cost and latency against the chat path | Reported |
 
 **Tool health (monitoring)**
 
@@ -137,8 +159,9 @@ recruiting, rather than stretching the window or counting Arthur.
 
 ## Non-goals (current pass)
 
-- **No course and no tutor.** It doesn't teach grammar lessons, grade
-  writing or do spaced repetition.
+- **No course and no tutor.** It doesn't teach grammar lessons or grade
+  writing. The recommender suggests what to learn next; it doesn't
+  schedule reviews (no spaced repetition).
 - **No copyrighted study material.** No official JLPT past papers and no
   textbook content. Only openly licensed data.
 - **No claims about JLPT results.** "Users passed the exam" can't be
