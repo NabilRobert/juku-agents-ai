@@ -135,6 +135,20 @@ app with AI) is common, so the idea isn't what is being shown. What is:
 
    The agents add judgement and explanation on top, not facts.
 
+### How it lines up with the 2026 agent trends
+
+Each trend is used only where it does real work in Juku, and each comes
+with a number.
+
+| Trend | What Juku does | Shown by |
+|---|---|---|
+| **Agent identity and delegated authorization.** There is no standard yet for "who is this agent, and what may it do for whom", and multi-hop delegation is the open problem | Every agent has its own identity (its own gateway key). Every call carries a signed delegation chain: learner → agent → (agent →) tool. Each hop can only narrow what the one before allowed, never widen it. A learner can see which agent read what, and when. One real multi-hop path exists: in chat, Shiori asks Keiko for a new plan | ID1–ID3 |
+| **Governance enforced in code, not policy documents** | Every guardrail (spend, tools, data scope, memory categories, delegation depth) is in a committed rule file and enforced in code, each with a test that fails when the rule is removed | G1 |
+| **Evals and observability as standard infrastructure; evaluation-driven development** | Each agent's eval tasks and fixtures are committed before its code, and git history shows it. Traces, per-tool metrics and alerts come from day one | EDD1, M1–M7 |
+| **Agent safety** | A small attack suite on Juku's real surfaces: injection inside public Tatoeba sentences; attempts to reach another learner; attempts to plant false memory; attempts to widen a delegation. Measured with and without the gateway | SAF1–SAF2 |
+| **Coordinated agent teams, and where humans stay in the loop** | A fixed crew orchestrated by code, not by a manager agent. A written map of where a human decides (Phase 2): the learner confirms memory and known words; Arthur approves any prompt change | P1–P4, MEM3 |
+| **Memory and continual learning** | **Memory, yes; continual learning, no.** Juku remembers facts about each learner, with evidence. Its models don't change, and "learning from feedback" means Arthur reviewing drafted prompt changes. Continual learning is still research, so the portfolio doesn't bet on it | MEM1–MEM5 |
+
 ## Success metrics
 
 All are computed by committed SQL over the records and Project 6's traces.
@@ -228,6 +242,18 @@ and the traces.
 | S1 | Writes reaching the dictionary database | 0 (MCP-backbone's audit log) |
 | S2 | Personal data in public evidence | 0 (checked by a script before anything is published) |
 
+**Identity, governance and safety**
+
+| # | Metric | Target |
+|---|---|---|
+| ID1 | Tool calls carrying a valid delegation chain (signed, unexpired, audience-bound, actor matching the calling agent's key) | 100%. Any other call is refused and alerts |
+| ID2 | Delegations that widen scope, outlive their parent, go deeper than 2 hops, or are replayed | 0 accepted, in a committed test suite (mutation-checked) and in the live logs |
+| ID3 | Learners who opened "Siapa yang mengakses datamu" (who accessed my data) | Reported |
+| G1 | Guardrails in the rule file that have a test which fails when the guardrail is removed | 100% |
+| EDD1 | Agents whose eval tasks and fixtures were committed before their code (from git history) | 4 of 4 |
+| SAF1 | The attack suite, about 15 tasks: attacks with effect, with the gateway and without, scripted "gullible" agent | Predicted and committed before the run, as in the gateway project; reported against the prediction |
+| SAF2 | The same suite, run once with the real model | Reported as is |
+
 **Honesty rule, committed in advance:** if adoption lands below the
 floors, the write-up reports the real numbers and what was learnt about
 recruiting. It doesn't stretch the window or count Arthur.
@@ -274,9 +300,15 @@ recruiting. It doesn't stretch the window or count Arthur.
    3. the exam planner and mistakes queue;
    4. the group digest and WhatsApp;
    5. a text speaking partner (worth it if there's room).
-7. **Trend angle:** inspectable agent memory (checked against 2026
-   sources, 2026-10-27). Running a Juku quiz as an MCP App inside a
-   learner's own assistant is a later Could.
+7. **Trend angles:**
+   - inspectable agent memory (checked against 2026 sources, 2026-10-27);
+   - then, from Arthur's list the same day: agent identity and delegated
+     authorization, enforced governance, evaluation-driven development,
+     agent safety, and coordinated teams with humans in the loop. Each is
+     used where it does real work (table above).
+
+   Continual learning is deliberately not claimed. Running a Juku quiz as
+   an MCP App is a later Could.
 8. **Budget:** $5 in total, a per-key cap of about $4.50, not topped up
    until building starts.
 9. **Start:** only after the open server-security follow-ups are cleared

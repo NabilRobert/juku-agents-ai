@@ -79,11 +79,104 @@ build goes in slices ([slice plan](slice-plan.md)).
     (Phase 1, M7).
 - **SM3.** Its database login can read the progress tables and the
   dictionary, nothing else, and write nothing.
-- **SM4.** **Agents have no write tools at all.** When the chat suggests
-  marking a word known, it shows a button; the learner's click writes,
-  through the app. That is approval decided in code, as in Pitstop.
+- **SM4.** **No agent tool writes learner data.**
+  - When the chat suggests marking a word known, it shows a button; the
+    learner's click writes, through the app. That is approval decided in
+    code, as in Pitstop.
+  - There is one action tool, `request_replan`. It lets Shiori ask Keiko
+    for a new plan from chat. It only queues a Keiko run (at most 1 a day
+    per learner), whose result passes Tadashi and code like any plan. The
+    learner then accepts or ignores it.
 - **SM5.** It sits behind the gateway like MCP-backbone, with its own audit
   log, and spans that follow Project 6's conventions.
+
+**Agent identity and delegated authorization**
+
+There's no settled standard yet for "who is this agent, and what may it
+do for whom", and multi-hop delegation is the open part. Juku implements
+a small, testable version of it, and reads the MCP authorization spec
+current at build time before fixing the details. Arthur notes that a July
+2026 revision tightened authorization; spike 6 reads it.
+
+- **ID-R1. Each agent is its own identity.** Shiori, Keiko, Nikki and
+  Tadashi each have their own gateway key and allow-list. No key is
+  shared, and the app's own key can't call tools.
+- **ID-R2. Every call carries a delegation chain.**
+  - It is a short-lived token, signed by the app, with these claims:
+    - the learner, as a pseudonymous ID (the subject);
+    - the chain of actors, nested as in OAuth 2.0 Token Exchange's `act`
+      claim (RFC 8693);
+    - the purpose (chat, or a weekly run, with its run ID);
+    - the allowed tools;
+    - the audience (the Juku MCP server);
+    - the expiry.
+  - It travels in the MCP request's `_meta`, which the gateway passes
+    through unchanged (spike 6 checks this).
+  - It is never the gateway's own credential: no token passthrough.
+- **ID-R3. Delegation only narrows.** In the one multi-hop path, learner →
+  Shiori → Keiko → Juku MCP server, the token Keiko gets has:
+  - a subset of Shiori's tools;
+  - an expiry no later than Shiori's;
+  - the same learner;
+  - a chain one hop longer.
+
+  More than 2 agent hops is refused.
+- **ID-R4. Verified at both ends.** The Juku MCP server checks the
+  signature, audience, expiry, scope and chain. The gateway checks
+  (Should) that the last actor in the chain is the agent whose key made
+  the call.
+- **ID-R5. Every hop is logged**, with the chain, in the audit log and
+  the per-call records (Phase 1, ID1–ID2).
+- **ID-R6. The learner can see who accessed their data.** A "Siapa yang
+  mengakses datamu" page lists which agent read which kind of data, and
+  when: tool names and times, never content.
+
+**Guardrails (enforced in code, as usual)**
+
+Every guardrail lives in a committed rule file (or the gateway's policy
+file) and is enforced in code, not described in a document. Each has a
+test that fails when the rule is removed (Phase 1, G1).
+
+| Guardrail | Enforced in | Test |
+|---|---|---|
+| Spend: reports pool, chat pool, per-learner and global daily caps, hard stop | The app's budget guard (B1), checked before every model call | Each cap is reached in a test, and the call is refused |
+| Spend backstop | The Sumopod key cap | Checked once at key creation, and recorded |
+| Tools per agent | The gateway's policy (deny by default) | Each agent calling a tool outside its list is refused |
+| Data scope: one learner per session | The Juku MCP server (SM2, ID-R2) | The cross-learner suite (M7) |
+| Delegation: narrowing only, depth ≤ 2, expiry, audience | The Juku MCP server, and the gateway's actor check | The delegation suite (ID2) |
+| No writes by agents, except `request_replan` | The tool list, and the server's read-only login | A write attempt is refused at the tool and at the database |
+| Dictionary is read-only | MCP-backbone's validator, and a read-only transaction and login | MCP-backbone's red-team suite, plus a Juku-specific check |
+| Injection in tool outputs | The gateway's detector (fails closed) | The attack suite (SAF1) |
+| Report claims: numbers, words, levels, citations, staleness | Code checks after Tadashi (AG1) | Planted bad reports are blocked |
+| Memory: evidence required, learning-only categories | Code (MEM-R2, MEM-R3) | Notes without evidence, or in a forbidden category, are refused |
+| Privacy of public evidence | The privacy check (EV2) | A planted nickname or small cell fails the check |
+| 18+ and consent before first use | The app | No activity is possible without a consent record |
+
+**Humans in the loop**
+
+| Decision | Who decides | Never automatic |
+|---|---|---|
+| Whether a word is "known" | The learner (a click), or two correct quiz answers on separate days (a code rule) | An agent saying so |
+| Whether a memory note stays | The learner can remove it, or mark it wrong, at any time | |
+| Whether a new plan from `request_replan` is used | The learner | |
+| Whether a report goes out | Code, after Tadashi; otherwise the facts-only fallback | The model approving itself |
+| Whether a prompt or rule changes | Arthur, from the feedback job's drafts (AG4) | Any self-modifying prompt |
+| Whether a failure becomes an eval task, and its fix | Arthur, in the weekly review | |
+| Launch, and every paid eval run | Arthur | |
+
+**Safety evaluation**
+- **SAF-R1.** An attack suite of about 15 tasks on Juku's own surfaces:
+  - injection planted in a **fixture copy** of the Tatoeba sentences
+    (never in the live data);
+  - attempts to reach another learner's data;
+  - attempts to plant a false or forbidden memory note through chat;
+  - attempts to widen a delegation;
+  - attempts to make an agent call a tool outside its list.
+
+  Which attacks should succeed is predicted and committed before the run,
+  as in the gateway project.
+- **SAF-R2.** Run with the scripted "gullible" agent, with and without the
+  gateway ($0), then once with the real model (paid, with Arthur's OK).
 
 **Memory (inspectable, evidence-backed)**
 - **MEM-R1. Three kinds, all in Postgres:**
@@ -350,7 +443,8 @@ by SM2.
   (M5) and counted.
 - **Security:**
   - each agent has its own gateway key and allow-list;
-  - agents have no write tools;
+  - no agent tool writes learner data (one action tool, `request_replan`,
+    only queues a run);
   - a new key for every secret, with nothing reused;
   - invite codes are random and single-person.
 - **A reviewer gets it in about 15 minutes** from the README and the case
@@ -383,6 +477,9 @@ by SM2.
 | **Must** | LE1–LE3, LE7: progress, quizzes, the recommender, with fixtures |
 | **Must** | SM1–SM5: Juku's MCP server, scoped by session, read-only, behind the gateway |
 | **Must** | MEM-R1–R6: structured memory, evidence-checked notes, learning-only categories, consolidation, the "Shiori ingat…" page |
+| **Must** | ID-R1–R3, ID-R5: per-agent identities, delegation chains that only narrow, logging; ID-R4 at the Juku MCP server |
+| **Must** | The guardrails table, each guardrail with its test; the humans-in-the-loop map |
+| **Must** | SAF-R1 and SAF-R2 with the scripted agent; evaluation-driven order (each agent's tasks committed before its code) |
 | **Must** | AG1–AG3, AG5: the weekly pipeline with critic and code approval, scheduling with a dead-man's switch, run records, the cited chat |
 | **Must** | UI1–UI3; D1–D3; M1, M4–M6; B1–B3 |
 | **Must** | Privacy as above: consent, 18+, stored/not stored, retention, self-serve deletion, public-evidence check |
@@ -392,7 +489,8 @@ by SM2.
 | **Should** | LE5, LE6: the pace planner and the mistakes queue |
 | **Should** | AG4: the feedback job; M2, M3: the audit imports; D4: views and schema comments |
 | **Should** | EV3: case study, JOURNEY, portfolio entry |
-| **Should** | The gateway's per-key rate limit (built in the gateway repo; Arthur's call) |
+| **Should** | The gateway's per-key rate limit and its actor check (ID-R4), built in the gateway repo; Arthur's call |
+| **Should** | ID-R6: the "Siapa yang mengakses datamu" page; SAF-R2 once with the real model |
 | **Could** | X1: the group digest; X2: WhatsApp delivery; X3: the text speaking partner |
 | **Could** | X4: a Juku quiz as an MCP App, so a learner can use it inside their own assistant. It needs OAuth on Juku's MCP server, and its own consent wording |
 | **Could** | gpt-5-nano as a cheaper fallback near a pool's end, measured as a "what changed" |
@@ -400,7 +498,7 @@ by SM2.
 
 ## Rough effort
 
-About 5–6 weeks of building, then the 4-week window:
+About 6–7 weeks of building, then the 4-week window:
 
 | Work | Estimate |
 |---|---|
@@ -410,6 +508,7 @@ About 5–6 weeks of building, then the 4-week window:
 | The thin app with consent and deletion | 3–4 days |
 | The agent pipeline and scheduling | 4–5 days |
 | Memory (notes, checks, consolidation, the page) | 2–3 days |
+| Identity and delegation, the guardrail tests, the attack suite | 3 days |
 | Monitoring and alerts | 2 days |
 | Eval set and pipeline fixtures | 2 days |
 | Deploy and dogfood | 3 days, mostly waiting on server steps |
