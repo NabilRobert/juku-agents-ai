@@ -237,7 +237,11 @@ test that fails when the rule is removed (Phase 1, G1).
     issue can't pass.
   - If an output still fails, the learner gets a facts-only report built
     from a template, and the fallback is counted (Phase 1, P3).
-- **AG2. Scheduling** by external cron (as in Pitstop), Sunday 18:00 WIB.
+- **AG2. Scheduling** by external cron (as in Pitstop), Sunday 18:00 **in
+  each learner's own timezone** (WIB by default). Indonesia has three
+  timezones, and some learners live in Japan.
+  - Runs are idempotent jobs keyed by (learner, week): a rerun never
+    duplicates a report (fitness function FF7).
   - Each run records its start and end.
   - A dead-man's switch alerts if a due run hasn't completed within an
     hour.
@@ -253,15 +257,34 @@ test that fails when the rule is removed (Phase 1, G1).
   - The app checks every cited ID against the rows returned in that turn,
     and labels an answer that fails "unverified" (Phase 1, Q2).
   - When the data doesn't have it, the answer says "tidak ada di data".
+  - Answers stream to the page as they're written (server-sent events), so
+    a 15 s answer doesn't look stuck (Should).
+- **AG6. A learner in distress.**
+  - A moderation check runs on each message before the model sees it:
+    the provider's moderation endpoint if Sumopod exposes it, otherwise a
+    small local classifier.
+  - If a message suggests self-harm, Shiori gives a fixed, kind reply with
+    Indonesia's official mental-health line (verify the number at build
+    time). No improvised answer.
+  - Arthur gets an alert with no content in it.
 
 **The interface (thin on purpose)**
 - **UI1.** Server-rendered pages, in Indonesian: Chat, Kuis, Rekomendasi,
   Bacaan, Rencana, Laporan, **Shiori ingat…** (memory), and Settings
-  (level, exam date, delete my data).
+  (level, exam date, timezone, download my data, delete my data).
 - **UI2.** The browser holds no model or MCP key. The app reaches data only
   through the gateway, except its own writes from learner clicks.
 - **UI3.** A thumbs up or down on chat answers and reports, with an
   optional reason chosen from a list.
+
+**Japanese input**
+- **JI1.** Input is normalised before lookup: full- and half-width forms,
+  romaji to kana, and kana variants (jaconv). Words are tokenized and
+  given normalised forms with SudachiPy.
+- **JI2.** Fuzzy search, so "taberu", "食べる" and a near-miss typo find the
+  same word. It's a Juku MCP tool (`search_words`) using pg_trgm and
+  PGroonga, because MCP-backbone's validator allows only built-in SQL
+  functions.
 
 **Dictionary data**
 - **D1.** Its own Postgres database, loaded by committed scripts from the
@@ -269,6 +292,11 @@ test that fails when the rule is removed (Phase 1, G1).
   its word index, and Indonesian translations where they exist) and a
   community JLPT list. Downloads aren't committed; their versions and
   checksums are.
+  - **Updates:** the version in use is pinned and recorded.
+  - JMdict is updated often, and entries can be merged or removed. On an
+    upgrade, removed entry IDs are mapped from the release's change data,
+    so a learner's known word never points at nothing.
+  - The count of anything unmapped is reported.
 - **D2.** Licences checked and attributed on an "about the data" page
   before launch. *To verify in slice 1:* the EDRDG licence (CC BY-SA) for
   JMdict, KANJIDIC2 and KRADFILE; CC BY 2.0 FR for Tatoeba; and the JLPT
@@ -377,6 +405,10 @@ care, not legal advice.
   3. (optional, off by default) being counted in the group digest (X1);
   4. (optional, per message) letting a specific output be quoted, chosen
      when rating.
+- **Processing abroad, stated plainly.** Questions and report facts are
+  sent to an AI model provider outside Indonesia. UU PDP has rules on
+  transfers abroad, so the notice says so, and the "about" page names the
+  provider.
 - **18+ only.** Many JLPT learners are school students, and under UU PDP a
   child's data needs a parent's consent. Requiring 18+ keeps it simple.
 - Withdrawal is "Hapus data saya", at any time.
@@ -424,6 +456,10 @@ by SM2.
   add up.
 - Arthur can do the same on request for someone who has lost their code.
 
+**Access**
+- "Unduh data saya" exports everything Juku holds about the learner as a
+  JSON file: the right of access, not only deletion.
+
 **Public evidence**
 - Aggregates only, never below 5 learners in any cell; dates by week.
 - An output is quoted only with that message's quote permission, and
@@ -434,6 +470,18 @@ by SM2.
 
 ## Non-functional
 
+- **Scale: built for ten, designed for thousands.** The data design
+  applies from day one, and the growth path uses existing tools
+  ([scale path](scale-path.md)):
+  - a narrow, append-only event table, partitioned by month;
+  - incrementally updated summaries;
+  - text kept apart from metrics;
+  - `cohort_id` and timezones from the start;
+  - stateless services.
+- **Anti-regression:** fitness functions in CI (FF1–FF11 in the scale path)
+  fail the build when a change degrades query plans, cost per output,
+  tool schemas, idempotency, guardrails or privacy. The harness's
+  regression gate covers agent quality.
 - **Footprint:** a small shared server, so every container has a memory
   cap. Grafana's idle memory and the MCP server's are measured and
   published.
@@ -480,6 +528,8 @@ by SM2.
 | **Must** | ID-R1–R3, ID-R5: per-agent identities, delegation chains that only narrow, logging; ID-R4 at the Juku MCP server |
 | **Must** | The guardrails table, each guardrail with its test; the humans-in-the-loop map |
 | **Must** | SAF-R1 and SAF-R2 with the scripted agent; evaluation-driven order (each agent's tasks committed before its code) |
+| **Must** | The data design in the scale path (events, summaries, separate text, `cohort_id`, timezones); fitness functions FF1–FF9 and FF11 in CI |
+| **Must** | AG6 (a learner in distress); JI1 (input normalization); the dictionary update policy; "Unduh data saya"; the processing-abroad wording |
 | **Must** | AG1–AG3, AG5: the weekly pipeline with critic and code approval, scheduling with a dead-man's switch, run records, the cited chat |
 | **Must** | UI1–UI3; D1–D3; M1, M4–M6; B1–B3 |
 | **Must** | Privacy as above: consent, 18+, stored/not stored, retention, self-serve deletion, public-evidence check |
@@ -491,6 +541,7 @@ by SM2.
 | **Should** | EV3: case study, JOURNEY, portfolio entry |
 | **Should** | The gateway's per-key rate limit and its actor check (ID-R4), built in the gateway repo; Arthur's call |
 | **Should** | ID-R6: the "Siapa yang mengakses datamu" page; SAF-R2 once with the real model |
+| **Should** | JI2 (fuzzy search); streamed answers; FF10 and the load test (Locust, 5,000 synthetic learners, $0); self-hosted error tracking (GlitchTip) |
 | **Could** | X1: the group digest; X2: WhatsApp delivery; X3: the text speaking partner |
 | **Could** | X4: a Juku quiz as an MCP App, so a learner can use it inside their own assistant. It needs OAuth on Juku's MCP server, and its own consent wording |
 | **Could** | gpt-5-nano as a cheaper fallback near a pool's end, measured as a "what changed" |
@@ -498,7 +549,7 @@ by SM2.
 
 ## Rough effort
 
-About 6–7 weeks of building, then the 4-week window:
+About 7–8 weeks of building, then the 4-week window:
 
 | Work | Estimate |
 |---|---|
@@ -509,6 +560,7 @@ About 6–7 weeks of building, then the 4-week window:
 | The agent pipeline and scheduling | 4–5 days |
 | Memory (notes, checks, consolidation, the page) | 2–3 days |
 | Identity and delegation, the guardrail tests, the attack suite | 3 days |
+| The scale-path data design, fitness functions, and the "now" gaps (export, distress, normalization, timezones, dictionary updates) | 3 days |
 | Monitoring and alerts | 2 days |
 | Eval set and pipeline fixtures | 2 days |
 | Deploy and dogfood | 3 days, mostly waiting on server steps |

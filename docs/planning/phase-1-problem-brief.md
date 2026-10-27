@@ -253,6 +253,8 @@ and the traces.
 | EDD1 | Agents whose eval tasks and fixtures were committed before their code (from git history) | 4 of 4 |
 | SAF1 | The attack suite, about 15 tasks: attacks with effect, with the gateway and without, scripted "gullible" agent | Predicted and committed before the run, as in the gateway project; reported against the prediction |
 | SAF2 | The same suite, run once with the real model | Reported as is |
+| FF | Fitness functions (scale path, FF1–FF9 and FF11) passing on every commit to `main` | 100%. A raised threshold is a visible, reviewed change |
+| LT | The load test: the $0 path at 5,000 synthetic learners (Should) | p95 published, labelled as a measurement of the design, not of real use |
 
 **Honesty rule, committed in advance:** if adoption lands below the
 floors, the write-up reports the real numbers and what was learnt about
@@ -275,7 +277,9 @@ recruiting. It doesn't stretch the window or count Arthur.
   descriptive).
 - **No open sign-up.** Access is by invite code, so cost and abuse stay
   bounded.
-- **No mobile app, handwriting input or multi-tenancy.** WhatsApp trails
+- **No mobile app, handwriting input or multi-group features.** The data
+  carries a `cohort_id` from day one, so many groups or a school can come
+  later without a migration ([scale path](scale-path.md)). WhatsApp trails
   the web page (Could).
 
 ## Decisions (settled with Arthur, 2026-10-27)
