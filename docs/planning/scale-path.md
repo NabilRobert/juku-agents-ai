@@ -33,7 +33,7 @@ Two rules:
 | `memory_notes` | Category (enum), short text, evidence event IDs, expiry | Small by design, with a cap per learner |
 | `chat_messages`, `reports` | Text with an expiry date | Kept apart from the metrics. Deleted by date, in batches |
 | `tool_calls`, `pipeline_runs` | Per-call and per-run records, no content | Partitioned by month, like the events |
-| `dict.*` | JMdict, KANJIDIC2, Tatoeba, the precomputed recommender tables | Read-only and identical for everyone, so it can be cached or replicated freely |
+| `dict.*` | OpenJLPT (words, kanji, grammar, examples), the precomputed recommender tables | Read-only and identical for everyone, so it can be cached or replicated freely |
 
 **From day one, because adding them later is painful:**
 - a `cohort_id` on learners and events, for when there's more than one
@@ -84,7 +84,7 @@ Some of these matter at ten learners too, so they are now in Phase 2
 | 3 | **A learner in distress** | Real people type real things into a chat. If someone writes about self-harm, Shiori needs a fixed, safe response, not improvisation | **now** | A moderation check before the model (the provider's moderation endpoint if Sumopod exposes it, otherwise a small local classifier). A fixed reply with Indonesia's official mental-health line (verify the number at build time). An alert to Arthur that contains no content |
 | 4 | **Japanese input normalization** | Learners type romaji, half-width katakana and mixed forms, and without normalising, lookups miss | **now** | **jaconv** (width and kana conversion, romaji to kana) and **SudachiPy** (tokenizing and normalised forms) |
 | 5 | **Fuzzy dictionary search** | "taberu", "食べる" and a typo should all find the word | **now**, as a Juku MCP tool | **pg_trgm**, and **PGroonga** for Japanese full-text search. Behind Juku's own `search_words` tool, because MCP-backbone's validator allows only built-in SQL functions |
-| 6 | **Dictionary updates** | JMdict is updated often; entries can be merged or removed, and a learner's "known" word could point at nothing | **now** (the policy); the updates themselves later | Pin a version and record it. On upgrade, map removed entry IDs using the release's change data, and report the count of anything unmapped |
+| 6 | **Dictionary updates** | A learner's "known" words must survive data upgrades | **solved by reuse** | OpenJLPT's IDs are stable across releases; the upgrade script reports any that disappeared |
 | 7 | **Timezones** | Indonesia has three (WIB, WITA, WIT), and some learners already live in Japan. "Sunday 18:00 WIB" is wrong for some of them | **now** | Store the learner's timezone (defaulting to WIB) and schedule in it |
 | 8 | **Error tracking** | Exceptions get lost in logs | Should, now | **GlitchTip**, self-hosted and Sentry-compatible, so error data stays on our own server. Scrub content before sending |
 | 9 | **Backups with point-in-time recovery, and restore drills** | A nightly dump loses a day of learners' work | Later; a nightly dump with a restore test now | **pgBackRest** |

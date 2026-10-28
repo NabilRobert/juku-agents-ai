@@ -17,10 +17,10 @@ to start sooner.
 
 | # | Question | Method | Pass | Time |
 |---|---|---|---|---|
-| 1 | How big is the dictionary in Postgres, and how long does it take to load? | Load JMdict, KANJIDIC2 and Tatoeba into a local `postgres:16`; record row counts, disk size and load time | Under 1 GB on disk; a repeatable load | 2 h |
+| 1 | How big is the data in Postgres, and how long does it take to load? | Load a pinned OpenJLPT release (its SQLite file) into a local `postgres:16`; record row counts, disk size and load time | A repeatable load; under 1 GB on disk | 1 h |
 | 2 | Do the recommender and i+1 queries fit the limits? | Run them in Juku's MCP server prototype with 0, 100 and 500 known words; time them | Under 200 ms each, at every size | 1 h |
 | 3 | Does Grafana fit? | Grafana OSS with a provisioned Postgres data source and one dashboard; read its idle memory | Idle well under 256 MB. Otherwise, fall back to cron alerts (ADR-009) | 1 h |
-| 4 | How cleanly do the JLPT lists and Tatoeba's index map to JMdict? | Match by spelling and reading; count ambiguous and unmatched entries, and the share of sentences that are fully indexed | Counted and reported; rules for the ambiguous ones written down | 1.5 h |
+| 4 | How complete is OpenJLPT for Juku? | Count the words without a JMdict link (about 0.3% expected) and the words without an example sentence; tokenize the examples with SudachiPy and measure how many map back to word IDs, which reading practice needs | Counted and reported; rules for the gaps written down | 1 h |
 | 5 | Does Sumopod report cached input tokens? | Read the usage fields in existing harness logs (no new calls) | Answered either way; the cost model is updated | 15 min |
 | 6 | Does the delegation chain hold through the gateway? | First, read the MCP authorization spec current at build time (Arthur notes a July 2026 revision). Prototype Juku's MCP server with a signed token in `_meta`, through a local gateway. Try: another learner's rows; a widened scope; an expired, replayed or wrong-audience token; a chain 3 hops deep; Keiko's key carrying Shiori's chain | The gateway passes `_meta` through unchanged; every attempt fails and is logged | 3 h |
 
@@ -50,7 +50,7 @@ From then on, a red fitness function blocks the merge.
 
 | Slice | Delivers | Done when | Model cost |
 |---|---|---|---|
-| **1. Data** | Load scripts with pinned versions and checksums; the dictionary update policy (pinned version, mapping removed entries); the "about the data" page with licences; views and schema comments; row counts committed; CI with FF4 and FF5 | One command rebuilds the dictionary database; licences checked | $0 |
+| **1. Data** | The OpenJLPT load script, with a pinned release and checksum; the update policy (stable IDs, report any that disappeared); the "about the data" page with licences; views and schema comments; row counts committed; CI with FF4 and FF5 | One command rebuilds the dictionary database; licences checked | $0 |
 | **2. Learning engine** | The data design from the scale path (event table partitioned by month, incremental summaries, `cohort_id`, timezones); input normalization; known words, coverage, quizzes (generation and grading) and Susumu, the recommender, with fixture learners and tests (mutation-checked); a synthetic 5,000-learner database for FF1 | Exact outputs match the fixtures; FF1–FF3 green | $0 |
 | **3. Juku's MCP server, identity and guardrails** | The scoped tools, including `get_memory` and `request_replan`; per-agent identities; delegation tokens and their checks; `guardrails.yaml` and its tests; spans | The cross-learner suite (M7) and the delegation suite (ID2) pass, and are mutation-checked: removing any check makes a test fail. Every guardrail has its test (G1) | $0 |
 | **4. Memory** | The notes table, evidence checks, allowed categories, consolidation, and the "Shiori ingat…" page | Fixtures: a note without evidence, with someone else's evidence, or in a forbidden category is refused; a stale note lapses | $0 |

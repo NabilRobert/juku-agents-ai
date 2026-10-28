@@ -27,8 +27,9 @@ An agentic chat answers questions with citations. The agents' memory of
 each learner is structured and inspectable: learners see what Shiori
 remembers about them, with its evidence, and can remove it.
 
-All knowledge of Japanese comes from open dictionaries (JMdict, KANJIDIC2,
-Tatoeba), reached only through MCP tools.
+All knowledge of Japanese comes from [OpenJLPT](https://github.com/evanclan/OpenJLPT)
+(CC BY-SA 4.0: JLPT words linked to JMdict, kanji, grammar points and
+Tatoeba examples), reached only through MCP tools.
 
 It puts the 2026 agent topics to work where they fit:
 - every agent has its own identity, and delegation chains (learner →

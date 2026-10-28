@@ -263,10 +263,11 @@ recruiting. It doesn't stretch the window or count Arthur.
 
 ## Non-goals (current pass)
 
-- **No course and no tutor.** It doesn't teach grammar lessons or grade
-  free writing. At N2 the exam leans more on grammar and reading, and Juku
-  covers that only through vocabulary, kanji and reading practice. The
-  write-up says so.
+- **No course and no tutor.** It doesn't run grammar lessons or grade free
+  writing. It does answer grammar questions from OpenJLPT's 526 reviewed
+  grammar points, with citations, which narrows the gap at N2, where the
+  exam leans more on grammar and reading. The write-up says where coverage
+  stops.
 - **No full spaced-repetition scheduler.** The mistakes queue uses simple
   Leitner boxes in code. SM-2-style scheduling is out of scope.
 - **No voice.** The speaking partner, if built, is text only (Phase 2,
@@ -295,9 +296,13 @@ recruiting. It doesn't stretch the window or count Arthur.
    product" the same day, at Arthur's request).
 3. **Focus:** the agents and MCP tools under real use. Tool monitoring is
    in scope here, because Project 6 deliberately stops at traces.
-4. **Data:** open dictionary datasets (JMdict, KANJIDIC2, radical data,
-   Tatoeba sentences, community JLPT-level lists) in their own Postgres,
-   served through MCP-backbone.
+4. **Data:** **OpenJLPT** (CC BY-SA 4.0: JLPT words linked to JMdict,
+   kanji from KANJIDIC2, 526 grammar points, Tatoeba examples), loaded
+   into Juku's own Postgres and served through MCP-backbone. This was
+   revised on 2026-10-28 under the folder's new "reuse before building"
+   rule, replacing separate JMdict, KANJIDIC2 and Tatoeba imports and
+   hand-written grammar (Phase 5, ADR-003). Arthur's textbook PDFs are a
+   private coverage checklist only.
 5. **Channel:** a small web page first; WhatsApp later.
 6. **Features, in priority order** (Phase 2, Must/Should/Could):
    1. the core agentic loop;

@@ -52,9 +52,10 @@ build goes in slices ([slice plan](slice-plan.md)).
   - Generated and graded in code.
 - **LE3. Recommender:** i+1 with kanji leverage (Phase 5, ADR-010), with
   a stated reason for each word.
-- **LE4. Reading practice (Should):** Tatoeba sentences, linked to JMdict
-  entries through Tatoeba's word index, in which every word but one is
-  known. Coverage of the index is measured in spike 4.
+- **LE4. Reading practice (Should):** OpenJLPT's example sentences (from
+  Tatoeba, with furigana), tokenized with SudachiPy and matched to word
+  IDs, in which every word but one is known. Coverage is measured in
+  spike 4.
 - **LE5. Pace planner (Should):** from the exam date and the current
   coverage, the words a week needed to reach a target coverage. The
   formula is committed and shown to the learner.
@@ -322,26 +323,33 @@ built to a budget and checked in CI (ADR-024).
   romaji to kana, and kana variants (jaconv). Words are tokenized and
   given normalised forms with SudachiPy.
 - **JI2.** Fuzzy search, so "taberu", "食べる" and a near-miss typo find the
-  same word. It's a Juku MCP tool (`search_words`) using pg_trgm and
-  PGroonga, because MCP-backbone's validator allows only built-in SQL
-  functions.
+  same word. It's a Juku MCP tool (`search_words`) that calls OpenJLPT's
+  own Python package (ranked search over kanji, kana, romaji and
+  English). It's reused rather than built, and it lives in Juku's server
+  because MCP-backbone's validator allows only built-in SQL functions.
 
 **Dictionary data**
-- **D1.** Its own Postgres database, loaded by committed scripts from the
-  official releases: JMdict, KANJIDIC2, KRADFILE/RADKFILE, Tatoeba (with
-  its word index, and Indonesian translations where they exist) and a
-  community JLPT list. Downloads aren't committed; their versions and
-  checksums are.
-  - **Updates:** the version in use is pinned and recorded.
-  - JMdict is updated often, and entries can be merged or removed. On an
-    upgrade, removed entry IDs are mapped from the release's change data,
-    so a learner's known word never points at nothing.
-  - The count of anything unmapped is reported.
-- **D2.** Licences checked and attributed on an "about the data" page
-  before launch. *To verify in slice 1:* the EDRDG licence (CC BY-SA) for
-  JMdict, KANJIDIC2 and KRADFILE; CC BY 2.0 FR for Tatoeba; and the JLPT
-  list's licence. The official JLPT has published no word lists since
-  2010, so the levels are community estimates, and the page says so.
+- **D1.** Its own Postgres database, loaded by a committed script from a
+  pinned **OpenJLPT** release (Phase 5, ADR-003). It holds 7,811 words
+  linked to JMdict, 2,383 kanji with readings, radicals, strokes and
+  frequency, 526 grammar points, and Tatoeba example sentences with
+  furigana. The download isn't committed; its version and checksum are.
+  - **Updates:** OpenJLPT's IDs are stable across releases, so a learner's
+    known words survive an upgrade. The upgrade script still reports any
+    ID that disappeared.
+  - **Grammar:** grammar questions are answered from OpenJLPT's grammar
+    points, with citations, like words and kanji.
+  - **A full JMdict import, for words outside the JLPT lists, is a Could.**
+- **D2.** Licences attributed on an "about the data" page before launch:
+  - OpenJLPT is CC BY-SA 4.0 and built on JMdict and KANJIDIC2 (EDRDG),
+    Jonathan Waller's JLPT lists and Tatoeba. The wording follows its
+    NOTICE.md;
+  - any dataset Juku derives and redistributes is CC BY-SA 4.0 too;
+  - the official JLPT has published no word lists since 2010, so the
+    levels are community estimates, and the page says so.
+- **D2b. Arthur's textbook PDFs are a private coverage checklist only.**
+  They're used to spot topics or words OpenJLPT lacks. They're never
+  committed, never sent to a model, and never a source of copied text.
 - **D3.** MCP-backbone serves it through "connect your own database", with
   a read-only login, on its own workspace and key.
 - **D4.** Schema comments and read-only views that make it easier for a
