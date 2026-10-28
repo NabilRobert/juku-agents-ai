@@ -2,20 +2,20 @@
 
 from datetime import UTC, datetime
 
-import pytest
 from juku_app.privacy import delete_learner, export_learner
 from juku_data.engine import Databases, create_learner, mark_known
 from juku_data.engine.models import Learner
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: privacy lands in the next commit")
-
 LEARNER_COLUMNS = """
-SELECT c.table_schema, c.table_name FROM information_schema.columns c
-JOIN information_schema.tables t USING (table_schema, table_name)
-WHERE c.column_name = 'learner_id' AND t.table_type = 'BASE TABLE'
-  AND c.table_schema NOT IN ('pg_catalog', 'information_schema')
+SELECT n.nspname, c.relname FROM pg_attribute a
+JOIN pg_class c ON c.oid = a.attrelid
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE a.attname = 'learner_id' AND NOT a.attisdropped
+  AND c.relkind IN ('r', 'p') AND NOT c.relispartition
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY 1, 2
 """
 
 

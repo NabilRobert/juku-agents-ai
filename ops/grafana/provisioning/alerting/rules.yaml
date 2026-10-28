@@ -1,9 +1,9 @@
 # Juku's alert rules (Phase 2 M5), provisioned from this file. Each reads
 # the monitoring schema through the read-only data source and goes to
 # Arthur's Telegram (contact-points.yaml). Every threshold matches
-# guardrails.yaml's `alerts` section; a test keeps them in step. The
-# budget alerts arrive with the budget guard (track C), the missed weekly
-# pipeline run with slice 6. "No data" counts as alerting: a dead-man's
+# guardrails.yaml's `alerts` section, and the budget alerts its
+# `budget.alert_fractions`; tests keep them in step. The missed weekly
+# pipeline run arrives with slice 6. "No data" counts as alerting: a dead-man's
 # switch must not go quiet because its table is empty.
 apiVersion: 1
 groups:
@@ -245,3 +245,135 @@ groups:
       project: juku
     annotations:
       summary: '{{ $values.A }} job(s) failed on their latest run, e.g. verify-state finding learner summaries that differ from the events (FF3). See monitoring.job_runs.'
+  - uid: juku-budget-50
+    title: A budget pool reached 50%
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(spent_share), 0) AS value FROM monitoring.budget_by_pool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gte
+            params:
+            - 0.5
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A budget pool has spent {{ $values.A }} of its size (alert at 50%). See monitoring.budget_by_pool.
+  - uid: juku-budget-80
+    title: A budget pool reached 80%
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(spent_share), 0) AS value FROM monitoring.budget_by_pool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gte
+            params:
+            - 0.8
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A budget pool has spent {{ $values.A }} of its size (alert at 80%). See monitoring.budget_by_pool.
+  - uid: juku-budget-100
+    title: A budget pool reached 100%
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(spent_share), 0) AS value FROM monitoring.budget_by_pool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gte
+            params:
+            - 1.0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A budget pool has spent {{ $values.A }} of its size (alert at 100%). See monitoring.budget_by_pool.
+  - uid: juku-distress
+    title: A learner may be in distress
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.distress_events WHERE occurred_at > now() - interval '10 minutes'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: The moderation check flagged {{ $values.A }} message(s) in the last 10 minutes; Shiori gave the fixed reply. No content is stored.

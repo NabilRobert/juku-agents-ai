@@ -7,8 +7,6 @@ from juku_data.engine.models import Learner
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: invites and consent land in the next commit")
-
 YES = ConsentAnswers(is_adult=True, accepts_service=True, accepts_aggregates=True, accepts_group_digest=False)
 
 

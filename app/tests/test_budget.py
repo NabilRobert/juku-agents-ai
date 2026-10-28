@@ -11,8 +11,6 @@ from pydantic_ai.usage import RunUsage
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the budget guard lands in the next commit")
-
 NOW = datetime(2026, 11, 10, 9, 0, tzinfo=UTC)
 
 
@@ -95,12 +93,14 @@ async def test_a_learner_stops_at_their_daily_question_cap(
 
 @pytest.mark.guardrail("budget.chat_daily_questions_per_learner")
 async def test_the_learners_day_is_their_own(clean_budget: AsyncEngine, rules: Rules, learner: Learner) -> None:
-    """20 questions late on Monday in Jakarta, then 08:00 on Tuesday there: a new day for this learner."""
+    """20 questions at 06:00 in Jakarta (23:00 UTC the day before), then 08:00 there: the same day for them."""
     guard = BudgetGuard(clean_budget, rules)
-    monday_evening_wib = datetime(2026, 11, 9, 22, 0, tzinfo=UTC) - timedelta(hours=7)
+    tuesday_6am_wib = datetime(2026, 11, 9, 23, 0, tzinfo=UTC)
     for _ in range(rules.budget.chat_daily_questions_per_learner):
-        await spend(clean_budget, "chat", "0.000001", learner.id, at=monday_evening_wib)
-    await guard.check("chat", learner.id, datetime(2026, 11, 10, 1, 0, tzinfo=UTC))
+        await spend(clean_budget, "chat", "0.000001", learner.id, at=tuesday_6am_wib)
+    with pytest.raises(BudgetRefusedError) as refused:
+        await guard.check("chat", learner.id, datetime(2026, 11, 10, 1, 0, tzinfo=UTC))
+    assert refused.value.reason == "learner_daily_questions"
 
 
 @pytest.mark.guardrail("budget.chat_run_request_limit")

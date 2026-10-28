@@ -1,9 +1,6 @@
 """AG5 and Q2: every ID an answer cites must be among the rows its tools returned in that turn."""
 
-import pytest
 from juku_app.citations import check_citations
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the citation check lands in the next commit")
 
 RESULTS = [
     {"words": [{"word_id": "86f67e2dc3", "word": "食べる"}, {"word_id": "e0bcec9bd9", "word": "飲む"}]},

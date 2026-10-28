@@ -213,6 +213,93 @@
           "rawSql": "SELECT date_trunc('hour', logged_at) AS time, caller AS metric, count(*) AS calls FROM monitoring.audit_lines WHERE source = 'gateway' AND kind = 'call' AND $__timeFilter(logged_at) GROUP BY 1, 2 ORDER BY 1"
         }
       ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Budget by pool (USD)",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT pool, size_usd, spent_usd, round(spent_share * 100, 1) AS spent_pct, spent_today_usd FROM monitoring.budget_by_pool ORDER BY pool"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Real-user timings, p75 by page (FE8)",
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT day, page, metric, round(p75::numeric, 3) AS p75, samples FROM monitoring.web_vitals_daily WHERE $__timeFilter(day) ORDER BY day DESC, page, metric"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Activity per day (5 or more learners)",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT day::timestamptz AS time, quiz_answers, words_marked, sentences_read FROM monitoring.activity_by_day WHERE $__timeFilter(day) ORDER BY 1"
+        }
+      ]
     }
   ]
 }
