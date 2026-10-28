@@ -104,7 +104,6 @@ services:
       db: {condition: service_healthy}
     environment:
       JUKU_MCP_AUDIT_LOG: /var/log/juku-mcp/audit.jsonl
-      JUKU_MCP_REQUIRE_GATEWAY_CALLER: "true"
       OTEL_EXPORTER_OTLP_ENDPOINT: ${JUKU_OTLP_ENDPOINT:-}
     secrets:
       - juku_mcp_app_database_url
