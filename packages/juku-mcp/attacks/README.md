@@ -55,12 +55,17 @@ What it shows:
   port** and shares no network with the app (ops/compose.yaml): without
   the gateway, nothing binds a chain to the key that made the call. Spike
   6 found the same; slice 8 must check the port on the server.
-- **The gateway's rules detector flagged none of the planted
-  instructions** (0 of 22 results suspicious): they don't use the phrases
-  its rules look for. The gullible agent obeyed them, and Juku's server
-  refused the call, because no tool takes a learner and the replan tool is
-  capped. A note for the gateway project; the defence here doesn't depend
-  on the detector.
+- **A gateway finding: its rules detector flagged none of the three
+  results with planted instructions.** The gateway ran its rules layer
+  only (detector `rules-251a56f28c31`; the model layer was off). Of the 22
+  results it scanned, 3 were `find_reading_sentences` outputs carrying the
+  planted text; the other 19 (14 `get_progress`, 5 `request_replan`) had
+  none, so "0 of 22 flagged" overstates it. The planted lines don't use
+  the phrases the rules look for. The gullible agent obeyed them, and
+  Juku's server refused the call, because no tool takes a learner and the
+  replan tool is capped; the defence here doesn't depend on the detector.
+  For re-scoring with the model layer, `SAF1_CAPTURE=<file>` records each
+  result's text exactly as the gateway scanned it.
 - Unlike spike 6's server, Keiko calling a tool outside her list is refused
   even directly: the server checks each token's tools against the agent's
   list in guardrails.yaml, not only against the token.

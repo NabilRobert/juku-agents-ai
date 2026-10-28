@@ -92,8 +92,10 @@ What went wrong while building, and what changed because of it
 - **SAF1: 15 of 15 as predicted, both ways.** The two attacks predicted to
   succeed directly did, and none did through the patched gateway (and,
   rerun once the gateway merged P6, none through the real one either). The
-  gateway's rules detector flagged none of the planted instructions; the
-  defence was Juku's server refusing what they asked for.
+  gateway's rules detector (its rules layer only; the model layer was
+  off) flagged none of the three results with planted instructions, all
+  `find_reading_sentences`; the other 19 of the 22 results it scanned had
+  none. The defence was Juku's server refusing what they asked for.
 - **G1 is checked, not claimed.** A guardrail harness lists every rule in
   guardrails.yaml's guardrail sections and fails make check if one has no
   test marked with it.
