@@ -1,5 +1,52 @@
 # Spike 1: how big is the dictionary in Postgres, and how long does it take to load?
 
+**Plan change (2026-10-28):** Juku's data is now OpenJLPT (ADR-003, on
+`docs/planning`), so the spike was rerun on it. Both results are below:
+- **OpenJLPT** is the plan;
+- the **JMdict, KANJIDIC2, KRADFILE and Tatoeba load** is kept as the
+  fallback, for ADR-003's "full JMdict import" Could.
+
+## OpenJLPT (the plan)
+
+**Pass: 19 MB on disk (11 MB of tables), loaded in about 2 s, identical on
+a repeat load.**
+
+```
+openjlpt/load.sh openjlpt     # checksums, SQLite to COPY files, keys and indexes, report
+```
+
+- **Data:** `data/openjlpt.sqlite` from github.com/evanclan/OpenJLPT, CC BY-SA
+  4.0, pinned to **commit `bf4e1ee`** (2026-09-30, "openjlpt upgrade").
+  - **No release has this data.** The latest release, v0.2.0 (2026-07-21),
+    is the older dataset: 8,334 words with no JMdict IDs, 2,211 kanji and
+    100 grammar points. The data Juku plans on exists only on `main`.
+  - PyPI's `openjlpt` is still 0.1.0.
+  - So slice 1 pins a commit and a checksum (both recorded here), not a
+    release. That's a risk to note in ADR-003: one maintainer, and no
+    tagged version of what we use.
+- `openjlpt/sqlite_to_tsv.py` (standard library, read-only SQLite) writes
+  one COPY file per table and unnests the example sentences into
+  `vocab_example`. The SQLite FTS5 tables aren't carried over.
+  - It's plain code because it's a spike script. For slice 1, pgloader is
+    the off-the-shelf alternative.
+
+| Table | Rows | Size, with indexes |
+|---|---|---|
+| vocab | 7,811 | 5.7 MB |
+| vocab_example | 13,718 | 3.7 MB |
+| grammar | 526 | 1.2 MB |
+| kanji | 2,383 | 0.8 MB |
+| pos | 47 | 32 kB |
+| **The database** | | **19 MB** |
+
+- **Load time:** 2.0–2.3 s (conversion 0.2 s, COPY 1.0–1.5 s, keys and
+  indexes 0.6–0.8 s).
+- **Repeatable:** two loads into fresh databases give identical md5 hashes
+  for all 5 tables ([openjlpt/results-load.txt](openjlpt/results-load.txt)).
+  Row counts equal the SQLite's.
+
+## JMdict, KANJIDIC2, KRADFILE and Tatoeba (the fallback)
+
 **Pass: 299 MB on disk, against the 1 GB limit, loaded in 18–23 s, with
 identical content on a repeat load into a fresh container.**
 
@@ -17,7 +64,7 @@ psql -At -f table_hashes.sql   # one count and md5 per table, to compare loads
 - `checksums.sha256` records the downloads. `load.sh` refuses to run if
   they differ.
 
-## The data (fetched 2026-10-28)
+### The data (fetched 2026-10-28)
 
 | Source | Version | Licence |
 |---|---|---|
@@ -26,7 +73,7 @@ psql -At -f table_hashes.sql   # one count and md5 per table, to compare loads
 | KRADFILE, KRADFILE2 | in kradzip.zip, files dated 2023-08-09 | EDRDG, CC BY-SA 4.0 |
 | Tatoeba: Japanese and Indonesian sentences, jpn–ind links, Japanese word index | export of 2026-10-24 | CC BY 2.0 FR |
 
-## Numbers
+### Numbers
 
 | Table | Rows | Size, with indexes |
 |---|---|---|
@@ -55,7 +102,7 @@ psql -At -f table_hashes.sql   # one count and md5 per table, to compare loads
   ([results-table-hashes.txt](results-table-hashes.txt)). The full report
   is [results-load.txt](results-load.txt).
 
-## Found in the data (for slice 1)
+### Found in the data (for slice 1)
 
 - JMdict's DTD declares the entity `ik` twice, identically. The loader
   keeps the first, as XML does.
@@ -75,5 +122,9 @@ psql -At -f table_hashes.sql   # one count and md5 per table, to compare loads
 
 ## What it changes in the plan
 
-Nothing. The scale path's "about 1 GB" for the dictionary can become
-"about 0.3 GB, measured (spike 1)", and slice 1 inherits this loader.
+- **OpenJLPT fits easily:** 19 MB, loaded in 2 s. Slice 1 loads it from a
+  pinned commit with a checksum. ADR-003 should record that no release has
+  this data (v0.2.0 is the older dataset) and that PyPI is at 0.1.0.
+- **Keep the JMdict loader on a branch as the Could:** about 0.3 GB,
+  measured. The scale path's "about 1 GB" for the dictionary can become
+  "about 20 MB with OpenJLPT; about 0.3 GB with a full JMdict import".
