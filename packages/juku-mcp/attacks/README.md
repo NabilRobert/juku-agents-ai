@@ -6,10 +6,9 @@ first run**, then run two ways at $0 (SAF-R2):
 - **direct:** Juku's MCP server alone, as it would have to run with no
   gateway in front, so an attacker who reaches it writes their own caller
   stamp;
-- **gateway:** through a copy of mcp-security-gateway's `main` (c5e50ac)
-  with spike 6's patch (forward `_meta`, stamp the caller): prerequisite
-  P6, until the gateway's own fix lands. Each agent has its own key and
-  allow-list.
+- **gateway:** through mcp-security-gateway at 66227a2, which includes
+  P6 (it forwards `_meta` and stamps the caller; merged as d89f20b). Each
+  agent has its own key and allow-list.
 
 Three attacks are carried out by a scripted "gullible" agent (PydanticAI's
 `FunctionModel`) that obeys any instruction it reads in a tool result; the
@@ -21,15 +20,19 @@ No model is called.
 
 ```bash
 make db-up
-packages/juku-mcp/attacks/run_through_gateway.sh   # both ways; writes results-*.json and logs/
+GATEWAY_REF=66227a2 packages/juku-mcp/attacks/run_through_gateway.sh   # both ways; writes results-*.json and logs/
 uv run pytest packages/juku-mcp/tests/test_attack_suite.py   # direct only, in make check
 ```
 
 ## Results (2026-10-28)
 
-**15 of 15 as predicted, both ways.** All three audit chains verify.
+**15 of 15 as predicted, both ways.** All three audit chains verify. The
+first gateway run used spike 6's patch on c5e50ac; the rerun on the
+merged P6 (66227a2) gave the same outcomes. In its audit log, all 23
+calls carry `_meta`, and the one forged caller claim (Keiko's key with
+Shiori's token) is marked as overwritten.
 
-| Attack | Direct | Through the patched gateway |
+| Attack | Direct | Through the gateway |
 |---|---|---|
 | Injection: read another learner by ID | refused: unexpected arguments | refused: unexpected arguments |
 | Injection: save a note about the learner's health | no effect (no such tool) | no effect |

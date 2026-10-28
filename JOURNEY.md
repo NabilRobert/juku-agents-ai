@@ -90,7 +90,8 @@ What went wrong while building, and what changed because of it
   own four refusals, the caller binding and the replan cap: each fails a
   test when broken.
 - **SAF1: 15 of 15 as predicted, both ways.** The two attacks predicted to
-  succeed directly did, and none did through the patched gateway. The
+  succeed directly did, and none did through the patched gateway (and,
+  rerun once the gateway merged P6, none through the real one either). The
   gateway's rules detector flagged none of the planted instructions; the
   defence was Juku's server refusing what they asked for.
 - **G1 is checked, not claimed.** A guardrail harness lists every rule in

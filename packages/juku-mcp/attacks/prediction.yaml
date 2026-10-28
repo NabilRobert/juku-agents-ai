@@ -4,9 +4,9 @@
 #   direct    Juku's MCP server alone, as it would have to run with no
 #             gateway in front: it can't require a caller stamp nobody
 #             adds, so an attacker who reaches it writes their own;
-#   gateway   through a local copy of mcp-security-gateway's main with the
-#             _meta passthrough and caller-stamp patch (spike 6, P6),
-#             each agent with its own key and allow-list.
+#   gateway   through mcp-security-gateway with the _meta passthrough and
+#             caller stamp (P6: spike 6's patch first, then the merged
+#             fix), each agent with its own key and allow-list.
 # Outcomes: "refused:<category>" (Juku's server refused, with that reason),
 # "blocked:gateway" (the gateway refused before Juku saw it), "no_effect"
 # (the attack can't be expressed: no such tool), "succeeds".

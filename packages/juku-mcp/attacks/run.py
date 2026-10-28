@@ -1,7 +1,7 @@
-"""Run SAF1 both ways, directly and through the patched gateway, and write the results next to the prediction.
+"""Run SAF1 both ways, directly and through the gateway, and write the results next to the prediction.
 
-Called by run_through_gateway.sh, which exports the gateway's main and
-applies spike 6's patch. Everything here is throwaway: databases on the
+Called by run_through_gateway.sh, which exports the gateway at a commit
+that includes P6 (`_meta` forwarded, the caller stamped). Everything here is throwaway: databases on the
 local test Postgres, keys made for the run, logs in a temporary folder.
 
 Usage: uv run python packages/juku-mcp/attacks/run.py <gateway source dir> <gateway python> <work dir>
