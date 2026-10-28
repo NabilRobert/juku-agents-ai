@@ -50,10 +50,16 @@ def synthetic_cache_key() -> str:
     from juku_testkit.databases import repo_root, require_openjlpt
 
     root = repo_root()
+    package = root / "packages" / "juku-data" / "src" / "juku_data"
     digest = hashlib.sha256()
-    sources = sorted((root / "migrations").rglob("*.py")) + sorted(
-        (root / "packages" / "juku-data" / "src").rglob("*.py")
-    )
+    # Not the whole package: memory and the CLI don't change what the synthetic learners hold.
+    sources = [
+        *sorted((root / "migrations").rglob("*.py")),
+        *sorted((package / "engine").rglob("*.py")),
+        *sorted((package / "dictionary").rglob("*.py")),
+        package / "japanese.py",
+        package / "synthetic.py",
+    ]
     for path in [*sources, require_openjlpt() / "openjlpt.sqlite"]:
         digest.update(path.read_bytes())
     return digest.hexdigest()[:12]
