@@ -1,5 +1,84 @@
 # Spike 2: do the recommender and i+1 queries fit the limits?
 
+**Plan change (2026-10-28):** Juku's data is now OpenJLPT, and ADR-010's
+ordering was rewritten for it, so the spike was rerun on OpenJLPT's tables.
+Both runs are below; the OpenJLPT one is the plan.
+
+## On OpenJLPT, with ADR-010's rewritten ordering (the plan)
+
+**Pass on a quiet machine; borderline under heavy load.**
+- **On the first, quiet run:** the worst single call was 62 ms with jit on
+  and 91 ms with jit off, at 0, 100 and 500 known words, N5–N2, through
+  the MCP server.
+  - Those result files were overwritten by the reruns below; the numbers
+    come from that run's output.
+- **Then the laptop got busy,** with other sessions at a load average of
+  13–21. Two reruns under that load, each with its load recorded in the
+  file:
+  - p95 stayed under 200 ms everywhere;
+  - but single calls reached **242 ms and 274 ms** (`recommend_words`, N2,
+    500 known words, jit off);
+  - with jit on, the worst calls were 121 ms and 148 ms.
+- **Recheck on a quiet machine,** or the server, as slice 2's FF1
+  baseline, before calling it settled.
+
+```
+psql -d openjlpt -f openjlpt/precompute.sql   # word_kanji, word_level, kanji_leverage
+python openjlpt/sentences.py                  # the reading-practice index (SudachiPy)
+python openjlpt/bench.py off > openjlpt/results-jit-off.md
+python openjlpt/grow.py > openjlpt/results-growth.md
+```
+
+- **Tables** (in spike 1's `openjlpt` database):
+  - `word_level` (7,811 words), with commonness = the KANJIDIC2
+    frequency rank of the word's rarest kanji (kana-only = 0, unranked
+    kanji = 9999);
+  - `word_kanji` (10,965 rows) and `kanji_leverage` (9,165 rows);
+  - kanji levels come straight from OpenJLPT.
+- **The ordering:** gaps from easier levels first, then leverage, then
+  commonness, then the stable ID. At most 3 of 10 share a new kanji.
+- **Reading practice:** `sentences.py` tokenizes OpenJLPT's 12,615
+  distinct example sentences with SudachiPy, with spike 4's matching
+  rules, copied there with the commit cited. It keeps the 8,339 sentences
+  whose every content word maps to one word ID. That's the same count as
+  spike 4, with ない counted as grammar.
+
+**The latest run, under load** (round trip in ms, p50 / p95 / max, jit
+off; [openjlpt/results-jit-off.md](openjlpt/results-jit-off.md), and
+`results-*-loaded.md` for the other loaded run):
+
+| Level | 0 known | 100 known | 500 known |
+|---|---|---|---|
+| `recommend_words` N5 | 14.1 / 28.7 / 36.6 | 13.7 / 22.7 / 55.3 | 12.8 / 18.1 / 22.3 |
+| `recommend_words` N4 | 22.1 / 37.7 / 76.7 | 20.2 / 44.7 / 112.1 | 24.4 / 47.1 / 97.4 |
+| `recommend_words` N3 | 25.1 / 53.6 / 112.5 | 21.4 / 29.6 / 35.0 | 22.3 / 31.5 / 87.8 |
+| `recommend_words` N2 | 29.1 / 50.8 / 118.7 | 35.3 / 70.5 / 111.7 | 63.7 / 110.7 / **242.0** |
+| `find_reading_sentences` | 15.3 / 41.1 / 166.3 | 11.4 / 24.3 / 63.6 | 17.1 / 36.1 / 67.4 |
+
+**Beyond the pass rule** (direct SQL,
+[openjlpt/results-growth.md](openjlpt/results-growth.md)):
+- **The reading query stays flat:** 13–24 ms p50 from 500 to 4,000 known
+  words under load (10–18 ms on the quiet run). The sentence pool is small
+  (8,339).
+- **The recommender grows:** 43–114 ms p50 under load, with a p95 of 187 ms
+  at 2,000 known words (64 ms p50 on the quiet run). The N2 candidate set is
+  the largest. It's the query to tune in slice 2, and FF1's EXPLAIN check
+  should watch it.
+
+**What it changes:**
+- With OpenJLPT, spike 2's LE4 concern goes away: the reading query no
+  longer crosses 200 ms.
+- The recommender at N2 needs a look in slice 2: a quiet-machine
+  baseline, and if needed, precomputing each learner's candidate set as
+  their known words change (the scale path's incremental summaries).
+- The other proposals stand: `jit = off` on the role, the EXPLAIN/JIT
+  fitness check, and the two-database read.
+- Where words with no new kanji rank is now ADR-010's leverage-0 case.
+
+---
+
+## On JMdict and Tatoeba (the first run, now the fallback)
+
 **Pass, after one fix.** Through the MCP server prototype, with 0, 100 and
 500 known words at N5–N2, the rewritten recommender takes 4–21 ms (p50) and
 at most 69 ms. The i+1 sentence query takes 3–72 ms (p50) and at most
@@ -29,7 +108,7 @@ python grow.py > results-growth.md             # 500 to 4,000 known words
   (in memory, so no network), on Arthur's laptop with Postgres 16 in
   Docker.
 
-## Built from ADR-010
+### Built from ADR-010
 
 `precompute.sql` makes `word_level` (7,723 entries: easiest level, common
 tier, nf frequency band), `word_kanji` (11,706), `kanji_level` (2,108
@@ -41,7 +120,7 @@ rules exactly: the candidates, the five-key lexicographic order, at most 3
 of 10 sharing a new kanji, and a reason built from the row, for example
 "1 kanji baru: 何, muncul di 13 kata umum N5."
 
-## Numbers (round trip at the MCP client, ms: p50 / p95 / max)
+### Numbers (round trip at the MCP client, ms: p50 / p95 / max)
 
 **v2, the rewritten recommender, jit on** ([results-v2-jit-on.md](results-v2-jit-on.md)):
 
@@ -87,7 +166,7 @@ The recommender stays flat. **The reading query grows with the known set**
 crosses 200 ms at about 2,000 known words, which is about where an N3
 learner is.
 
-## What it changes in the plan
+### What it changes in the plan
 
 - **Proposed for slice 2:** the known-words read and the dictionary query
   are two round trips by design, because Juku's MCP server reads two
