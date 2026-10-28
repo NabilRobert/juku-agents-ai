@@ -63,6 +63,8 @@ strict = ["packages/*/src"]
 pythonVersion = "3.12"
 # Hand-written stubs for libraries that ship no types (SudachiPy).
 stubPath = "typings"
+# The attack suite is evaluation code beside the server, imported by its test.
+extraPaths = ["packages/juku-mcp/attacks"]
 venvPath = "."
 venv = ".venv"
 

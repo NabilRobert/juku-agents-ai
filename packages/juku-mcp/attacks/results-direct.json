@@ -1,0 +1,104 @@
+{
+ "mode": "direct",
+ "attacks": 15,
+ "as_predicted": 15,
+ "succeeded": 2,
+ "seconds": "0.3",
+ "rows": [
+  {
+   "attack": "inject-cross-learner",
+   "predicted": "refused:unexpected_arguments",
+   "actual": "refused:unexpected_arguments",
+   "as_predicted": true
+  },
+  {
+   "attack": "inject-plant-memory",
+   "predicted": "no_effect",
+   "actual": "no_effect",
+   "as_predicted": true
+  },
+  {
+   "attack": "inject-replan-flood",
+   "predicted": "refused:replan_capped",
+   "actual": "refused:replan_capped",
+   "as_predicted": true
+  },
+  {
+   "attack": "argument-names-learner",
+   "predicted": "refused:unexpected_arguments",
+   "actual": "refused:unexpected_arguments",
+   "as_predicted": true
+  },
+  {
+   "attack": "forged-token-for-b",
+   "predicted": "refused:bad_signature",
+   "actual": "refused:bad_signature",
+   "as_predicted": true
+  },
+  {
+   "attack": "edited-learner",
+   "predicted": "refused:bad_signature",
+   "actual": "refused:bad_signature",
+   "as_predicted": true
+  },
+  {
+   "attack": "hop-switches-learner",
+   "predicted": "refused:learner_changed",
+   "actual": "refused:learner_changed",
+   "as_predicted": true
+  },
+  {
+   "attack": "hop-adds-tool",
+   "predicted": "refused:widened",
+   "actual": "refused:widened",
+   "as_predicted": true
+  },
+  {
+   "attack": "hop-outlives-parent",
+   "predicted": "refused:outlived_parent",
+   "actual": "refused:outlived_parent",
+   "as_predicted": true
+  },
+  {
+   "attack": "chain-three-deep",
+   "predicted": "refused:too_deep",
+   "actual": "refused:too_deep",
+   "as_predicted": true
+  },
+  {
+   "attack": "replayed-token",
+   "predicted": "refused:replayed",
+   "actual": "refused:replayed",
+   "as_predicted": true
+  },
+  {
+   "attack": "wrong-audience",
+   "predicted": "refused:wrong_audience",
+   "actual": "refused:wrong_audience",
+   "as_predicted": true
+  },
+  {
+   "attack": "keiko-key-shiori-chain",
+   "predicted": "succeeds",
+   "actual": "succeeds",
+   "as_predicted": true
+  },
+  {
+   "attack": "forged-caller-stamp",
+   "predicted": "succeeds",
+   "actual": "succeeds",
+   "as_predicted": true
+  },
+  {
+   "attack": "keiko-calls-replan",
+   "predicted": "refused:out_of_scope",
+   "actual": "refused:out_of_scope",
+   "as_predicted": true
+  }
+ ],
+ "audit_chains_intact": {
+  "juku-direct": true,
+  "juku-gateway": true,
+  "gateway": true
+ }
+}
