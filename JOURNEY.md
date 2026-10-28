@@ -215,3 +215,17 @@ What went wrong while building, and what changed because of it
 - **Not done here:** FF6 (token ceilings) needs a tokenizer, and none is on
   ADR-025's approved list; it stays pending for Arthur. The paid runs are
   slice 7, with Arthur's OK.
+
+## The consent gate (2026-10-29)
+
+- **Reports and chat only on the current notice.** The pages already sent a
+  learner without current consent to the notice; the weekly run didn't. Now
+  it skips them, records why (`app.pipeline_skips`, "consent_outdated"),
+  and their queued replans wait; the next hourly run after they accept
+  gives them their report. A recorded skip isn't an overdue run, and a run
+  that goes ahead clears it, so a later failure still alerts.
+- **The tests' learners now consent, as real ones do,** or the gate would
+  have skipped every fixture.
+- **Mutation checks:** six breaks (the run's check, recording and clearing
+  the skip, the replans' check, the overdue function, the pages' gate),
+  each failing a test.

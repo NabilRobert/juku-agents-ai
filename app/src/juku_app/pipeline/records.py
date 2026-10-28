@@ -164,3 +164,25 @@ async def publish_report(
 async def finish_run(app: AsyncEngine, run_id: int, status: str, now: datetime) -> None:
     async with app.begin() as connection:
         await connection.execute(text(FINISH), {"status": status, "now": now, "id": run_id})
+
+
+async def record_skip(app: AsyncEngine, learner_id: int, week: date, reason: str, now: datetime) -> None:
+    """A week skipped on purpose, and why: one row per (learner, week), updated if the job tries again."""
+    async with app.begin() as connection:
+        await connection.execute(
+            text(
+                "INSERT INTO app.pipeline_skips (learner_id, week_start, reason, skipped_at) "
+                "VALUES (:learner, :week, :reason, :now) ON CONFLICT (learner_id, week_start) "
+                "DO UPDATE SET reason = excluded.reason, skipped_at = excluded.skipped_at"
+            ),
+            {"learner": learner_id, "week": week, "reason": reason, "now": now},
+        )
+
+
+async def clear_skip(app: AsyncEngine, learner_id: int, week: date) -> None:
+    """The week's run goes ahead after all: the skip no longer accounts for it."""
+    async with app.begin() as connection:
+        await connection.execute(
+            text("DELETE FROM app.pipeline_skips WHERE learner_id = :learner AND week_start = :week"),
+            {"learner": learner_id, "week": week},
+        )

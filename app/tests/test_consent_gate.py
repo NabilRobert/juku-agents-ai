@@ -11,10 +11,9 @@ CONSENT_VERSION moves on.
 import uuid
 from datetime import timedelta
 
-import pytest
 from juku_app.consent import CONSENT_VERSION, ConsentAnswers, record_consent
 from juku_app.invites import issue_codes
-from juku_app.pipeline.run import due_learners, run_due, run_weekly
+from juku_app.pipeline.run import due_learners, run_due, run_replans, run_weekly
 from juku_common.rules import Rules
 from juku_data.engine import Databases
 from juku_data.engine.models import Learner
@@ -22,8 +21,6 @@ from juku_testkit.memory_fixtures import load_memory_fixture
 from pipeline_helpers import crew_of, services_for, sunday_evening
 from sqlalchemy import text
 from web_helpers import client_for, csrf_header, csrf_of, deps, sign_up
-
-EDD = pytest.mark.xfail(strict=True, reason="EDD: the consent gate lands in the next commit")
 
 OLDER_VERSION = "2026-01-01"
 ACCEPTED = ConsentAnswers(is_adult=True, accepts_service=True, accepts_aggregates=False, accepts_group_digest=False)
@@ -42,7 +39,6 @@ async def reports_of(db: Databases, learner: Learner) -> int:
         )
 
 
-@EDD
 async def test_the_weekly_run_skips_a_learner_on_an_older_notice_and_says_why(
     engine_databases: Databases, rules: Rules
 ) -> None:
@@ -59,7 +55,6 @@ async def test_the_weekly_run_skips_a_learner_on_an_older_notice_and_says_why(
     assert reason == "consent_outdated"
 
 
-@EDD
 async def test_once_they_accept_the_current_notice_the_next_run_gives_them_their_report(
     engine_databases: Databases, rules: Rules
 ) -> None:
@@ -71,9 +66,13 @@ async def test_once_they_accept_the_current_notice_the_next_run_gives_them_their
     later = await run_weekly(services, learner, now + timedelta(hours=1))
     assert later.status == "published"
     assert await reports_of(engine_databases, learner) == 1
+    async with engine_databases.app.connect() as connection:
+        skips = await connection.scalar(
+            text("SELECT count(*) FROM app.pipeline_skips WHERE learner_id = :l"), {"l": learner.id}
+        )
+    assert skips == 0, "the run went ahead: a later failure must count as overdue again"
 
 
-@EDD
 async def test_a_learner_waiting_to_re_consent_is_not_an_overdue_run(engine_databases: Databases, rules: Rules) -> None:
     learner = await learner_on_an_older_notice(engine_databases, rules)
     late = sunday_evening(learner.timezone) + timedelta(minutes=rules.pipeline.overdue_after_minutes + 1)
@@ -90,7 +89,6 @@ async def test_a_learner_waiting_to_re_consent_is_not_an_overdue_run(engine_data
     assert await overdue() == before - 1, "skipped for consent, and recorded: not a missing run"
 
 
-@EDD
 async def test_the_hourly_job_records_the_skip_and_still_succeeds(engine_databases: Databases, rules: Rules) -> None:
     learner = await learner_on_an_older_notice(engine_databases, rules)
     now = sunday_evening(learner.timezone)
@@ -98,6 +96,37 @@ async def test_the_hourly_job_records_the_skip_and_still_succeeds(engine_databas
     outcomes = await run_due(services_for(engine_databases, rules, crew_of()), engine_databases.app, now)
     assert any(outcome.reason == "consent_outdated" for outcome in outcomes)
     assert await reports_of(engine_databases, learner) == 0
+
+
+async def test_a_queued_replan_waits_until_the_learner_accepts_the_current_notice(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    learner = await learner_on_an_older_notice(engine_databases, rules)
+    async with engine_databases.app.begin() as connection:
+        await connection.execute(
+            text(
+                "INSERT INTO learning.replan_requests (learner_id, local_day, sequence_in_day, actor_chain) "
+                "VALUES (:l, '2026-11-05', 1, ARRAY['agent:shiori'])"
+            ),
+            {"l": learner.id},
+        )
+    services = services_for(engine_databases, rules, crew_of())
+    now = sunday_evening(learner.timezone)
+
+    async def handled() -> bool:
+        async with engine_databases.app.connect() as connection:
+            return bool(
+                await connection.scalar(
+                    text("SELECT handled_at IS NOT NULL FROM learning.replan_requests WHERE learner_id = :l"),
+                    {"l": learner.id},
+                )
+            )
+
+    assert [outcome for outcome in await run_replans(services, now) if outcome.run_id is None] == []
+    assert not await handled()
+    await record_consent(engine_databases.app, learner.id, ACCEPTED)
+    await run_replans(services, now + timedelta(hours=1))
+    assert await handled()
 
 
 async def test_chat_sends_an_old_version_learner_to_the_consent_page_until_they_accept(

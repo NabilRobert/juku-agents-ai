@@ -1,5 +1,7 @@
 """One learner's weekly run, in code's fixed order (ADR-007; AG1, AG2): facts, Keiko, Tadashi, Nikki, Tadashi.
 
+0. A learner on an older consent notice gets nothing new until they
+   accept the current one: the week is skipped, and why is recorded.
 1. Claim the (learner, week) run: a published week is skipped, a run
    another worker holds is left alone, a dead one is taken over (FF7).
 2. Gather the facts (code, no model).
@@ -38,6 +40,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from juku_app.budget import BudgetGuard, BudgetRefusedError
+from juku_app.consent import has_current_consent
 from juku_app.pipeline import records
 from juku_app.pipeline.approval import decide_approval
 from juku_app.pipeline.checks import check_plan, check_report
@@ -48,6 +51,7 @@ from juku_app.pipeline.outputs import Issue, KeikoPlan, Review
 
 RunStatus = Literal["published", "fallback", "skipped", "replanned", "busy"]
 JOB_NAME = "run-weekly"
+CONSENT_OUTDATED = "consent_outdated"
 # ISO weekdays run Monday 1 to Sunday 7; the rule file counts Monday as 0.
 ISO_WEEKDAY_OFFSET = 1
 
@@ -215,12 +219,16 @@ async def _report(context: RunScope, facts: WeekFacts, plan: KeikoPlan) -> str |
 
 async def run_weekly(services: PipelineServices, learner: Learner, now: datetime) -> RunOutcome:
     week_start, _ = week_of(now, learner.timezone)
+    if not await has_current_consent(services.db.app, learner.id):
+        await records.record_skip(services.db.app, learner.id, week_start, CONSENT_OUTDATED, now)
+        return RunOutcome(run_id=None, status="skipped", reason=CONSENT_OUTDATED)
     lease = timedelta(minutes=services.rules.pipeline.run_lease_minutes)
     claimed = await records.claim_weekly_run(services.db.app, learner.id, week_start, now, lease)
     if claimed.claim == "done":
         return RunOutcome(run_id=claimed.run_id, status="skipped")
     if claimed.claim == "busy":
         return RunOutcome(run_id=claimed.run_id, status="busy")
+    await records.clear_skip(services.db.app, learner.id, week_start)
     retired = await retired_note_ids(services.db, learner.id)
     context = RunScope(services=services, learner=learner, run_id=claimed.run_id, now=now, retired=retired)
     facts = await gather_facts(services.db, learner, now)
@@ -259,6 +267,8 @@ async def run_replans(services: PipelineServices, now: datetime) -> list[RunOutc
     outcomes: list[RunOutcome] = []
     for request_id, public_id in queued:
         learner = await engine.get_learner(services.db, str(public_id))
+        if not await has_current_consent(services.db.app, learner.id):
+            continue  # stays queued: it runs once they accept the current notice
         week_start, _ = week_of(now, learner.timezone)
         run_id = await records.start_replan_run(services.db.app, learner.id, week_start, int(request_id), now)
         retired = await retired_note_ids(services.db, learner.id)
