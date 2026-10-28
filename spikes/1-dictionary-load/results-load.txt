@@ -1,0 +1,38 @@
+tatoeba index tokens unparsed: 1
+NOTICE:  database "dict_b" does not exist, skipping
+parse_s=9.5 copy_s=3.3 index_s=5.3 total_s=18.0
+version	JMdict_e	2026-10-28
+version	KANJIDIC2	2026-301
+database_bytes	312998935	298 MB
+dict_schema_bytes	304889856	291 MB
+table	tatoeba_index	1178440	122 MB
+table	jmdict_gloss	443930	34 MB
+table	jmdict_reading	265911	32 MB
+table	tatoeba_sentence	277297	31 MB
+table	jmdict_sense	253882	29 MB
+table	jmdict_kanji	233703	25 MB
+table	jmdict_entry	218971	12 MB
+table	kanjidic_char	13108	3008 kB
+table	kradfile	12156	1664 kB
+table	tatoeba_link	6262	656 kB
+table	jmdict_entity	266	64 kB
+table	dict_version	2	32 kB
+table	tatoeba_index_unparsed	1	16 kB
+index_lines_for_missing_sentences	214
+links_to_missing_sentences	2
+count	dict_version	2
+count	jmdict_entity	266
+count	jmdict_entry	218971
+count	jmdict_gloss	443930
+count	jmdict_kanji	233703
+count	jmdict_reading	265911
+count	jmdict_sense	253882
+count	kanjidic_char	13108
+count	kradfile	12156
+count	tatoeba_index	1178440
+count	tatoeba_index_unparsed	1
+count	tatoeba_link	6262
+count	tatoeba_sentence	277297
+real 22.22
+user 9.61
+sys 0.64
