@@ -117,6 +117,7 @@ async def test_a_second_import_adds_only_the_new_lines(engine: AsyncEngine, tmp_
     second = await import_audit_log(engine, GATEWAY, path)
     third = await import_audit_log(engine, GATEWAY, path)
     assert (first.lines_imported, second.lines_imported, third.lines_imported) == (3, 2, 0)
+    assert third.is_intact
     assert await scalar(engine, "SELECT count(*) FROM monitoring.audit_lines") == 5
 
 
@@ -172,3 +173,51 @@ async def test_a_line_without_a_timestamp_stops_the_whole_import(engine: AsyncEn
     result = await import_audit_log(engine, JUKU_MCP, path)
     assert result.problems == ["line 2: no `ts` or `kind`"]
     assert await scalar(engine, "SELECT count(*) FROM monitoring.audit_lines") == 0
+
+
+async def test_the_two_logs_are_counted_separately(engine: AsyncEngine, tmp_path: Path) -> None:
+    gateway_path = tmp_path / "gateway-audit.jsonl"
+    write_gateway_log(gateway_path, calls=2)
+    await import_audit_log(engine, GATEWAY, gateway_path)
+    juku_path = tmp_path / "juku-mcp-audit.jsonl"
+    log = AuditLog(juku_path, genesis=JUKU_MCP_GENESIS, fsync=False)
+    log.append("call", tool="get_progress", decision="allowed")
+    log.close()
+    result = await import_audit_log(engine, JUKU_MCP, juku_path)
+    assert (result.is_intact, result.lines_imported) == (True, 1)
+
+
+async def test_a_field_of_the_wrong_type_is_stored_as_null(engine: AsyncEngine, tmp_path: Path) -> None:
+    path = tmp_path / "gateway-audit.jsonl"
+    log = AuditLog(path, genesis=GATEWAY_GENESIS, fsync=False)
+    log.append("result", call_id="c1", caller=7, tool="get_progress", suspicious="yes", score="high")
+    log.close()
+    assert (await import_audit_log(engine, GATEWAY, path)).is_intact
+    row = await scalar(
+        engine, "SELECT format('%s|%s|%s', caller, is_suspicious, detector_score) FROM monitoring.audit_lines"
+    )
+    assert row == "||"
+
+
+async def test_a_line_torn_by_a_crash_is_skipped_and_the_lines_after_it_imported(
+    engine: AsyncEngine, tmp_path: Path
+) -> None:
+    path = tmp_path / "juku-mcp-audit.jsonl"
+    log = AuditLog(path, genesis=JUKU_MCP_GENESIS, fsync=False)
+    log.append("call", tool="get_progress", decision="allowed")
+    log.close()
+    with path.open("a") as file:
+        file.write('{"kind": "call", "torn')
+    log = AuditLog(path, genesis=JUKU_MCP_GENESIS, fsync=False)
+    log.append("call", tool="get_memory", decision="allowed")
+    log.close()
+    result = await import_audit_log(engine, JUKU_MCP, path)
+    assert (result.is_intact, result.lines_total, result.lines_imported) == (True, 4, 3)
+
+
+async def test_a_timestamp_that_is_not_iso_is_a_problem(engine: AsyncEngine, tmp_path: Path) -> None:
+    path = tmp_path / "juku-mcp-audit.jsonl"
+    log = AuditLog(path, genesis=JUKU_MCP_GENESIS, fsync=False)
+    log.append("call", tool="get_progress", decision="allowed", ts="yesterday")
+    log.close()
+    assert (await import_audit_log(engine, JUKU_MCP, path)).problems == ["line 1: `ts` isn't an ISO timestamp"]

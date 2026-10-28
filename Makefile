@@ -9,6 +9,7 @@
 #   make db-up     start the local test Postgres (loopback only, throwaway)
 #   make db-down   stop it and delete its data
 #   make fix       format and auto-fix lint
+#   make mutation  mutmut on every package (end of each slice; slow, so not in make check)
 
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
@@ -22,7 +23,7 @@ WEB_DIR := app/web
 
 WITH_TOOL := scripts/with-tool.sh
 
-.PHONY: check lint types test migrations-lint secrets frontend lighthouse fix db-up db-down
+.PHONY: check lint types test migrations-lint secrets frontend lighthouse fix mutation db-up db-down
 
 check: lint types test migrations-lint secrets frontend lighthouse
 	@echo "make check: all steps passed"
@@ -59,6 +60,15 @@ frontend:
 lighthouse:
 	@if [[ ! -f $(WEB_DIR)/package.json ]]; then echo "skipped: no frontend yet ($(WEB_DIR))"; exit 0; fi; \
 	$(WITH_TOOL) lhci "FF12: npm install -g @lhci/cli@0.15.1" lhci autorun --config=$(WEB_DIR)/lighthouserc.json
+
+# mutmut 3 runs one package at a time (each has its own [tool.mutmut]); survivors are listed.
+mutation:
+	@for package in packages/*/; do \
+		grep -q '^\[tool.mutmut\]' $$package/pyproject.toml || continue; \
+		echo "== $$package"; \
+		(cd $$package && rm -rf mutants && $(UV) run --frozen mutmut run --max-children 4 >/dev/null; \
+			$(UV) run --frozen mutmut results | grep -v ': killed'; rm -rf mutants); \
+	done
 
 fix:
 	$(UV) run --frozen ruff format .

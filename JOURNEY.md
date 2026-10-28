@@ -23,3 +23,13 @@ What went wrong while building, and what changed because of it
   password, the dashboard, all six alert rules and the Telegram contact
   point loaded; each alert fired on purpose and cleared. Delivery to
   Telegram needs the real token, so it waits for slice 8.
+- **mutmut, at the end of the track.** Run over the whole workspace, mutmut
+  3 couldn't map `packages/<name>/src` to module names and ran no tests,
+  so each package now has its own `[tool.mutmut]` and `make mutation`
+  runs them one by one. juku-common: 165 of 194 mutants killed; juku-ops:
+  218 of 229, then tests were added for the real gaps it showed (a JSON
+  line that isn't an object, a recovery as the last line, the gateway's
+  line format, wrong-typed fields, two logs side by side, a torn line
+  mid-file, a bad timestamp). The survivors left are equivalent (a no-op
+  `cast`, `strict=` on zips of equal length, the default text encoding)
+  or only change an error message's wording.

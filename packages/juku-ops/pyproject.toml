@@ -25,3 +25,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/juku_ops"]
+
+[tool.mutmut]
+# Run from this folder: `uv run --frozen mutmut run`. The tests need `make db-up`.
+source_paths = ["src/juku_ops/"]
+do_not_mutate = ["src/juku_ops/cli.py", "src/juku_ops/tables.py", "src/juku_ops/settings.py"]
+pytest_add_cli_args_test_selection = ["tests/"]

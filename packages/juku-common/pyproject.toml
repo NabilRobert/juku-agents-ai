@@ -11,3 +11,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/juku_common"]
+
+[tool.mutmut]
+# Run from this folder: `uv run --frozen mutmut run`.
+source_paths = ["src/juku_common/"]
+pytest_add_cli_args_test_selection = ["tests/"]
