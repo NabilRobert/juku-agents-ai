@@ -29,9 +29,9 @@ RUN_DATE = "2026-11-08"
 RUN_TIME = time(18, 0)
 
 
-def sunday_evening(timezone: str) -> datetime:
+def sunday_evening(timezone: str, on: str = RUN_DATE) -> datetime:
     """Sunday 18:00 in the learner's own timezone: when their weekly run is due (AG2)."""
-    return datetime.combine(datetime.fromisoformat(RUN_DATE).date(), RUN_TIME, tzinfo=ZoneInfo(timezone))
+    return datetime.combine(datetime.fromisoformat(on).date(), RUN_TIME, tzinfo=ZoneInfo(timezone))
 
 
 def prompt_of(messages: list[ModelMessage]) -> dict[str, Any]:
@@ -108,11 +108,14 @@ def crew_of(
     )
 
 
-def services_for(db: Databases, rules: Rules, crew: Crew) -> PipelineServices:
+def services_for(
+    db: Databases, rules: Rules, crew: Crew, key: ed25519.Ed25519PrivateKey | None = None
+) -> PipelineServices:
+    """The run's services; `key` signs Keiko's tokens, so pass the one Juku's MCP server trusts when it's called."""
     return PipelineServices(
         db=db,
         rules=rules,
         guard=BudgetGuard(db.app, rules),
-        signer=Signer(ed25519.Ed25519PrivateKey.generate(), rules),
+        signer=Signer(key or ed25519.Ed25519PrivateKey.generate(), rules),
         crew=crew,
     )

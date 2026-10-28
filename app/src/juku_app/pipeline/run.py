@@ -11,6 +11,7 @@ from juku_common.rules import Rules
 from juku_data.engine import Databases
 from juku_data.engine.models import Learner
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from juku_app.budget import BudgetGuard
 from juku_app.pipeline.crew import Crew
@@ -34,4 +35,16 @@ class RunOutcome(BaseModel):
 
 
 async def run_weekly(services: PipelineServices, learner: Learner, now: datetime) -> RunOutcome:
+    raise NotImplementedError
+
+
+async def due_learners(db: Databases, rules: Rules, now: datetime) -> list[Learner]:
+    raise NotImplementedError
+
+
+async def run_due(services: PipelineServices, ops: AsyncEngine, now: datetime) -> list[RunOutcome]:
+    raise NotImplementedError
+
+
+async def run_replans(services: PipelineServices, now: datetime) -> list[RunOutcome]:
     raise NotImplementedError

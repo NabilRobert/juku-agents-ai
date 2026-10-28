@@ -44,3 +44,7 @@ class CrewModels:
 
 def build_crew(models: CrewModels, toolset: MCPToolset | None = None) -> Crew:
     raise NotImplementedError
+
+
+def keiko_toolset(url: str, gateway_key: str | None = None) -> MCPToolset:
+    raise NotImplementedError
