@@ -41,13 +41,17 @@ def public_key_from_pem(pem: str) -> ed25519.Ed25519PublicKey:
     return key
 
 
-def create_app(settings: McpSettings, rules: Rules | None = None) -> Starlette:
-    rules = rules or load_rules()
-    install_tracing()
-    db = Databases(
+def databases(settings: McpSettings, rules: Rules) -> Databases:  # noqa: ARG001 (EDD stub; sized next commit)
+    return Databases(
         app=create_async_engine(settings.app_database_url, pool_size=POOL_SIZE),
         dictionary=create_async_engine(settings.dict_database_url, pool_size=POOL_SIZE),
     )
+
+
+def create_app(settings: McpSettings, rules: Rules | None = None) -> Starlette:
+    rules = rules or load_rules()
+    install_tracing()
+    db = databases(settings, rules)
     deps = ServerDeps(
         db=db,
         verifier=Verifier(public_key_from_pem(settings.delegation_public_key), rules),

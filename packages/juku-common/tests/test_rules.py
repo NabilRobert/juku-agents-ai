@@ -37,6 +37,19 @@ budget:
   report_run_request_limit: 8
   report_run_total_tokens_limit: 40000
   alert_fractions: [0.5, 0.8, 1.0]
+database:
+  connection_limit: 20
+  reserved_for_admin: 2
+  app_pool: 3
+  app_dict_pool: 2
+  app_commands: 1
+  mcp_pool: 3
+  mcp_dict_pool: 2
+  ops_connections: 2
+  migrator_connections: 1
+  dict_owner_connections: 1
+  grafana_connections: 2
+  mcp_backbone_connections: 1
 fitness:
   FF4:
     title: Migrations are safe

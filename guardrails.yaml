@@ -85,6 +85,34 @@ budget:
   # Budget alerts fire at these shares of each pool (M5).
   alert_fractions: [0.5, 0.8, 1.0]
 
+# Connections to the managed database (ADR-016, revised 2026-10-29). The
+# provider allows this many to the cluster; the shares below must fit in
+# it. Each pool is fixed, with no overflow, and each login role's
+# CONNECTION LIMIT in ops/db/roles.sql is its share, so Postgres itself
+# refuses the connection that would pass it.
+database:
+  connection_limit: 20
+  # Left free for the provider's admin login: setup, or a psql session.
+  reserved_for_admin: 2
+  # juku_app: the web app's pools on the app and dict databases.
+  app_pool: 3
+  app_dict_pool: 2
+  # juku_app too: a hand-run command (juku invite, delete-learner) beside the app.
+  app_commands: 1
+  # juku_mcp: Juku's MCP server's pools.
+  mcp_pool: 3
+  mcp_dict_pool: 2
+  # juku_ops: cron jobs use one connection each; two may overlap.
+  ops_connections: 2
+  # juku_migrator: migrations and partition upkeep, one at a time.
+  migrator_connections: 1
+  # dict_owner: the dictionary reload, run by hand.
+  dict_owner_connections: 1
+  # grafana_reader: its data source's maxOpenConns.
+  grafana_connections: 2
+  # mcp_backbone: MCP-backbone's read-only login on the dictionary.
+  mcp_backbone_connections: 1
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as
