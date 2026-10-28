@@ -1,0 +1,214 @@
+# Juku's alert rules (Phase 2 M5), provisioned from this file. Each reads
+# the monitoring schema through the read-only data source and goes to
+# Arthur's Telegram (contact-points.yaml). Every threshold matches
+# guardrails.yaml's `alerts` section; a test keeps them in step. The
+# budget alerts arrive with the budget guard (track C), the missed weekly
+# pipeline run with slice 6. "No data" counts as alerting: a dead-man's
+# switch must not go quiet because its table is empty.
+apiVersion: 1
+groups:
+- orgId: 1
+  name: juku
+  folder: Juku
+  interval: 1m
+  rules:
+  - uid: juku-heartbeat-stale
+    title: Heartbeat stale
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(extract(epoch FROM now() - max(beat_at)), 1e9) AS value FROM monitoring.heartbeats WHERE source = 'app'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 300
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: 'No heartbeat from the app for over 5 minutes: the app, its container or cron is down.'
+  - uid: juku-missed-run
+    title: Scheduled run missed
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.expected_jobs e WHERE coalesce((SELECT max(r.finished_at) FROM monitoring.job_runs r WHERE r.job = e.job AND r.status = 'succeeded'), '-infinity')
+          < now() - e.every - e.grace
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: '{{ $values.A }} scheduled job(s) haven''t completed on time (monitoring.expected_jobs).'
+  - uid: juku-tool-error-rate
+    title: Tool error rate over 5% in an hour
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(error_rate), 0) AS value FROM (SELECT tool, avg((outcome IN ('tool_error', 'transport_error'))::int) AS error_rate FROM monitoring.tool_calls WHERE called_at > now()
+          - interval '1 hour' GROUP BY tool) per_tool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.05
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A tool's error rate over the last hour is {{ $values.A }} (limit 0.05).
+  - uid: juku-detector-flag
+    title: Injection detector flagged a tool output
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.audit_lines WHERE source = 'gateway' AND is_suspicious AND imported_at > now() - interval '10 minutes'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: The gateway's detector flagged {{ $values.A }} tool output(s) in the last import.
+  - uid: juku-audit-chain-broken
+    title: Audit chain broken
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM (SELECT DISTINCT ON (source) is_intact FROM monitoring.audit_imports ORDER BY source, imported_at DESC) latest WHERE NOT is_intact
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: An audit log failed its hash-chain check; nothing was imported from it. See monitoring.audit_imports.
+  - uid: juku-mcp-refusal
+    title: Juku's MCP server refused a call
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.audit_lines WHERE source = 'juku-mcp' AND decision = 'refused' AND imported_at > now() - interval '10 minutes'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: 'Juku''s MCP server refused {{ $values.A }} call(s): a cross-learner or widened-delegation attempt, or a bug. The reason categories are in monitoring.audit_lines.'

@@ -1,0 +1,22 @@
+# Alerts go to Arthur only (ADR-009), through a Telegram bot (settled
+# decision 2). The token is a secret file; the chat ID comes from ops/.env.
+# Messages carry the alert's name and numbers, never learner data.
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: telegram-arthur
+    receivers:
+      - uid: juku-telegram-arthur
+        type: telegram
+        settings:
+          bottoken: $__file{/run/secrets/telegram_bot_token}
+          chatid: $JUKU_TELEGRAM_CHAT_ID
+          parse_mode: None
+        disableResolveMessage: false
+policies:
+  - orgId: 1
+    receiver: telegram-arthur
+    group_by: [alertname]
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h

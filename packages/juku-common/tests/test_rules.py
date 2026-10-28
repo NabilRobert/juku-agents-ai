@@ -7,6 +7,9 @@ from juku_common.rules import RulesError, load_rules
 
 VALID = """
 version: 1
+alerts:
+  heartbeat_stale_seconds: 300
+  tool_error_rate_per_hour: 0.05
 fitness:
   FF4:
     title: Migrations are safe
@@ -78,3 +81,8 @@ def test_a_missing_file_says_where_it_looked(tmp_path: Path) -> None:
 def test_the_path_can_come_from_the_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("JUKU_RULES_PATH", str(write(tmp_path, VALID)))
     assert set(load_rules().fitness) == {"FF4", "FF1"}
+
+
+def test_an_alert_threshold_out_of_range_is_refused(tmp_path: Path) -> None:
+    with pytest.raises(RulesError, match=r"alerts\.tool_error_rate_per_hour"):
+        load_rules(write(tmp_path, VALID.replace("tool_error_rate_per_hour: 0.05", "tool_error_rate_per_hour: 5")))

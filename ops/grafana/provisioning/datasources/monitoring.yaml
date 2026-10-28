@@ -1,0 +1,19 @@
+# Grafana's only data source: the app database, as `grafana_reader`, which
+# can read the monitoring schema and nothing else (ops/db/roles.sql and the
+# monitoring migration). Its password is a secret file, never in the repo.
+apiVersion: 1
+datasources:
+  - name: juku-monitoring
+    uid: juku-monitoring
+    type: grafana-postgresql-datasource
+    url: db:5432
+    user: grafana_reader
+    secureJsonData:
+      password: $__file{/run/secrets/grafana_reader_password}
+    jsonData:
+      database: app
+      sslmode: disable
+      postgresVersion: 1600
+      maxOpenConns: 2
+    isDefault: true
+    editable: false

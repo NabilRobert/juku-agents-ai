@@ -6,6 +6,13 @@
 # when the rule is removed (Phase 1, G1).
 version: 1
 
+# When Arthur is alerted (Phase 2 M5). The Grafana rules in
+# ops/grafana/provisioning/alerting/rules.yaml use these numbers; a test
+# keeps them equal.
+alerts:
+  heartbeat_stale_seconds: 300
+  tool_error_rate_per_hour: 0.05
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as

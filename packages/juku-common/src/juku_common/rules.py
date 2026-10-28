@@ -57,10 +57,18 @@ class FitnessFunction(Section):
         return self
 
 
+class AlertThresholds(Section):
+    """When an alert fires (Phase 2 M5). Grafana's rule files must use the same numbers."""
+
+    heartbeat_stale_seconds: int = Field(gt=0)
+    tool_error_rate_per_hour: float = Field(gt=0, lt=1)
+
+
 class Rules(Section):
     """The whole rule file."""
 
     version: int
+    alerts: AlertThresholds
     fitness: dict[str, FitnessFunction]
 
     @model_validator(mode="after")

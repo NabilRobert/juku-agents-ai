@@ -1,0 +1,11 @@
+# Dashboards come only from the committed JSON in ops/grafana/dashboards;
+# edits in the UI aren't saved, so the repo stays the source of truth.
+apiVersion: 1
+providers:
+  - name: juku
+    folder: Juku
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
