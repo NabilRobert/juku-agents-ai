@@ -5,8 +5,6 @@ from juku_common.delegation import Signer
 from mcp import Client
 from mcp_helpers import Learners, call, token_for
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the server lands in the next commit")
-
 EAT = "86f67e2dc3"  # 食べる/たべる in OpenJLPT
 
 

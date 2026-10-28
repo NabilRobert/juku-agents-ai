@@ -25,7 +25,6 @@ from mcp import Client
 from mcp_helpers import Learners, call, token_for
 
 pytestmark = [
-    pytest.mark.xfail(strict=True, reason="EDD: the server lands in the next commit"),
     pytest.mark.fitness("FF8"),
 ]
 

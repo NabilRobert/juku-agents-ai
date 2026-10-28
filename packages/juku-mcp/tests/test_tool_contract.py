@@ -27,7 +27,6 @@ async def listed_tools(client: Client) -> list[dict[str, Any]]:
     ]
 
 
-@pytest.mark.xfail(strict=True, reason="EDD: the server lands in the next commit")
 @pytest.mark.fitness("FF5")
 async def test_the_tools_match_their_snapshot(client: Client) -> None:
     assert await listed_tools(client) == json.loads(SNAPSHOT.read_text(encoding="utf-8"))

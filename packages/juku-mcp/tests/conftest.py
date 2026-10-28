@@ -18,7 +18,7 @@ from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from mcp_helpers import Learners, make_deps
+from mcp_helpers import Learners, connected, make_deps
 
 
 @pytest.fixture
@@ -62,5 +62,5 @@ async def learners(engine_databases: Databases) -> Learners:
 async def client(
     engine_databases: Databases, key: ed25519.Ed25519PrivateKey, audit_path: Path
 ) -> AsyncIterator[Client]:
-    async with Client(build_server(make_deps(engine_databases, key, audit_path))) as connected:
-        yield connected
+    async with connected(build_server(make_deps(engine_databases, key, audit_path))) as client:
+        yield client

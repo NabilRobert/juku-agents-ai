@@ -15,8 +15,6 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the server lands in the next commit")
-
 
 @pytest.fixture(scope="module")
 def spans() -> Iterator[InMemorySpanExporter]:

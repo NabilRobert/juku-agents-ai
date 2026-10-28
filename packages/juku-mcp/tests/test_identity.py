@@ -14,10 +14,9 @@ from juku_common.rules import load_rules
 from juku_data.engine import Databases
 from juku_mcp.server import build_server
 from mcp import Client
-from mcp_helpers import Learners, call, make_deps, token_for
+from mcp_helpers import Learners, call, connected, make_deps, token_for
 
 pytestmark = [
-    pytest.mark.xfail(strict=True, reason="EDD: the server lands in the next commit"),
     pytest.mark.fitness("FF8"),
 ]
 
@@ -56,7 +55,7 @@ async def test_behind_the_gateway_the_chain_must_match_the_calling_key(
     engine_databases: Databases, key: ed25519.Ed25519PrivateKey, signer: Signer, learners: Learners, audit_path: Path
 ) -> None:
     deps = make_deps(engine_databases, key, audit_path, rules=load_rules())  # require_gateway_caller: true
-    async with Client(build_server(deps)) as gateway_side:
+    async with connected(build_server(deps)) as gateway_side:
         keiko = signer.delegate(token_for(signer, learners.a), to_agent="keiko", tools=["get_progress"])
         assert (await call(gateway_side, "get_progress", keiko, caller="shiori")).body["refused"] == "actor_mismatch"
         no_stamp = token_for(signer, learners.a)

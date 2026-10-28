@@ -10,10 +10,8 @@ from juku_common.rules import load_rules
 from juku_data.engine import Databases
 from juku_mcp.server import build_server
 from mcp import Client
-from mcp_helpers import Learners, call, make_deps, token_for
+from mcp_helpers import Learners, call, connected, make_deps, token_for
 from sqlalchemy import text
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the server lands in the next commit")
 
 
 async def queued(db: Databases, learner_id: int) -> int:
@@ -47,7 +45,7 @@ async def test_the_daily_cap_comes_from_the_rule_file(
             "delegation": rules.delegation.model_copy(update={"require_gateway_caller": False}),
         }
     )
-    async with Client(build_server(make_deps(engine_databases, key, audit_path, rules=rules))) as client:
+    async with connected(build_server(make_deps(engine_databases, key, audit_path, rules=rules))) as client:
         answers = [await call(client, "request_replan", token_for(signer, learners.b)) for _ in range(3)]
     assert [answer.body["queued"] for answer in answers] == [True, True, False]
 
