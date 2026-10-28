@@ -10,8 +10,6 @@ from juku_testkit.privacy import PLANTED_QUESTION, find_text
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the importer is a stub until the next commit")
-
 
 @pytest.fixture
 async def engine(app_engine: AsyncEngine) -> AsyncIterator[AsyncEngine]:
@@ -159,3 +157,18 @@ async def test_juku_mcp_refusals_keep_their_category_and_chain_but_not_their_det
     async with engine.connect() as connection:
         assert await find_text(connection, "monitoring", "PLANTED-7f3a") == []
         assert await find_text(connection, "monitoring", "lrn_planted") == []
+
+
+async def test_a_line_without_a_timestamp_stops_the_whole_import(engine: AsyncEngine, tmp_path: Path) -> None:
+    path = tmp_path / "juku-mcp-audit.jsonl"
+    log = AuditLog(path, genesis=JUKU_MCP_GENESIS, fsync=False)
+    log.append("call", tool="get_progress", decision="allowed")
+    log.close()
+    lines = path.read_text().splitlines(keepends=True)
+    log = AuditLog(path, genesis=JUKU_MCP_GENESIS, fsync=False)
+    log.append("call", tool="get_memory", decision="allowed", ts=None)
+    log.close()
+    assert len(path.read_text().splitlines()) == len(lines) + 1
+    result = await import_audit_log(engine, JUKU_MCP, path)
+    assert result.problems == ["line 2: no `ts` or `kind`"]
+    assert await scalar(engine, "SELECT count(*) FROM monitoring.audit_lines") == 0

@@ -45,8 +45,7 @@ fitness:
     until: track B (slice 3)
   FF9:
     title: No content in records, traces or logs
-    status: pending
-    until: track D (the audit importer)
+    status: active
   FF10:
     title: Load test against the recorded baseline
     status: pending
