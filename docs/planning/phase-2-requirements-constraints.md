@@ -282,9 +282,10 @@ test that fails when the rule is removed (Phase 1, G1).
 
 Learners use mid-range Android phones on mobile data, so the frontend is
 built to a budget and checked in CI (ADR-024).
-- **FE1. Server-rendered HTML first.** Pages arrive ready to read. htmx
-  (about 14 KB) handles the partial updates: quiz answers, ratings,
-  "mark known", loading more history. No single-page framework.
+- **FE1. Server-rendered HTML first.** Pages arrive ready to read. **Vue 3
+  islands** (Arthur's stack) mount only where a page is interactive: chat,
+  quiz answers, ratings, "mark known", loading more history. There's no
+  client router and no single-page app (Phase 5, ADR-024).
 - **FE2. Load only what a page needs.** Vite builds one small bundle per
   page, so the chat's streaming code loads only on Chat. Heavy pieces
   load on demand with dynamic `import()`. Everything below the fold is
@@ -582,7 +583,7 @@ by SM2.
 | **Must** | SAF-R1 and SAF-R2 with the scripted agent; evaluation-driven order (each agent's tasks committed before its code) |
 | **Must** | The data design in the scale path (events, summaries, separate text, `cohort_id`, timezones); fitness functions FF1–FF9 and FF11 in CI |
 | **Must** | AG6 (a learner in distress); JI1 (input normalization); the dictionary update policy; "Unduh data saya"; the processing-abroad wording |
-| **Must** | FE1–FE7: server-rendered pages with htmx, per-page bundles and lazy loading, system Japanese fonts, `<ruby>`, compression and caching, the performance budget in CI |
+| **Must** | FE1–FE7: server-rendered pages with Vue islands, per-page bundles and lazy loading, system Japanese fonts, `<ruby>`, compression and caching, the performance budget in CI |
 | **Must** | AG1–AG3, AG5: the weekly pipeline with critic and code approval, scheduling with a dead-man's switch, run records, the cited chat |
 | **Must** | UI1–UI3; D1–D3; M1, M4–M6; B1–B3 |
 | **Must** | Privacy as above: consent, 18+, stored/not stored, retention, self-serve deletion, public-evidence check |

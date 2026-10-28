@@ -145,7 +145,7 @@ limits. Raising one is a visible, reviewed change, never a silent one.
 ## The load test (Should, $0)
 
 - **What:** Locust drives 5,000 synthetic learners against the full stack
-  on the laptop. The model is scripted (record and replay), so it costs
+  on the laptop. The model is scripted (PydanticAI's `FunctionModel`), so it costs
   nothing.
 - **Measured:**
   - event writes per second;

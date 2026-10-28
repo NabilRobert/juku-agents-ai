@@ -31,7 +31,7 @@ browser ─► Juku app ─┤                                                  
 | The learner's MCP server | The MCP Python SDK | The scoped tools: no existing server holds Juku's learner data |
 | Delegation tokens | RFC 8693 claim shapes; Keycloak at scale | A small signer and verifier (ADR-018) |
 | Learning engine and Susumu | — | Built: deterministic, testable logic over Juku's data is what's demonstrated (ADR-010) |
-| The agents and the tool loop | The MCP and OpenAI-compatible SDKs | The loop itself, so every call is visible (ADR-005) |
+| The agents and the tool loop | **PydanticAI** (ADR-005, ADR-025) | The agents' prompts, tools and typed outputs |
 
 ### ADR-001: The users are Indonesian JLPT learners in a study group (settled)
 
@@ -150,21 +150,35 @@ the consent, memory and deletion screens.
   personal data, and per-conversation pricing.
 - *Telegram:* less used in Indonesia, and not Arthur's second choice.
 
-### ADR-005: A thin Python app with a hand-written tool loop
+### ADR-005: A thin Python app, with PydanticAI for the agents (revised 2026-10-28)
 
 **Decision:**
-- Python 3.12, FastAPI, server-rendered Jinja2 with a little TypeScript,
-  SQLAlchemy and Alembic.
-- An MCP Python SDK client to the gateway, and an OpenAI-compatible client
-  to Sumopod.
-- The tool loop and the pipeline are written by hand, so every call is
-  recorded and traced.
+- Python 3.12, FastAPI, SQLAlchemy 2 + Alembic, Pydantic, Typer, uv.
+  Pages are server-rendered shells with Vue islands (ADR-024).
+- **The agents run on PydanticAI** (approved by Arthur 2026-10-28,
+  ADR-025):
+  - its MCP client reaches the gateway over Streamable HTTP;
+  - its OpenAI-compatible provider reaches Sumopod;
+  - typed outputs carry Tadashi's issues and Keiko's note proposals;
+  - `UsageLimits` caps each run;
+  - `TestModel` and `FunctionModel` drive the $0 scripted tests;
+  - its OpenTelemetry instrumentation feeds Project 6.
+- **The pipeline is PydanticAI agents chained in plain Python,** in a fixed
+  order (ADR-007).
 
 **Why:** the loop is the subject being monitored, so it must be visible.
+PydanticAI keeps it visible: every message and tool call is in the run's
+message history and its spans. It also removes the loop code we would
+otherwise have written and tested ourselves.
 
 **Rejected:**
-- *An agent framework (LangChain, LlamaIndex, CrewAI and the like):* it
-  hides the loop being measured.
+- *A hand-written loop* (this ADR as first written): it reimplements what
+  the framework does, against the folder's "frameworks over plain code"
+  rule.
+- *LangChain, LlamaIndex, CrewAI:* heavier, and they hide the loop being
+  measured.
+- *The OpenAI Agents SDK:* close, but tied to OpenAI's conventions, with
+  less emphasis on typed outputs.
 - *A single-page app:* more front end than this needs (ADR-024).
 - *Direct database access from agents:* it skips the stack being shown.
 
@@ -681,10 +695,13 @@ overstate the work to the audience this portfolio is for.
 - *Manual review only:* it doesn't scale, and it misses slow drift.
 - *Load tests on every commit:* too slow. They run before releases.
 
-### ADR-024: The frontend is server-rendered, lazy, and held to a budget
+### ADR-024: The frontend is server-rendered, lazy, and held to a budget (revised 2026-10-28)
 
 **Decision:**
-- Jinja2 pages with htmx for partial updates.
+- Jinja2 page shells, with **Vue 3 + TypeScript islands** mounted only
+  where a page is interactive (chat, quiz, the memory page). There's no
+  client router. Approved by Arthur 2026-10-28 (ADR-025), so the frontend
+  matches his stack. Vitest for tests.
 - Vite building one small bundle per page, with dynamic imports for the
   heavy pieces.
 - Lazy images, and lists loaded 20 at a time.
@@ -705,7 +722,8 @@ overstate the work to the audience this portfolio is for.
   functions.
 
 **Rejected:**
-- *A Vue or React single-page app:* a large first download and client
+- *htmx* (this ADR as first written): small, but not in Arthur's stack.
+- *A full Vue or React single-page app:* a large first download and client
   routing, for a handful of simple pages.
 - *Next.js or Nuxt:* a second runtime (Node) next to the Python app, for
   no gain here.
@@ -717,27 +735,27 @@ overstate the work to the audience this portfolio is for.
 Default to Arthur's stack: FastAPI, Pydantic, SQLAlchemy 2 + Alembic,
 Typer, pytest, uv, ruff and pyright, the MCP SDK, Vue 3 / TypeScript /
 Tailwind / Vite / Vitest, the OpenTelemetry SDK and Inspect AI. Rows
-marked **proposed** are new to his stack and **wait for his OK**; until
-then, the ADR they would replace stands.
+new to his stack were proposed and **approved by Arthur on 2026-10-28**
+(PydanticAI, Vue islands, and all the small libraries).
 
 | Component | Framework (recommended) | Why | Rejected alternative | Status |
 |---|---|---|---|---|
-| **Agent loop** (Shiori, Keiko, Nikki, Tadashi) | **PydanticAI** | Its MCP client connects to the gateway over Streamable HTTP. It speaks to Sumopod through its OpenAI-compatible provider (a base URL). Typed outputs (Pydantic models) suit Tadashi's issues and Keiko's note proposals. `UsageLimits` caps tokens and requests per run, which backs the budget guard. `TestModel` and `FunctionModel` give the $0 scripted runs. OpenTelemetry instrumentation follows the GenAI conventions Project 6 uses. Every message and tool call stays visible in the run's message history, so the "loop must be visible" reason in ADR-005 still holds | A hand-written loop (ADR-005 as first written): it reimplements what the framework does. LangChain and LlamaIndex: heavier, and they hide the loop. *Spike 6 checks that the delegation token can be set in each call's `_meta`* | **proposed** (would revise ADR-005) |
+| **Agent loop** (Shiori, Keiko, Nikki, Tadashi) | **PydanticAI** | Its MCP client connects to the gateway over Streamable HTTP. It speaks to Sumopod through its OpenAI-compatible provider (a base URL). Typed outputs (Pydantic models) suit Tadashi's issues and Keiko's note proposals. `UsageLimits` caps tokens and requests per run, which backs the budget guard. `TestModel` and `FunctionModel` give the $0 scripted runs. OpenTelemetry instrumentation follows the GenAI conventions Project 6 uses. Every message and tool call stays visible in the run's message history, so the "loop must be visible" reason in ADR-005 still holds | A hand-written loop (ADR-005 as first written): it reimplements what the framework does. LangChain and LlamaIndex: heavier, and they hide the loop. *Spike 6 checks that the delegation token can be set in each call's `_meta`* | **approved 2026-10-28** (ADR-005 revised) |
 | **The crew's orchestration** (the weekly pipeline) | PydanticAI agents chained in plain Python: its documented "programmatic hand-off" pattern | A fixed 4-step chain with at most 2 revisions is a few lines; code decides the order (ADR-007) | pydantic-graph, a state-machine framework: heavier than a fixed chain | with the row above |
 | **Scheduling** | **cron starting a Typer CLI command** (`juku run-weekly`, `juku consolidate`, `juku import-audit`) | The OS scheduler plus Arthur's CLI framework, as Pitstop did; "no crontab = no runs" stays checkable; the dead-man's switch watches the records (ADR-014) | APScheduler, in-process: jobs stop silently when the app restarts, and run twice with two workers. At scale, Procrastinate (scale path) | stack (Typer); cron is the OS |
 | **HTTP API and pages** | FastAPI, with Jinja2 for the page shells | Arthur's stack; MCP-backbone's console does the same | — | stack |
-| **Interactive frontend** (chat, quiz, memory page) | **Vue 3 + TypeScript + Tailwind + Vite, as per-page "islands"**: the server renders the page, Vue mounts only the interactive parts, and there's no router; Vitest for tests | Arthur's frontend stack, so it looks like one team's work. The Vue runtime (~30 KB compressed) fits the 100 KB per-page budget (ADR-024, FF12) | htmx (ADR-024 as first written): not in his stack. A full Vue SPA with a router: a heavier first load | **proposed** (would revise ADR-024) |
+| **Interactive frontend** (chat, quiz, memory page) | **Vue 3 + TypeScript + Tailwind + Vite, as per-page "islands"**: the server renders the page, Vue mounts only the interactive parts, and there's no router; Vitest for tests | Arthur's frontend stack, so it looks like one team's work. The Vue runtime (~30 KB compressed) fits the 100 KB per-page budget (ADR-024, FF12) | htmx (ADR-024 as first written): not in his stack. A full Vue SPA with a router: a heavier first load | **approved 2026-10-28** (ADR-024 revised) |
 | **Streaming answers** | sse-starlette | Server-sent events for FastAPI, done properly (disconnects, pings) | A hand-written `StreamingResponse` event format | small library |
 | **Settings, and the rule file** (`guardrails.yaml`) | Pydantic Settings and Pydantic models | Validated at start-up; a bad limit fails loudly | Reading the YAML into plain dicts | stack |
 | **Database and migrations** | SQLAlchemy 2 + Alembic; Postgres's own partitioning (pg_partman at scale) | Stack | — | stack |
 | **Juku's MCP server** | The official MCP Python SDK | Stack; the same as MCP-backbone | — | stack |
-| **Delegation tokens** (ADR-018) | **PyJWT** with Ed25519 (`cryptography`) | Well-maintained JWT signing and checking; RFC 8693's `act` claim is just a nested claim | Hand-rolled signed tokens; Authlib (more than needed); Keycloak now (scale path) | **proposed** |
-| **Login sessions and invite codes** | Starlette's `SessionMiddleware` (signed cookies) and **argon2-cffi** for code hashes | No hand-rolled cookies or hashing | passlib (unmaintained); plain SHA-256 for codes | **proposed** (argon2-cffi) |
-| **HTTP calls and retries** (non-model) | **httpx** and **tenacity** | The established choices; PydanticAI already retries model calls | `requests` plus hand-written retry loops | **proposed** |
-| **Structured logs** | **structlog** | JSON logs with request and trace IDs, alongside OpenTelemetry | `logging` with hand-formatted JSON | **proposed** |
-| **Japanese input** | SudachiPy, jaconv; OpenJLPT's package for search | Reuse (ADR-003) | — | **proposed** (new libraries) |
+| **Delegation tokens** (ADR-018) | **PyJWT** with Ed25519 (`cryptography`) | Well-maintained JWT signing and checking; RFC 8693's `act` claim is just a nested claim | Hand-rolled signed tokens; Authlib (more than needed); Keycloak now (scale path) | **approved 2026-10-28** |
+| **Login sessions and invite codes** | Starlette's `SessionMiddleware` (signed cookies) and **argon2-cffi** for code hashes | No hand-rolled cookies or hashing | passlib (unmaintained); plain SHA-256 for codes | **approved 2026-10-28** |
+| **HTTP calls and retries** (non-model) | **httpx** and **tenacity** | The established choices; PydanticAI already retries model calls | `requests` plus hand-written retry loops | **approved 2026-10-28** |
+| **Structured logs** | **structlog** | JSON logs with request and trace IDs, alongside OpenTelemetry | `logging` with hand-formatted JSON | **approved 2026-10-28** |
+| **Japanese input** | SudachiPy, jaconv; OpenJLPT's package for search | Reuse (ADR-003) | — | **approved 2026-10-28** |
 | **Moderation** (Phase 2, AG6) | The provider's moderation endpoint through the same OpenAI-compatible client; if Sumopod doesn't expose one, a small local classifier on the gateway's ONNX setup | No hand-written keyword lists | A keyword blocklist | to check in a spike |
-| **The WhatsApp channel** (Could, X2) | **The WhatsApp Cloud API through `pywa`**: a Python framework for Meta's official API, with FastAPI webhook support | Official API, so no ban risk; it fits the FastAPI app | Twilio for WhatsApp (an extra account and per-message fee on top of Meta's); unofficial WhatsApp Web libraries (against WhatsApp's terms; numbers get banned) | **proposed**, for after the window |
+| **The WhatsApp channel** (Could, X2) | **The WhatsApp Cloud API through `pywa`**: a Python framework for Meta's official API, with FastAPI webhook support | Official API, so no ban risk; it fits the FastAPI app | Twilio for WhatsApp (an extra account and per-message fee on top of Meta's); unofficial WhatsApp Web libraries (against WhatsApp's terms; numbers get banned) | **approved 2026-10-28**, for after the window |
 | **CLI** (load, export, delete, runs) | Typer | Stack | argparse | stack |
 | **Tests** | pytest (+ mutmut), Vitest, Lighthouse CI, Locust | Stack, plus the tools the fitness functions name | — | stack |
 | **Evals** | Inspect AI, via agent-eval-harness | Stack | — | stack |
