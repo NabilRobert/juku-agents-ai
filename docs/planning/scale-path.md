@@ -30,6 +30,7 @@ Two rules:
 | `learning_events` | `bigint` ID, learner ID, cohort ID, event type (`smallint` enum), item ID (dictionary entry or kanji), result, timestamp with time zone. No text | About 40 bytes a row. Partitioned by month, so retention is dropping a partition, not a mass delete. Indexed on (learner, time) |
 | `learner_state` | One row per learner and item: box (Leitner), known flag, last seen, counts | Updated as each event arrives. It holds what the recommender, quizzes and reports read, so they never scan history |
 | `learner_coverage` | One row per learner and level: words known, kanji known | Incremental counters, so the "how much of N3 do I know" page reads one row |
+| `learner_candidate` | One row per learner and candidate word: the word, its one unknown kanji (if any) | Updated when a word becomes known or the learner's level changes, so the recommender ranks a small table. Spike 2: the per-call version reached 231 ms p95 at 4,000 known words |
 | `memory_notes` | Category (enum), short text, evidence event IDs, expiry | Small by design, with a cap per learner |
 | `chat_messages`, `reports` | Text with an expiry date | Kept apart from the metrics. Deleted by date, in batches |
 | `tool_calls`, `pipeline_runs` | Per-call and per-run records, no content | Partitioned by month, like the events |
@@ -126,7 +127,7 @@ what statistics at this sample size can't.
 
 | # | Fitness function | Guards | Fails when | Runs |
 |---|---|---|---|---|
-| FF1 | **Query plans.** `EXPLAIN` on the hot queries (recommender, coverage, quiz pick, learner state) against a synthetic database of 5,000 learners | Scale | A sequential scan of `learning_events`, or a plan cost over its recorded ceiling | Every commit |
+| FF1 | **Query plans.** `EXPLAIN` on the hot queries (recommender, coverage, quiz pick, learner state) against a synthetic database of 5,000 learners, including one who knows 4,000 words | Scale | A sequential scan of `learning_events`, a plan cost over its recorded ceiling, or `recommend_words` over 200 ms for the 4,000-word learner | Every commit |
 | FF2 | **Hot paths read summaries only** | Scale | A $0 page or an agent tool touches `learning_events` directly (checked from the query log in tests) | Every commit |
 | FF3 | **Incremental state = full recompute** | Correctness | `learner_state` or `learner_coverage` differs from recomputing from events, on the fixtures | Every commit, and nightly in production |
 | FF4 | **Migrations are safe** | Uptime at scale | Squawk flags a locking or rewriting migration | Every commit |

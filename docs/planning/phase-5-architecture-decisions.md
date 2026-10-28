@@ -393,9 +393,16 @@ An earlier version spent about 300 ms in JIT compilation. So:
 - `jit = off` is set on the Juku MCP server's database role;
 - a fitness check (FF13) fails if a tool query's plan cost jumps or JIT
   turns on;
-- slice 2 records a quiet-machine baseline for `recommend_words` at N2.
-  If it nears 200 ms, each learner's candidates are precomputed when
-  their known words change.
+- **each learner's candidates are kept incrementally** in
+  `learner_candidate`: the unknown words with at most one unknown kanji,
+  and that kanji. They're updated when a word becomes known or the learner's level
+  changes, so
+  `recommend_words` ranks a small table instead of re-deriving the known
+  kanji on every call. Spike 2's retime showed why: at 4,000 known words
+  (N5–N2 is about 4,700), the per-call query reached 231 ms at p95 and
+  649 ms at worst. The table is checked against a full recompute nightly,
+  like the other summaries;
+- FF1 times `recommend_words` with 4,000 known words.
 
 **Why:** explainable, testable to the exact row, and free. Agents add
 judgement and explanation on top, and never invent the facts.
