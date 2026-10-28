@@ -16,7 +16,7 @@ it. The first results stay as the fallback, for a full JMdict import.
 | # | Question | Result | Pass rule | Branch |
 |---|---|---|---|---|
 | 1 | How big is the dictionary, and how long does it load? | **OpenJLPT: 19 MB, 2 s**, identical on a repeat. Pinned to commit `bf4e1ee`: no release has this data. (Fallback, JMdict + KANJIDIC2 + Tatoeba: 299 MB, 18 s) | Under 1 GB, repeatable: **pass** | `spike/dictionary-load` |
-| 2 | Do the recommender and i+1 queries fit? | **OpenJLPT, quiet machine: worst call 91 ms**. Under heavy load from other sessions, p95 stays under 200 ms, but single N2 calls at 500 known words reach 242–274 ms. (Fallback: worst 120 ms, after a JIT fix) | Under 200 ms each: **pass on a quiet machine; recheck in slice 2** | `spike/recommender-query` |
+| 2 | Do the recommender and i+1 queries fit? | **OpenJLPT, quieter rerun (load ~5): worst call 102 ms** (jit off) at 0/100/500 known words. Beyond the rule, the recommender reaches a p95 of 231 ms and a max of 649 ms at 4,000 known words; the reading query stays flat. (Fallback: worst 120 ms, after a JIT fix) | Under 200 ms each: **pass**; slice 2 makes the recommender incremental | `spike/recommender-query` |
 | 3 | Does Grafana fit? | Idle **217 MiB** median uncapped; **244–251 MiB** in a 256 MB cap; `GOMEMLIMIT` doesn't help | Well under 256 MB: **fail**, so cron alerts | `spike/grafana-memory` |
 | 4 | How complete is OpenJLPT for Juku? (was: how cleanly do the lists map) | **11 of 7,811 words unlinked**; all links resolve; 7.2% have no example; **90.7% of example tokens map to one word**, so 63.3% of sentences (66.1% with ない as grammar) qualify for i+1. Common words in neither list (父, 母, 顔) need a supplement. (Without OpenJLPT: 98.0% of rows unique, 24 ambiguous) | Counted, rules written: **pass** | `spike/jlpt-mapping` |
 | 5 | Does Sumopod report cached input tokens? | **Yes**, in all 6,792 raw responses; **32%** of prompt tokens were cached, automatically | Answered: **pass** (cost-model edit proposed below) | `spike/cached-tokens` |
@@ -50,12 +50,12 @@ it. The first results stay as the fallback, for a full JMdict import.
   reading index covers 8,339 SudachiPy-tokenized example sentences. Both
   tools run through a minimal MCP server, with known words from an `app`
   database of 5,000 synthetic learners.
-  - **Quiet machine:** worst call 62 ms (jit on) and 91 ms (jit off).
-  - **Under a load average of 13–21** from other sessions: p95 under
-    200 ms everywhere; worst single calls 242–274 ms (N2, 500 known words,
-    jit off).
-  - The reading query stays flat to 4,000 known words. The recommender
-    grows, to a p95 of 187 ms at 2,000 under load.
+  - **Quieter rerun (load average about 5):** worst call 102 ms (jit off)
+    and 123 ms (jit on). An earlier run gave 62 and 91 ms; under a load of
+    13–21, single N2 calls reached 242–274 ms.
+  - **At 4,000 known words** (an advanced N2 learner), `recommend_words`
+    reaches a p95 of 231 ms and a max of 649 ms. The reading query stays
+    flat (24 ms p50).
 - **The fallback (JMdict and Tatoeba):** the worst call was 120 ms, after
   rewriting the recommender. The first version spent about 300 ms in JIT
   compilation. Its reading query over 102,568 sentences crossed 200 ms at
@@ -193,9 +193,9 @@ Not edited yet. Each needs Arthur's OK.
    - `jit = off` on the Juku MCP server's role;
    - a fitness check that fails if a tool query's plan cost explodes or
      JIT kicks in;
-   - a quiet-machine baseline for `recommend_words` at N2 before slice 2
-     signs off. If it's still near 200 ms, precompute each learner's
-     candidates as their known words change.
+   - keep each learner's recommender candidates incrementally (unknown
+     words with at most one unknown kanji), updated as words become known.
+     FF1 times `recommend_words` at 4,000 known words;
    - The reading query is fine on OpenJLPT.
 7. **ADR-003 (spikes 1 and 4):**
    - record that the OpenJLPT data Juku uses has **no release**, so it's
