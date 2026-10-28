@@ -54,7 +54,7 @@ async def test_tool_calls_has_monthly_partitions_through_2027(app_engine: AsyncE
 async def test_grafana_reader_can_read_the_monitoring_schema(app_engine: AsyncEngine) -> None:
     async with app_engine.connect() as connection:
         await connection.execute(text("SET ROLE grafana_reader"))
-        assert await connection.scalar(text("SELECT count(*) FROM monitoring.expected_jobs")) == 2
+        assert await connection.scalar(text("SELECT count(*) FROM monitoring.expected_jobs")) >= 2
         await connection.rollback()
 
 

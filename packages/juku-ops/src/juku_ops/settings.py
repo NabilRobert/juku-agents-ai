@@ -19,6 +19,8 @@ class OpsSettings(BaseSettings):
 
     # The jobs' own role: writes imports, heartbeats and job runs (ops/db/roles.sql).
     ops_database_url: str
+    # The nightly state check reads learner data, as the app's role.
+    app_database_url: str | None = None
     # Partition upkeep is DDL, so it runs as the role that owns the tables.
     migrator_database_url: str | None = None
     gateway_audit_log: Path | None = None

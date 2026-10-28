@@ -26,6 +26,8 @@ CREATE DATABASE dict OWNER dict_owner;
 REVOKE ALL ON DATABASE app FROM PUBLIC;
 REVOKE ALL ON DATABASE dict FROM PUBLIC;
 GRANT CONNECT ON DATABASE app TO juku_app, juku_mcp, juku_ops, grafana_reader;
+-- The nightly state check (FF3) and rebuilds compare through temporary tables.
+GRANT TEMPORARY ON DATABASE app TO juku_app;
 GRANT CONNECT ON DATABASE dict TO dict_reader;
 SQL
 

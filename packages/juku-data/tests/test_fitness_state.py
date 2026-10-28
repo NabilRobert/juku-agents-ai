@@ -60,11 +60,16 @@ async def test_a_summary_that_drifts_from_the_events_is_reported(engine_database
     """The check isn't vacuous: change one summary row behind the engine's back and it's found."""
     learner = await create_learner(engine_databases, nickname="drift", target_level=5)
     word = (await some_words(engine_databases, 1))[0]
-    await mark_known(engine_databases, learner.id, word, datetime(2026, 11, 2, tzinfo=UTC))
-    async with engine_databases.app.begin() as connection:
-        await connection.execute(
-            text("UPDATE learning.learner_coverage SET words_known = words_known + 1 WHERE learner_id = :id"),
-            {"id": learner.id},
-        )
-    differences = await verify_state(engine_databases, [learner.id])
-    assert differences and all("learner_coverage" in difference for difference in differences)
+    try:
+        await mark_known(engine_databases, learner.id, word, datetime(2026, 11, 2, tzinfo=UTC))
+        async with engine_databases.app.begin() as connection:
+            await connection.execute(
+                text("UPDATE learning.learner_coverage SET words_known = words_known + 1 WHERE learner_id = :id"),
+                {"id": learner.id},
+            )
+        differences = await verify_state(engine_databases, [learner.id])
+        assert differences and all("learner_coverage" in difference for difference in differences)
+    finally:
+        # Other tests verify every learner in the database; this one mustn't stay drifted.
+        async with engine_databases.app.begin() as connection:
+            await connection.execute(text("DELETE FROM learning.learners WHERE id = :id"), {"id": learner.id})

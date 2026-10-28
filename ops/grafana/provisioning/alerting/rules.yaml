@@ -212,3 +212,36 @@ groups:
       project: juku
     annotations:
       summary: 'Juku''s MCP server refused {{ $values.A }} call(s): a cross-learner or widened-delegation attempt, or a bug. The reason categories are in monitoring.audit_lines.'
+  - uid: juku-job-failed
+    title: A scheduled job failed
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM (SELECT DISTINCT ON (job) status FROM monitoring.job_runs ORDER BY job, started_at DESC) latest WHERE status = 'failed'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: '{{ $values.A }} job(s) failed on their latest run, e.g. verify-state finding learner summaries that differ from the events (FF3). See monitoring.job_runs.'

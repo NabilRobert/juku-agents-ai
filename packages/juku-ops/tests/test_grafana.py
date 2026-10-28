@@ -29,6 +29,8 @@ M5_ALERTS = {
     "juku-detector-flag",
     "juku-audit-chain-broken",
     "juku-mcp-refusal",
+    # Beyond M5: the daily checks' "scheduled runs completed" (standard checks, section 6).
+    "juku-job-failed",
 }
 
 

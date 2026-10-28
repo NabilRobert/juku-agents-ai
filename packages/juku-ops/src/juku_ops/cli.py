@@ -3,6 +3,7 @@
     juku-ops heartbeat           every minute: a beat, only if the app answers
     juku-ops import-audit        every 5 minutes: verify and import the audit logs
     juku-ops ensure-partitions   daily: keep the next months' partitions ready
+    juku-ops verify-state        nightly: learner summaries against a recompute (FF3 in production)
 
 Each job but the heartbeat records its run in monitoring.job_runs. A job
 that finds a problem exits with status 1, so cron's own mail or log shows
@@ -24,6 +25,7 @@ from juku_ops.heartbeat import beat, is_healthy
 from juku_ops.jobs import recorded_run
 from juku_ops.partitions import ensure_month_partitions
 from juku_ops.settings import OpsSettings
+from juku_ops.state_check import StateDriftError, verify_production_state
 
 app = typer.Typer(help="Juku's scheduled operations jobs.", no_args_is_help=True)
 
@@ -106,3 +108,27 @@ def ensure_partitions() -> None:
         raise typer.Exit(1)
     created = asyncio.run(_ensure_partitions(settings, settings.migrator_database_url))
     typer.echo(f"created {len(created)} partitions" + (f": {', '.join(created)}" if created else ""))
+
+
+async def _verify_state(settings: OpsSettings, app_url: str) -> list[str]:
+    ops_engine, app_engine = _engine(settings.ops_database_url), _engine(app_url)
+    try:
+        return await verify_production_state(app_engine, ops_engine)
+    finally:
+        await ops_engine.dispose()
+        await app_engine.dispose()
+
+
+@app.command("verify-state")
+def verify_state() -> None:
+    """Check every learner's summaries against a recompute from their events."""
+    settings = OpsSettings()  # pyright: ignore[reportCallIssue]
+    if settings.app_database_url is None:
+        typer.echo("JUKU_APP_DATABASE_URL is not set: the check reads learner data as the app's role", err=True)
+        raise typer.Exit(1)
+    try:
+        asyncio.run(_verify_state(settings, settings.app_database_url))
+    except StateDriftError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    typer.echo("learner summaries match a recompute from the events")
