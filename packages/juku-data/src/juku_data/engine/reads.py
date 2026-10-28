@@ -93,6 +93,23 @@ LEFT JOIN ojlpt.supplement_word sup ON sup.id = f.new_word_id
 ORDER BY length(f.ja), f.sentence_id
 """
 
+COVERAGE = """
+SELECT c.level, c.words_known, c.kanji_known,
+       (SELECT count(*) FROM learning.dictionary_words w WHERE w.level = c.level) AS words_total,
+       (SELECT count(*) FROM learning.dictionary_kanji k WHERE k.level = c.level) AS kanji_total
+FROM learning.learner_coverage c WHERE c.learner_id = :learner_id ORDER BY c.level DESC
+"""
+KNOWN_COUNT = "SELECT count(*) FROM learning.learner_state WHERE learner_id = :learner_id AND is_known"
+KNOWN_IDS = "SELECT item_id FROM learning.learner_state WHERE learner_id = :learner_id AND is_known ORDER BY item_id"
+MISTAKES = """
+SELECT item_id, box, due_at FROM learning.learner_state
+WHERE learner_id = :learner_id AND box IS NOT NULL ORDER BY due_at, item_id
+"""
+ACTIVITY = """
+SELECT day, quiz_answers, quiz_correct, words_marked, sentences_read FROM learning.learner_daily_activity
+WHERE learner_id = :learner_id AND day > :first_excluded AND day <= :today ORDER BY day
+"""
+
 WORD_DETAILS = """
 SELECT id, word, reading, meanings FROM ojlpt.vocab WHERE id = ANY(:ids)
 UNION ALL
@@ -119,30 +136,15 @@ async def word_details(dictionary: AsyncEngine, word_ids: list[str]) -> dict[str
 
 async def known_word_ids(app: AsyncEngine, learner_id: int) -> list[str]:
     async with app.connect() as connection:
-        found = await connection.scalars(
-            text("SELECT item_id FROM learning.learner_state WHERE learner_id = :id AND is_known ORDER BY item_id"),
-            {"id": learner_id},
-        )
+        found = await connection.scalars(text(KNOWN_IDS), {"learner_id": learner_id})
         return [str(word_id) for word_id in found]
 
 
 async def get_progress(app: AsyncEngine, learner_id: int) -> Progress:
     async with app.connect() as connection:
         target_level = await _target_level(connection, learner_id)
-        rows = (
-            await connection.execute(
-                text(
-                    "SELECT c.level, c.words_known, c.kanji_known, "
-                    "(SELECT count(*) FROM learning.dictionary_words w WHERE w.level = c.level) AS words_total, "
-                    "(SELECT count(*) FROM learning.dictionary_kanji k WHERE k.level = c.level) AS kanji_total "
-                    "FROM learning.learner_coverage c WHERE c.learner_id = :id ORDER BY c.level DESC"
-                ),
-                {"id": learner_id},
-            )
-        ).all()
-        known_words = await connection.scalar(
-            text("SELECT count(*) FROM learning.learner_state WHERE learner_id = :id AND is_known"), {"id": learner_id}
-        )
+        rows = (await connection.execute(text(COVERAGE), {"learner_id": learner_id})).all()
+        known_words = await connection.scalar(text(KNOWN_COUNT), {"learner_id": learner_id})
     levels = [
         LevelCoverage(
             level=level,
@@ -202,15 +204,7 @@ async def recommend_words(app: AsyncEngine, dictionary: AsyncEngine, learner_id:
 
 async def get_mistakes(app: AsyncEngine, dictionary: AsyncEngine, learner_id: int, now: datetime) -> Mistakes:
     async with app.connect() as connection:
-        rows = (
-            await connection.execute(
-                text(
-                    "SELECT item_id, box, due_at FROM learning.learner_state "
-                    "WHERE learner_id = :id AND box IS NOT NULL ORDER BY due_at, item_id"
-                ),
-                {"id": learner_id},
-            )
-        ).all()
+        rows = (await connection.execute(text(MISTAKES), {"learner_id": learner_id})).all()
     details = await word_details(dictionary, [str(row[0]) for row in rows])
     items = [
         MistakeItem(
@@ -285,12 +279,8 @@ async def get_recent_activity(app: AsyncEngine, learner_id: int, today: date, da
     async with app.connect() as connection:
         rows = (
             await connection.execute(
-                text(
-                    "SELECT day, quiz_answers, quiz_correct, words_marked, sentences_read "
-                    "FROM learning.learner_daily_activity "
-                    "WHERE learner_id = :id AND day > :first_excluded AND day <= :today ORDER BY day"
-                ),
-                {"id": learner_id, "first_excluded": today - timedelta(days=days), "today": today},
+                text(ACTIVITY),
+                {"learner_id": learner_id, "first_excluded": today - timedelta(days=days), "today": today},
             )
         ).all()
     return RecentActivity(

@@ -38,6 +38,17 @@ DISTRACTORS = 3
 RECOMMENDATION_POOL = 60
 
 
+DUE_ITEMS = """
+SELECT item_id FROM learning.learner_state
+WHERE learner_id = :learner_id AND box IS NOT NULL AND due_at < :end_of_day ORDER BY due_at, item_id
+"""
+IN_PROGRESS = """
+SELECT item_id FROM learning.learner_state
+WHERE learner_id = :learner_id AND NOT is_known AND box IS NULL AND correct_count + wrong_count > 0
+ORDER BY last_seen_at DESC, item_id
+"""
+
+
 @dataclass(frozen=True)
 class QuizWord:
     id: str
@@ -64,20 +75,8 @@ def stable_hash(*parts: object) -> int:
 async def _picked_word_ids(app: AsyncEngine, learner: Learner, today: date) -> list[str]:
     end_of_day = datetime.combine(today + timedelta(days=1), time(), tzinfo=ZoneInfo(learner.timezone))
     async with app.connect() as connection:
-        due = await connection.scalars(
-            text(
-                "SELECT item_id FROM learning.learner_state WHERE learner_id = :id AND box IS NOT NULL "
-                "AND due_at < :end_of_day ORDER BY due_at, item_id"
-            ),
-            {"id": learner.id, "end_of_day": end_of_day},
-        )
-        in_progress = await connection.scalars(
-            text(
-                "SELECT item_id FROM learning.learner_state WHERE learner_id = :id AND NOT is_known "
-                "AND box IS NULL AND correct_count + wrong_count > 0 ORDER BY last_seen_at DESC, item_id"
-            ),
-            {"id": learner.id},
-        )
+        due = await connection.scalars(text(DUE_ITEMS), {"learner_id": learner.id, "end_of_day": end_of_day})
+        in_progress = await connection.scalars(text(IN_PROGRESS), {"learner_id": learner.id})
         picked = [str(word_id) for word_id in due] + [str(word_id) for word_id in in_progress]
     _, ranked = await ranked_candidates(app, learner.id, RECOMMENDATION_POOL)
     picked += [word_id for word_id, *_ in ranked]
