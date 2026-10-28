@@ -1,0 +1,31 @@
+{
+  "name": "juku-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Juku's Vue islands: the interactive parts of server-rendered pages (ADR-024)",
+  "type": "module",
+  "scripts": {
+    "build": "vue-tsc --noEmit && vite build",
+    "test": "vitest run",
+    "budget": "node scripts/check-budget.mjs",
+    "check": "npm run test"
+  },
+  "dependencies": {
+    "vue": "3.5.44",
+    "web-vitals": "4.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-vue": "6.0.10",
+    "@vue/test-utils": "2.5.1",
+    "jsdom": "29.1.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.5",
+    "vue-tsc": "3.3.13"
+  },
+  "overrides": {
+    "rollup": "4.63.5"
+  }
+}

@@ -35,3 +35,6 @@ node_modules/
 ops/secrets/
 ops/.env
 ops/gateway-audit/
+
+# The islands' build output (made by `npm run build` in app/web)
+app/src/juku_app/static/dist/
