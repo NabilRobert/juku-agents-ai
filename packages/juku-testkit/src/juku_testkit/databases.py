@@ -15,13 +15,13 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
 from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 ADMIN_URL_ENV = "JUKU_TEST_ADMIN_URL"
 REQUIRE_DB_ENV = "JUKU_REQUIRE_DB"
@@ -139,3 +139,13 @@ def empty_database() -> Iterator[TestDatabase]:
         yield database
     finally:
         drop_database(database)
+
+
+@pytest.fixture
+async def app_engine(app_database: TestDatabase) -> AsyncIterator[AsyncEngine]:
+    """An engine on the migrated `app` database, as the admin (tests switch role with SET ROLE)."""
+    engine = create_async_engine(app_database.sqlalchemy_url)
+    try:
+        yield engine
+    finally:
+        await engine.dispose()

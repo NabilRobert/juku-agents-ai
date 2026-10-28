@@ -50,7 +50,7 @@ ignore = ["S101"]
 "**/tests/**" = ["S105", "S106", "S608"]
 
 [tool.pyright]
-include = ["packages"]
+include = ["packages", "migrations"]
 exclude = ["spikes", "**/node_modules", "**/.venv"]
 strict = ["packages/*/src"]
 pythonVersion = "3.12"

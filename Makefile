@@ -22,9 +22,9 @@ WEB_DIR := app/web
 
 WITH_TOOL := scripts/with-tool.sh
 
-.PHONY: check lint types test secrets frontend lighthouse fix db-up db-down
+.PHONY: check lint types test migrations-lint secrets frontend lighthouse fix db-up db-down
 
-check: lint types test secrets frontend lighthouse
+check: lint types test migrations-lint secrets frontend lighthouse
 	@echo "make check: all steps passed"
 
 lint:
@@ -37,6 +37,13 @@ types:
 # --fitness-complete: an active fitness function in guardrails.yaml with no test fails the run.
 test:
 	$(UV) run --frozen pytest -q --fitness-complete
+
+# FF4: render every migration as SQL, offline, and lint it for locking or rewriting statements.
+# Alembic's own bookkeeping table (alembic_version, a varchar column) isn't ours, so it's cut first.
+migrations-lint:
+	@mkdir -p $(BUILD)
+	$(UV) run --frozen alembic upgrade heads --sql | sed '/^CREATE TABLE alembic_version/,/^);/d' > $(BUILD)/migrations.sql
+	$(WITH_TOOL) squawk "FF4: pip install squawk-cli==2.70.0" squawk --config .squawk.toml $(BUILD)/migrations.sql
 
 # Secrets in any commit, then in the files not yet committed.
 secrets:
