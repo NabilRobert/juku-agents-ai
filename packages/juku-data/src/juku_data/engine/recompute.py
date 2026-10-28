@@ -60,18 +60,18 @@ answers AS (
     SELECT learner_id, item_id,
            count(*) FILTER (WHERE result = 1) AS correct_count,
            count(*) FILTER (WHERE result = 0) AS wrong_count,
-           max(occurred_at) FILTER (WHERE result = 0) AS last_wrong_at,
-           max(occurred_at) AS last_answer_at
-    FROM ev WHERE event_type IN ({QUIZ_MEANING}, {QUIZ_READING}) GROUP BY learner_id, item_id
+           max(last_wrong_at) AS last_wrong_at,
+           max(occurred_at) AS last_answer_at,
+           count(*) FILTER (WHERE result = 1 AND occurred_at > last_wrong_at) AS right_since_last_wrong
+    FROM (
+        SELECT ev.*, max(occurred_at) FILTER (WHERE result = 0) OVER (PARTITION BY learner_id, item_id) AS last_wrong_at
+        FROM ev WHERE event_type IN ({QUIZ_MEANING}, {QUIZ_READING})
+    ) answered
+    GROUP BY learner_id, item_id
 ),
 boxes AS (
     SELECT a.*,
-           CASE WHEN a.last_wrong_at IS NULL THEN NULL
-                ELSE least(1 + (SELECT count(*) FROM ev r
-                                WHERE r.learner_id = a.learner_id AND r.item_id = a.item_id
-                                  AND r.event_type IN ({QUIZ_MEANING}, {QUIZ_READING}) AND r.result = 1
-                                  AND r.occurred_at > a.last_wrong_at), {LAST_BOX})
-           END AS box
+           CASE WHEN a.last_wrong_at IS NULL THEN NULL ELSE least(1 + a.right_since_last_wrong, {LAST_BOX}) END AS box
     FROM answers a
 ),
 seen AS (SELECT learner_id, item_id, max(occurred_at) AS last_seen_at FROM ev GROUP BY learner_id, item_id)
