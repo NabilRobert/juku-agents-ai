@@ -2,8 +2,10 @@
 # Makes ops/secrets/: a fresh random password per database role, the
 # database URLs built from them, the delegation signing key pair (Ed25519,
 # ADR-018) and the session secret. Run once per server, by Arthur. It never
-# overwrites a file that exists, so rerunning it is safe. The Telegram bot
-# token is the one secret it can't make: put it in ops/secrets/telegram_bot_token.
+# overwrites a file that exists, so rerunning it is safe. Three secrets come
+# from elsewhere and are put in ops/secrets/ by hand: the Telegram bot's token,
+# Shiori's gateway key (from the gateway's deployment) and the Sumopod key
+# (the capped key of slice plan P3).
 set -euo pipefail
 cd "$(dirname "$0")"
 umask 077
@@ -32,5 +34,7 @@ if [[ ! -s juku_delegation_signing_key ]]; then
     openssl genpkey -algorithm ed25519 -out juku_delegation_signing_key
     openssl pkey -in juku_delegation_signing_key -pubout -out juku_mcp_delegation_public_key
 fi
-[[ -s telegram_bot_token ]] || echo "Now put the Telegram bot's token in ops/secrets/telegram_bot_token."
+for given in telegram_bot_token juku_shiori_gateway_key juku_model_api_key; do
+    [[ -s $given ]] || echo "Still to add by hand: ops/secrets/$given"
+done
 echo "ops/secrets/ is ready ($(ls | wc -l | tr -d ' ') files)."
