@@ -17,3 +17,16 @@ data/raw/
 .DS_Store
 .vscode/
 .idea/
+
+# Python and tools
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+mutants/
+build/
+*.egg-info/
+
+# Frontend
+node_modules/
+.lighthouseci/

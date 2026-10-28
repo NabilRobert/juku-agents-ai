@@ -1,0 +1,68 @@
+# Juku's one command: `make check` (standard-checks.md, section 1).
+#
+# It runs before every commit (the pre-commit hook) and again in CI. Each
+# step is one tool. A tool that isn't installed locally is skipped with a
+# note, and CI, which sets JUKU_REQUIRE_TOOLS=1, fails instead: CI installs
+# every tool, so nothing is skipped there.
+#
+#   make check     lint, types, tests and fitness functions, migrations, secrets, frontend
+#   make db-up     start the local test Postgres (loopback only, throwaway)
+#   make db-down   stop it and delete its data
+#   make fix       format and auto-fix lint
+
+SHELL := /bin/bash
+.SHELLFLAGS := -euo pipefail -c
+.DEFAULT_GOAL := check
+
+UV ?= uv
+BUILD := build
+TEST_DB_CONTAINER := juku-test-db
+TEST_DB_PORT := 55440
+WEB_DIR := app/web
+
+WITH_TOOL := scripts/with-tool.sh
+
+.PHONY: check lint types test secrets frontend lighthouse fix db-up db-down
+
+check: lint types test secrets frontend lighthouse
+	@echo "make check: all steps passed"
+
+lint:
+	$(UV) run --frozen ruff check .
+	$(UV) run --frozen ruff format --check .
+
+types:
+	$(UV) run --frozen pyright
+
+# --fitness-complete: an active fitness function in guardrails.yaml with no test fails the run.
+test:
+	$(UV) run --frozen pytest -q --fitness-complete
+
+# Secrets in any commit, then in the files not yet committed.
+secrets:
+	$(WITH_TOOL) gitleaks "brew install gitleaks" gitleaks git --no-banner --redact --config .gitleaks.toml .
+	$(WITH_TOOL) gitleaks "brew install gitleaks" gitleaks dir --no-banner --redact --config .gitleaks.toml .
+
+# The Vue islands (track C): tests, type check and the production build.
+frontend:
+	@if [[ ! -f $(WEB_DIR)/package.json ]]; then echo "skipped: no frontend yet ($(WEB_DIR))"; exit 0; fi; \
+	cd $(WEB_DIR) && npm run --silent check
+
+# FF12: the frontend budget on Lighthouse's mobile profile.
+lighthouse:
+	@if [[ ! -f $(WEB_DIR)/package.json ]]; then echo "skipped: no frontend yet ($(WEB_DIR))"; exit 0; fi; \
+	$(WITH_TOOL) lhci "FF12: npm install -g @lhci/cli@0.15.1" lhci autorun --config=$(WEB_DIR)/lighthouserc.json
+
+fix:
+	$(UV) run --frozen ruff format .
+	$(UV) run --frozen ruff check --fix .
+
+db-up:
+	@if docker inspect $(TEST_DB_CONTAINER) >/dev/null 2>&1; then docker start $(TEST_DB_CONTAINER) >/dev/null; else \
+		docker run -d --name $(TEST_DB_CONTAINER) -p 127.0.0.1:$(TEST_DB_PORT):5432 \
+			-e POSTGRES_HOST_AUTH_METHOD=trust --memory 512m postgres:16 >/dev/null; fi
+	@for _ in $$(seq 1 30); do docker exec $(TEST_DB_CONTAINER) pg_isready -q -U postgres && break; sleep 1; done
+	@echo "test Postgres on 127.0.0.1:$(TEST_DB_PORT) (container $(TEST_DB_CONTAINER))"
+
+db-down:
+	docker rm -f $(TEST_DB_CONTAINER)

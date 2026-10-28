@@ -1,0 +1,71 @@
+# The uv workspace root. Each folder under packages/ (and app/, from track C)
+# is its own package with its own tests; this root holds the shared tool
+# settings and the dev tools, and installs every member so one `uv sync`
+# gives one environment.
+[project]
+name = "juku-agents"
+version = "0.0.0"
+description = "Juku: an agentic JLPT learning platform for Indonesian learners"
+requires-python = ">=3.12,<3.13"
+dependencies = ["juku-common", "juku-ops"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+juku-common = { workspace = true }
+juku-ops = { workspace = true }
+juku-testkit = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "juku-testkit",
+    "mutmut==3.8.0",
+    "pre-commit==4.7.0",
+    "pyright==1.1.414",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-timeout==2.4.0",
+    "ruff==0.17.0",
+    "types-pyyaml==6.0.12.20250915",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+# The week-0 spikes are throwaway code, kept as evidence; they aren't linted.
+extend-exclude = ["spikes"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ARG", "RUF"]
+# S101: pytest's asserts.
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+# Migrations and tests build SQL from fixed strings, never from input.
+"migrations/**" = ["S608"]
+"**/tests/**" = ["S105", "S106", "S608"]
+
+[tool.pyright]
+include = ["packages"]
+exclude = ["spikes", "**/node_modules", "**/.venv"]
+strict = ["packages/*/src"]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+# A test that hangs fails instead of stalling the run or CI.
+timeout = 60
+addopts = "--import-mode=importlib"
+
+[tool.mutmut]
+source_paths = ["packages/juku-common/src/", "packages/juku-ops/src/"]
+pytest_add_cli_args_test_selection = ["packages/"]

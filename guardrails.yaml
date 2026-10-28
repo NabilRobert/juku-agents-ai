@@ -1,0 +1,68 @@
+# guardrails.yaml: every limit Juku enforces, in one reviewed file (ADR-019).
+#
+# Services load it at start-up (packages/juku-common/src/juku_common/rules.py)
+# and refuse to start if it is invalid. Raising a limit is a visible change
+# in a pull request, never a silent edit. Each rule has a test that fails
+# when the rule is removed (Phase 1, G1).
+version: 1
+
+# Fitness functions (scale path, ADR-023): automated checks that fail the
+# build when a change degrades a quality the design depends on. `pending`
+# ones name the slice that activates them; the harness lists them as
+# missing rather than skipping them silently.
+fitness:
+  FF1:
+    title: Query plans on a synthetic 5,000-learner database
+    status: pending
+    until: track A (slice 2)
+  FF2:
+    title: Hot paths read summaries only, never learning_events
+    status: pending
+    until: track A (slice 2)
+  FF3:
+    title: Incremental state equals a full recompute
+    status: pending
+    until: track A (slice 2)
+  FF4:
+    title: Migrations are safe (Squawk)
+    status: active
+    checked_by: squawk
+  FF5:
+    title: MCP tool schemas match their snapshots
+    status: pending
+    until: track B (slice 3)
+  FF6:
+    title: Prompt and context token ceilings
+    status: pending
+    until: slice 6 (the pipeline)
+  FF7:
+    title: Idempotent weekly runs
+    status: pending
+    until: slice 6 (the pipeline)
+  FF8:
+    title: Guardrail, delegation and isolation suites
+    status: pending
+    until: track B (slice 3)
+  FF9:
+    title: No content in records, traces or logs
+    status: pending
+    until: track D (the audit importer)
+  FF10:
+    title: Load test against the recorded baseline
+    status: pending
+    until: the load test (Should)
+    checked_by: locust
+  FF11:
+    title: Agent quality (the harness regression gate)
+    status: pending
+    until: slice 7 (paid evals, with Arthur's OK)
+    checked_by: agent-eval-harness
+  FF12:
+    title: Frontend budget (Lighthouse CI, mobile)
+    status: pending
+    until: track C (slice 5)
+    checked_by: lighthouse-ci
+  FF13:
+    title: Tool query plans stay under their cost ceilings, with JIT off
+    status: pending
+    until: track A (slice 2)

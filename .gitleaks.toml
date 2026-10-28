@@ -1,0 +1,11 @@
+# gitleaks: the default rules, plus the paths that hold hashes, not secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Spike evidence: sha256 hashes of throwaway test tokens and audit-line hashes, not secrets"
+paths = [
+    '''spikes/6-delegation-chain/logs/.*\.jsonl''',
+    '''spikes/6-delegation-chain/results-.*\.json''',
+    '''uv\.lock''',
+]
