@@ -20,7 +20,7 @@ it. The first results stay as the fallback, for a full JMdict import.
 | 3 | Does Grafana fit? | Idle **217 MiB** median uncapped; **244–251 MiB** in a 256 MB cap; `GOMEMLIMIT` doesn't help | Well under 256 MB: **fail**, so cron alerts | `spike/grafana-memory` |
 | 4 | How complete is OpenJLPT for Juku? (was: how cleanly do the lists map) | **11 of 7,811 words unlinked**; all links resolve; 7.2% have no example; **90.7% of example tokens map to one word**, so 63.3% of sentences (66.1% with ない as grammar) qualify for i+1. Common words in neither list (父, 母, 顔) need a supplement. (Without OpenJLPT: 98.0% of rows unique, 24 ambiguous) | Counted, rules written: **pass** | `spike/jlpt-mapping` |
 | 5 | Does Sumopod report cached input tokens? | **Yes**, in all 6,792 raw responses; **32%** of prompt tokens were cached, automatically | Answered: **pass** (cost-model edit proposed below) | `spike/cached-tokens` |
-| 6 | Does the delegation chain hold through the gateway? | The gateway's `main` **drops `_meta`**. With a 6-line patch to a local copy: token unchanged, **15/15 attacks refused and logged**, 3/3 legitimate calls pass | `_meta` unchanged, every attempt fails and is logged: **fail as the gateway stands; pass with the patch** | `spike/delegation-chain` |
+| 6 | Does the delegation chain hold through the gateway? | The gateway's `main` **drops `_meta`**. With a 6-line patch to a local copy: token unchanged, **15/15 attacks refused and logged**, 3/3 legitimate calls pass. **A PydanticAI agent ($0, TestModel/FunctionModel) sets the token per call via `process_tool_call`**, and it arrives unchanged | `_meta` unchanged, every attempt fails and is logged: **fail as the gateway stands; pass with the patch** | `spike/delegation-chain` |
 
 **Time:** every spike finished inside its time box except spike 2. With its OpenJLPT rerun and the reruns under load, it took about 1.5 h against a 1 h box.
 
@@ -120,12 +120,25 @@ it. The first results stay as the fallback, for a full JMdict import.
   - Audience validation is a MUST, and token passthrough is forbidden.
   - It still says nothing about delegation chains.
 - **Done:**
-  - ES256 tokens shaped on RFC 8693, single-use per call; a delegated
+  - Ed25519 tokens (PyJWT `EdDSA`) shaped on RFC 8693, single-use per
+    call; a delegated
     token carries its parent, so narrowing is provable;
   - a Juku MCP server whose tools take no arguments;
   - 22 unit tests, with 20/20 mutants killed;
   - 18 attempts run directly, through a copy of the gateway's `main`, and
     through a patched copy.
+- **PydanticAI (ADR-025):**
+  - an `Agent` with `MCPToolset` (Streamable HTTP, the agent's gateway key)
+    and a `process_tool_call` hook that mints each call's token and passes
+    it as `metadata`, which PydanticAI sends as `_meta`;
+  - through the patched gateway: 3 of 3 calls allowed, with the token and
+    `traceparent` unchanged (Shiori on `TestModel`, Keiko delegated on
+    `FunctionModel`);
+  - through `main`: refused, because the token is dropped.
+
+  No hand-written loop is needed. The packages came from the local uv
+  cache, with no download: pydantic-ai-slim[mcp] 2.56.0, fastmcp-slim
+  4.1.4, mcp 2.3.0, PyJWT 2.15.1 and cryptography 50.0.2.
 - **Numbers:** see the table above. Directly, the three key-bound attacks
   succeed, which shows Juku's server must be reachable only through the
   gateway. Through the patched gateway, all are refused and logged, and
@@ -154,7 +167,8 @@ Not edited yet. Each needs Arthur's OK.
    - Juku's server has no published port.
 4. **ADR-018:** fix the details spike 6 settled:
    - the key `io.github.nabilrobert.juku/delegation`;
-   - per-call, single-use tokens;
+   - per-call, single-use Ed25519 tokens, minted in PydanticAI's
+     `process_tool_call`;
    - the parent token embedded in a delegated one;
    - the gateway's caller stamp as the actor binding;
    - the reading of "no token passthrough" (an audience-bound token the
@@ -214,6 +228,7 @@ Not edited yet. Each needs Arthur's OK.
 | OpenJLPT (commit bf4e1ee) | CC BY-SA 4.0; built from JMdict, KANJIDIC2 (EDRDG, CC BY-SA 4.0), Waller's lists (CC BY) and Tatoeba (CC BY 2.0 FR) |
 | JLPT lists (fallback) | Jonathan Waller (tanos.co.uk), CC BY; republished with JMdict IDs by stephenmk/yomitan-jlpt-vocab, CC BY-SA 4.0 |
 | SudachiPy 0.7.0, sudachidict-core 20260723.1 | Apache-2.0 |
+| pydantic-ai-slim 2.56.0 (spike 6, from the uv cache) | MIT |
 | Grafana OSS (image only, not shipped) | AGPL-3.0 |
 
 The downloads are in `data/raw/` (git-ignored) and are never committed.
