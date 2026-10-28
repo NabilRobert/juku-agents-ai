@@ -3,7 +3,7 @@ name = "juku-testkit"
 version = "0.0.0"
 description = "Juku's shared test helpers: the fitness-function harness and the test databases (dev only)"
 requires-python = ">=3.12,<3.13"
-dependencies = ["juku-common", "alembic==1.20.0", "asyncpg==0.32.0", "pytest==9.1.1", "sqlalchemy[asyncio]==2.1.4"]
+dependencies = ["juku-common", "juku-data", "alembic==1.20.0", "asyncpg==0.32.0", "pytest==9.1.1", "sqlalchemy[asyncio]==2.1.4"]
 
 [project.entry-points.pytest11]
 juku_fitness = "juku_testkit.fitness"
@@ -11,6 +11,7 @@ juku_databases = "juku_testkit.databases"
 
 [tool.uv.sources]
 juku-common = { workspace = true }
+juku-data = { workspace = true }
 
 [build-system]
 requires = ["hatchling==1.27.0"]

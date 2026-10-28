@@ -149,3 +149,51 @@ async def app_engine(app_database: TestDatabase) -> AsyncIterator[AsyncEngine]:
         yield engine
     finally:
         await engine.dispose()
+
+
+OPENJLPT_DIR_ENV = "JUKU_OPENJLPT_DIR"
+
+
+def openjlpt_dir() -> Path:
+    """Where the pinned OpenJLPT files are: `$JUKU_OPENJLPT_DIR`, or data/raw/openjlpt-bf4e1ee (git-ignored)."""
+    return Path(os.environ.get(OPENJLPT_DIR_ENV, str(repo_root() / "data" / "raw" / "openjlpt-bf4e1ee")))
+
+
+def require_openjlpt() -> Path:
+    folder = openjlpt_dir()
+    if not (folder / "openjlpt.sqlite").is_file():
+        _skip_or_fail(f"no OpenJLPT files in {folder}: run `juku-data fetch-dictionary --to {folder}`")
+    return folder
+
+
+@pytest.fixture(scope="session")
+def dictionary_database() -> Iterator[TestDatabase]:
+    """A `dict` database loaded from the pinned OpenJLPT build, shared by the run's tests (read-only)."""
+    from juku_data.dictionary.load import load_dictionary
+    from juku_data.dictionary.source import verify_source
+
+    folder = require_openjlpt()
+    database = create_database("juku_test_dict")
+    try:
+        create_roles()
+
+        async def load() -> None:
+            engine = create_async_engine(database.sqlalchemy_url)
+            try:
+                await load_dictionary(engine, verify_source(folder))
+            finally:
+                await engine.dispose()
+
+        asyncio.run(load())
+        yield database
+    finally:
+        drop_database(database)
+
+
+@pytest.fixture
+async def dict_engine(dictionary_database: TestDatabase) -> AsyncIterator[AsyncEngine]:
+    engine = create_async_engine(dictionary_database.sqlalchemy_url)
+    try:
+        yield engine
+    finally:
+        await engine.dispose()
