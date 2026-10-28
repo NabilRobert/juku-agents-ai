@@ -9,56 +9,57 @@ run on 2026-10-28, locally and at $0:
 Each spike's code, raw output and full write-up is on its own branch, in
 `spikes/<n>-<topic>/`.
 
+**Plan change, the same day:** Juku's data became OpenJLPT (ADR-003, after
+Arthur's "reuse before building" rule), so spikes 1, 2 and 4 were rerun on
+it. The first results stay as the fallback, for a full JMdict import.
+
 | # | Question | Result | Pass rule | Branch |
 |---|---|---|---|---|
-| 1 | How big is the dictionary, and how long does it load? | **299 MB**, loaded in **18 s**; a fresh repeat load is identical, table by table (md5) | Under 1 GB, repeatable: **pass** | `spike/dictionary-load` |
-| 2 | Do the recommender and i+1 queries fit? | Worst call **120 ms** at 0/100/500 known words, N5–N2, through an MCP server, after one fix (v1 spent ~300 ms in JIT) | Under 200 ms each: **pass** | `spike/recommender-query` |
+| 1 | How big is the dictionary, and how long does it load? | **OpenJLPT: 19 MB, 2 s**, identical on a repeat. Pinned to commit `bf4e1ee`: no release has this data. (Fallback, JMdict + KANJIDIC2 + Tatoeba: 299 MB, 18 s) | Under 1 GB, repeatable: **pass** | `spike/dictionary-load` |
+| 2 | Do the recommender and i+1 queries fit? | **OpenJLPT, quiet machine: worst call 91 ms**. Under heavy load from other sessions, p95 stays under 200 ms, but single N2 calls at 500 known words reach 242–274 ms. (Fallback: worst 120 ms, after a JIT fix) | Under 200 ms each: **pass on a quiet machine; recheck in slice 2** | `spike/recommender-query` |
 | 3 | Does Grafana fit? | Idle **217 MiB** median uncapped; **244–251 MiB** in a 256 MB cap; `GOMEMLIMIT` doesn't help | Well under 256 MB: **fail**, so cron alerts | `spike/grafana-memory` |
-| 4 | How cleanly do the JLPT lists and Tatoeba map to JMdict? | **98.0%** of JLPT rows unique; 24 ambiguous and 15 unmatched after the rules. **95.2%** of Tatoeba tokens map; **97.1%** of indexed sentences map fully, with a 10-word override list | Counted, rules written: **pass** | `spike/jlpt-mapping` |
+| 4 | How complete is OpenJLPT for Juku? (was: how cleanly do the lists map) | **11 of 7,811 words unlinked**; all links resolve; 7.2% have no example; **90.7% of example tokens map to one word**, so 63.3% of sentences (66.1% with ない as grammar) qualify for i+1. Common words in neither list (父, 母, 顔) need a supplement. (Without OpenJLPT: 98.0% of rows unique, 24 ambiguous) | Counted, rules written: **pass** | `spike/jlpt-mapping` |
 | 5 | Does Sumopod report cached input tokens? | **Yes**, in all 6,792 raw responses; **32%** of prompt tokens were cached, automatically | Answered: **pass** (cost-model edit proposed below) | `spike/cached-tokens` |
 | 6 | Does the delegation chain hold through the gateway? | The gateway's `main` **drops `_meta`**. With a 6-line patch to a local copy: token unchanged, **15/15 attacks refused and logged**, 3/3 legitimate calls pass | `_meta` unchanged, every attempt fails and is logged: **fail as the gateway stands; pass with the patch** | `spike/delegation-chain` |
 
-Time: every spike finished inside its time box.
+**Time:** every spike finished inside its time box except spike 2. With its OpenJLPT rerun and the reruns under load, it took about 1.5 h against a 1 h box.
 
 ## 1. Dictionary load
 
-- **Data** (fetched 2026-10-28, all checksums committed):
-  - JMdict_e 2026-10-28, KANJIDIC2 2026-301 and KRADFILE (EDRDG, CC BY-SA
-    4.0);
-  - Tatoeba export of 2026-10-24: Japanese and Indonesian sentences,
-    jpn–ind links and the word index (CC BY 2.0 FR).
-- **Done:** a standard-library parser to COPY files, then `postgres:16`,
-  keys and indexes after the load. `test_parse.py` is mutation-checked.
-- **Numbers:**
-  - 218,971 entries; 443,930 glosses; 13,108 kanji;
-  - 277,297 sentences; 1,178,440 index tokens;
-  - 299 MB database (the data directory is 576 MB, 257 MB of it WAL from
-    the load);
-  - parse 9.5 s, COPY 3.3 s, indexes 5.3 s.
-  - Row counts equal the source's element counts.
-- **Found:**
-  - JMdict declares the entity `ik` twice;
-  - 105 duplicate index lines, and 214 index lines for deleted sentences;
-  - JMdict IDs written into some index tokens (`前(#1392580)`).
-- **Changes:** the scale path's "about 1 GB" for the dictionary can read
-  "about 0.3 GB, measured".
+- **OpenJLPT (the plan):** `data/openjlpt.sqlite` from evanclan/OpenJLPT
+  (CC BY-SA 4.0), loaded into `postgres:16`.
+  - 7,811 words, 13,718 examples, 2,383 kanji and 526 grammar points.
+  - 19 MB database; loads in 2.0–2.3 s; two loads have identical md5s.
+  - **Its latest release, v0.2.0, is an older, thinner dataset:** 8,334
+    words with no JMdict IDs, and 100 grammar points. The data Juku plans
+    on exists only on `main`, so it's pinned to commit `bf4e1ee`
+    (2026-09-30) with a checksum. PyPI's `openjlpt` is 0.1.0.
+  - The loader is plain spike code; pgloader is the off-the-shelf choice
+    for slice 1.
+- **The fallback** (JMdict_e 2026-10-28, KANJIDIC2 2026-301, KRADFILE, and
+  the Tatoeba export of 2026-10-24):
+  - 299 MB, loaded in 18 s, identical on a fresh repeat;
+  - a mutation-checked parser;
+  - data quirks recorded: a duplicate DTD entity, 105 duplicate and 214
+    orphaned index lines, and JMdict IDs inside index tokens.
 
 ## 2. Recommender and i+1 timing
 
-- **Done:**
-  - ADR-010's tables (`word_level`, `word_kanji`, `kanji_level`,
-    `kanji_leverage`), built in 5 s;
-  - `recommend_words` and `find_reading_sentences` in a minimal MCP server
-    (mcp 2.3.0);
-  - known words read from an `app` database holding 5,000 synthetic
-    learners (2.1 M rows);
-  - 50 timed calls per cell, at the MCP client.
-- **Numbers, round trip p50 / max:** recommender 4–21 ms / 69 ms; reading
-  query 3–72 ms / 120 ms.
-  - The first recommender failed (220 ms p50, 722 ms max). Postgres JIT
-    compiled a query whose repeated subplan inflated its cost estimate.
-  - Beyond the rule: the reading query reaches 208 ms p95 at 2,000 known
-    words; the recommender stays under 45 ms at 4,000.
+- **OpenJLPT (the plan):** ADR-010's rewritten tables and ordering (gaps,
+  leverage, commonness from the rarest kanji's frequency, stable ID). The
+  reading index covers 8,339 SudachiPy-tokenized example sentences. Both
+  tools run through a minimal MCP server, with known words from an `app`
+  database of 5,000 synthetic learners.
+  - **Quiet machine:** worst call 62 ms (jit on) and 91 ms (jit off).
+  - **Under a load average of 13–21** from other sessions: p95 under
+    200 ms everywhere; worst single calls 242–274 ms (N2, 500 known words,
+    jit off).
+  - The reading query stays flat to 4,000 known words. The recommender
+    grows, to a p95 of 187 ms at 2,000 under load.
+- **The fallback (JMdict and Tatoeba):** the worst call was 120 ms, after
+  rewriting the recommender. The first version spent about 300 ms in JIT
+  compilation. Its reading query over 102,568 sentences crossed 200 ms at
+  about 2,000 known words.
 
 ## 3. Grafana memory
 
@@ -74,28 +75,28 @@ Time: every spike finished inside its time box.
   - with `GOMEMLIMIT=150MiB`: 232 / 243. The live heap alone is over
     200 MiB.
 
-## 4. JLPT and Tatoeba mapping
+## 4. How complete is OpenJLPT?
 
-- **Data:** Waller's N5–N1 lists (CC BY), as republished by
-  stephenmk/yomitan-jlpt-vocab at `b062d4e` (CC BY-SA 4.0), whose hand-added
-  JMdict IDs served as a reference. tanos.co.uk didn't respond. N1 is
-  included, as Arthur asked.
-- **Rules:** match by spelling and reading. Then, in order:
-  1. R1, priority tags;
-  2. R2, primary form;
-  3. R3, kana-word preference.
-
-  Anything still tied is reported, never guessed.
-- **Numbers:**
-  - JLPT: 8,126 of 8,293 rows unique. R1–R3 settle 128, leaving 24
-    ambiguous and 15 unmatched. For N5–N2: 4,866 rows, 14 ambiguous and 1
-    unmatched (a typo, 田ぼ).
-  - 99.7% agree with the reference. By hand, most of the 23 disagreements
-    are the reference's errors (stale IDs, wrong homographs).
-  - Tatoeba: 59.6% of Japanese sentences are indexed, and 69.1% of those
-    map fully. の alone is 95% of the ambiguous tokens.
-  - Hand check of 30 rule-decided tokens: 27 of 28 distinct keys right,
-    1 doubtful.
+- **Links:**
+  - 7,800 of 7,811 words carry a JMdict ID, and all resolve in JMdict
+    2026-10-28. The 11 without one are phrases and rare spellings.
+  - Where OpenJLPT and this spike's own rule-based mapping of Waller's
+    lists cover the same (spelling, reading), 99.9% of IDs agree.
+- **Examples:** 566 words (7.2%) have none, 400 of them at N1.
+- **i+1:** SudachiPy (split mode C, with mode A for compounds) on 12,615
+  distinct sentences:
+  - 90.7% of the content tokens map to one word ID, 1.2% to several, and
+    8.1% to none;
+  - 63.3% of sentences map completely (66.1% with ない counted as
+    grammar);
+  - hand check: 29 of 30 sampled tokens right, 1 doubtful.
+- **Gap:** common words that are **in neither Waller's lists nor
+  OpenJLPT** (父, 母, 顔, 多く, 人々, 夕食).
+- **Without OpenJLPT,** mapping Waller's lists and Tatoeba's index
+  ourselves: 98.0% of rows unique, 24 ambiguous and 15 unmatched after
+  three rules, and 97.1% of indexed sentences mapped with a 10-word
+  override list. The hand-added reference IDs turned out stale or wrong in
+  most disagreements.
 
 ## 5. Cached tokens
 
@@ -174,27 +175,32 @@ Not edited yet. Each needs Arthur's OK.
    are: they assume no caching, so they err high. The measured basis note
    gains: "the harness's cost omits cached tokens (about −1.5%); $0.537
    with them".
-6. **ADR-010 and LE4 (spike 2):**
+6. **ADR-010 (spike 2):**
    - `jit = off` on the Juku MCP server's role;
    - a fitness check that fails if a tool query's plan cost explodes or
      JIT kicks in;
-   - words with no new kanji rank as leverage 0 (to confirm);
-   - function words count as known in reading practice;
-   - LE4 uses a per-learner incremental "unknowns per sentence", or a
-     lookup by target word, rather than a scan, because the scan crosses
-     200 ms near 2,000 known words.
-7. **Slice 1 (spike 4):** adopt R1–R3 as written, plus R4 (Waller's gloss)
-   and a reviewed override file for the top function words. Drop N1's
-   single-kanji rows from the word levels. Treat the hand-added IDs as a
-   second opinion that flags disagreements, not as ground truth.
-8. **The scale path (spike 1):** the dictionary is about 0.3 GB, measured.
+   - a quiet-machine baseline for `recommend_words` at N2 before slice 2
+     signs off. If it's still near 200 ms, precompute each learner's
+     candidates as their known words change.
+   - The reading query is fine on OpenJLPT.
+7. **ADR-003 (spikes 1 and 4):**
+   - record that the OpenJLPT data Juku uses has **no release**, so it's
+     pinned to commit `bf4e1ee` with a checksum. v0.2.0 is the older
+     dataset, and PyPI is at 0.1.0;
+   - add a small, reviewed **supplement file** of common words outside
+     the JLPT lists (父, 母, 顔…), with JMdict IDs, so i+1 sentences can
+     use them;
+   - count ない and OpenJLPT's grammar patterns as grammar in LE4, with
+     function words, names and numbers as known.
+8. **The scale path (spike 1):** the dictionary is about 20 MB with
+   OpenJLPT, or about 0.3 GB with a full JMdict import.
 
 ## Merge order
 
 1. `docs/planning` into `main` (main has no planning docs yet).
-2. The six `spike/*` branches, in any order. Each is cut from
-   `docs/planning` and adds only its own `spikes/<n>-<topic>/` folder, so
-   they don't conflict. Spike 2's and spike 4's scripts need spike 1's
+2. The six `spike/*` branches, in any order. Each is cut from an earlier
+   `docs/planning` (b34b8a4, before the OpenJLPT commits) and adds only its
+   own `spikes/<n>-<topic>/` folder, so they don't conflict. Spike 2's and spike 4's scripts need spike 1's
    database at run time, not its code.
 3. `docs/spikes` (this file) last, since it points into the spike
    folders.
@@ -205,7 +211,9 @@ Not edited yet. Each needs Arthur's OK.
 |---|---|
 | JMdict, KANJIDIC2, KRADFILE | EDRDG, CC BY-SA 4.0 |
 | Tatoeba sentences, links, index | CC BY 2.0 FR |
-| JLPT lists | Jonathan Waller (tanos.co.uk), CC BY; republished with JMdict IDs by stephenmk/yomitan-jlpt-vocab, CC BY-SA 4.0 |
+| OpenJLPT (commit bf4e1ee) | CC BY-SA 4.0; built from JMdict, KANJIDIC2 (EDRDG, CC BY-SA 4.0), Waller's lists (CC BY) and Tatoeba (CC BY 2.0 FR) |
+| JLPT lists (fallback) | Jonathan Waller (tanos.co.uk), CC BY; republished with JMdict IDs by stephenmk/yomitan-jlpt-vocab, CC BY-SA 4.0 |
+| SudachiPy 0.7.0, sudachidict-core 20260723.1 | Apache-2.0 |
 | Grafana OSS (image only, not shipped) | AGPL-3.0 |
 
 The downloads are in `data/raw/` (git-ignored) and are never committed.
