@@ -90,3 +90,17 @@ def test_after_unmarking_two_new_correct_days_are_needed() -> None:
     state = answer(state, True, MONDAY + timedelta(days=2))
     assert not state.is_known
     assert answer(state, True, MONDAY + timedelta(days=3)).is_known
+
+
+def test_a_wrong_answer_counts_only_as_wrong_and_a_right_one_only_as_right() -> None:
+    wrong = answer(ItemState(), False, MONDAY)
+    right = answer(wrong, True, MONDAY + timedelta(days=1))
+    assert (wrong.correct_count, wrong.wrong_count) == (0, 1)
+    assert (right.correct_count, right.wrong_count) == (1, 1)
+
+
+def test_every_event_records_when_the_word_was_last_seen() -> None:
+    later = MONDAY + timedelta(hours=3)
+    assert answer(ItemState(), True, MONDAY).last_seen_at == MONDAY
+    assert after_unmarked_known(ItemState(), at=later).last_seen_at == later
+    assert after_marked_known(ItemState(), at=later).last_seen_at == later

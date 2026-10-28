@@ -32,6 +32,7 @@ def test_input_is_normalized(typed: str, normalized: str) -> None:
         ("TABERU", "たべる"),
         ("eat", None),  # English: a letter would be left over
         ("to eat", None),
+        ("tabe ru", None),  # a space: two words, not one
         ("食べる", None),  # nothing to convert
     ],
 )

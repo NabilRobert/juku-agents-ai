@@ -30,7 +30,23 @@ build-backend = "hatchling.build"
 packages = ["src/juku_data"]
 
 [tool.mutmut]
-# Run from this folder: `uv run --frozen mutmut run`. The tests need `make db-up`.
+# Run from this folder: `uv run --frozen mutmut run`. Only the pure rules: the
+# database-backed modules would rebuild the test databases for every mutant,
+# so their rules are mutation-checked by hand instead (JOURNEY.md, track A).
 source_paths = ["src/juku_data/"]
-do_not_mutate = ["src/juku_data/cli.py", "src/juku_data/settings.py"]
-pytest_add_cli_args_test_selection = ["tests/"]
+do_not_mutate = [
+    "src/juku_data/__init__.py",
+    "src/juku_data/cli.py",
+    "src/juku_data/settings.py",
+    "src/juku_data/synthetic.py",
+    "src/juku_data/dictionary/*",
+    "src/juku_data/engine/__init__.py",
+    "src/juku_data/engine/api.py",
+    "src/juku_data/engine/models.py",
+    "src/juku_data/engine/plans.py",
+    "src/juku_data/engine/quiz.py",
+    "src/juku_data/engine/reads.py",
+    "src/juku_data/engine/recompute.py",
+    "src/juku_data/engine/writes.py",
+]
+pytest_add_cli_args_test_selection = ["tests/test_state_rules.py", "tests/test_japanese.py"]
