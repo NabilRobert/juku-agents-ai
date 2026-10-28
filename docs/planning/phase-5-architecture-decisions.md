@@ -712,6 +712,43 @@ overstate the work to the audience this portfolio is for.
 - *A full Japanese web font:* megabytes, for glyphs the phone already has.
 - *A third-party real-user monitoring service:* data leaving our server.
 
+### ADR-025: A framework for every component (the folder's "frameworks over plain code" rule)
+
+Default to Arthur's stack: FastAPI, Pydantic, SQLAlchemy 2 + Alembic,
+Typer, pytest, uv, ruff and pyright, the MCP SDK, Vue 3 / TypeScript /
+Tailwind / Vite / Vitest, the OpenTelemetry SDK and Inspect AI. Rows
+marked **proposed** are new to his stack and **wait for his OK**; until
+then, the ADR they would replace stands.
+
+| Component | Framework (recommended) | Why | Rejected alternative | Status |
+|---|---|---|---|---|
+| **Agent loop** (Shiori, Keiko, Nikki, Tadashi) | **PydanticAI** | Its MCP client connects to the gateway over Streamable HTTP. It speaks to Sumopod through its OpenAI-compatible provider (a base URL). Typed outputs (Pydantic models) suit Tadashi's issues and Keiko's note proposals. `UsageLimits` caps tokens and requests per run, which backs the budget guard. `TestModel` and `FunctionModel` give the $0 scripted runs. OpenTelemetry instrumentation follows the GenAI conventions Project 6 uses. Every message and tool call stays visible in the run's message history, so the "loop must be visible" reason in ADR-005 still holds | A hand-written loop (ADR-005 as first written): it reimplements what the framework does. LangChain and LlamaIndex: heavier, and they hide the loop. *Spike 6 checks that the delegation token can be set in each call's `_meta`* | **proposed** (would revise ADR-005) |
+| **The crew's orchestration** (the weekly pipeline) | PydanticAI agents chained in plain Python: its documented "programmatic hand-off" pattern | A fixed 4-step chain with at most 2 revisions is a few lines; code decides the order (ADR-007) | pydantic-graph, a state-machine framework: heavier than a fixed chain | with the row above |
+| **Scheduling** | **cron starting a Typer CLI command** (`juku run-weekly`, `juku consolidate`, `juku import-audit`) | The OS scheduler plus Arthur's CLI framework, as Pitstop did; "no crontab = no runs" stays checkable; the dead-man's switch watches the records (ADR-014) | APScheduler, in-process: jobs stop silently when the app restarts, and run twice with two workers. At scale, Procrastinate (scale path) | stack (Typer); cron is the OS |
+| **HTTP API and pages** | FastAPI, with Jinja2 for the page shells | Arthur's stack; MCP-backbone's console does the same | — | stack |
+| **Interactive frontend** (chat, quiz, memory page) | **Vue 3 + TypeScript + Tailwind + Vite, as per-page "islands"**: the server renders the page, Vue mounts only the interactive parts, and there's no router; Vitest for tests | Arthur's frontend stack, so it looks like one team's work. The Vue runtime (~30 KB compressed) fits the 100 KB per-page budget (ADR-024, FF12) | htmx (ADR-024 as first written): not in his stack. A full Vue SPA with a router: a heavier first load | **proposed** (would revise ADR-024) |
+| **Streaming answers** | sse-starlette | Server-sent events for FastAPI, done properly (disconnects, pings) | A hand-written `StreamingResponse` event format | small library |
+| **Settings, and the rule file** (`guardrails.yaml`) | Pydantic Settings and Pydantic models | Validated at start-up; a bad limit fails loudly | Reading the YAML into plain dicts | stack |
+| **Database and migrations** | SQLAlchemy 2 + Alembic; Postgres's own partitioning (pg_partman at scale) | Stack | — | stack |
+| **Juku's MCP server** | The official MCP Python SDK | Stack; the same as MCP-backbone | — | stack |
+| **Delegation tokens** (ADR-018) | **PyJWT** with Ed25519 (`cryptography`) | Well-maintained JWT signing and checking; RFC 8693's `act` claim is just a nested claim | Hand-rolled signed tokens; Authlib (more than needed); Keycloak now (scale path) | **proposed** |
+| **Login sessions and invite codes** | Starlette's `SessionMiddleware` (signed cookies) and **argon2-cffi** for code hashes | No hand-rolled cookies or hashing | passlib (unmaintained); plain SHA-256 for codes | **proposed** (argon2-cffi) |
+| **HTTP calls and retries** (non-model) | **httpx** and **tenacity** | The established choices; PydanticAI already retries model calls | `requests` plus hand-written retry loops | **proposed** |
+| **Structured logs** | **structlog** | JSON logs with request and trace IDs, alongside OpenTelemetry | `logging` with hand-formatted JSON | **proposed** |
+| **Japanese input** | SudachiPy, jaconv; OpenJLPT's package for search | Reuse (ADR-003) | — | **proposed** (new libraries) |
+| **Moderation** (Phase 2, AG6) | The provider's moderation endpoint through the same OpenAI-compatible client; if Sumopod doesn't expose one, a small local classifier on the gateway's ONNX setup | No hand-written keyword lists | A keyword blocklist | to check in a spike |
+| **The WhatsApp channel** (Could, X2) | **The WhatsApp Cloud API through `pywa`**: a Python framework for Meta's official API, with FastAPI webhook support | Official API, so no ban risk; it fits the FastAPI app | Twilio for WhatsApp (an extra account and per-message fee on top of Meta's); unofficial WhatsApp Web libraries (against WhatsApp's terms; numbers get banned) | **proposed**, for after the window |
+| **CLI** (load, export, delete, runs) | Typer | Stack | argparse | stack |
+| **Tests** | pytest (+ mutmut), Vitest, Lighthouse CI, Locust | Stack, plus the tools the fitness functions name | — | stack |
+| **Evals** | Inspect AI, via agent-eval-harness | Stack | — | stack |
+| **Tracing** | The OpenTelemetry SDK (PydanticAI's instrumentation emits spans into it) | Stack | — | stack |
+
+**Plain code, on purpose (each smaller than a framework):** the learning
+engine and Susumu, which are the demonstrated part (ADR-010); the
+budget-pool accounting (a few queries over recorded usage, on top of
+PydanticAI's per-run limits); and the citation and report checks, which
+are rules over IDs.
+
 ### Later (Could), recorded so they aren't re-decided
 
 - **The text speaking partner (X3):**
