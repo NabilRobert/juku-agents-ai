@@ -135,6 +135,16 @@ class DatabaseRules(Section):
     grafana_connections: int = Field(ge=1)
     mcp_backbone_connections: int = Field(ge=1)
 
+    @model_validator(mode="after")
+    def _shares_fit_the_limit(self) -> Self:
+        shares = sum(value for name, value in self if name != "connection_limit")
+        if shares > self.connection_limit:
+            raise ValueError(
+                f"the shares add up to {shares} connections, more than connection_limit ({self.connection_limit}): "
+                "lower a pool, or raise the limit if the provider's plan did"
+            )
+        return self
+
 
 class Rules(Section):
     """The whole rule file."""

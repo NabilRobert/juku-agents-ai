@@ -55,7 +55,6 @@ async def test_consent_says_18_and_processing_abroad(engine_databases: Databases
     assert "di luar Indonesia" in consent.text
 
 
-@pytest.mark.xfail(strict=True, reason="EDD: the notice's next version lands in the next commit")
 async def test_consent_says_a_third_party_stores_the_data_in_indonesia(engine_databases: Databases) -> None:
     """ADR-016, revised: a managed provider holds every row and the 7-day backups, so the notice names it as such."""
     code = (await issue_codes(engine_databases.app, 1))[0]

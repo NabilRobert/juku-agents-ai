@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-CONSENT_VERSION = "2026-10-28"
+CONSENT_VERSION = "2026-10-29"
 
 
 @dataclass(frozen=True)

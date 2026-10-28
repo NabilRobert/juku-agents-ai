@@ -19,8 +19,6 @@ from juku_common.rules import Rules, RulesError, load_rules
 from juku_testkit.databases import repo_root
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the managed-database changes land in the next commit")
-
 OPS = repo_root() / "ops"
 CONNECTION_LIMIT = re.compile(r"ALTER ROLE (\w+) CONNECTION LIMIT (\d+);")
 PROVIDER_HOST = "db.example.invalid"
@@ -112,7 +110,7 @@ def test_a_hand_run_command_takes_one_connection_with_no_overflow(rules: Rules) 
     config = AppSettings.model_construct(
         app_database_url="postgresql+asyncpg://u@h/app", dict_database_url="postgresql+asyncpg://u@h/dict"
     )
-    engines = command_databases(config)
+    engines = command_databases(config, rules)
     assert pool_of(engines.app) == (rules.database.app_commands, 0)
     assert pool_of(engines.dictionary) == (rules.database.app_commands, 0)
 
@@ -160,13 +158,17 @@ def test_juku_mcp_reaches_the_database_on_a_network_no_other_service_joins() -> 
         if name != "juku-mcp"
         for network in service["networks"]
     }
-    own = [network for network in compose["services"]["juku-mcp"]["networks"] if network not in others]
+    external = {name for name, network in compose["networks"].items() if network.get("external")}
+    own = [network for network in compose["services"]["juku-mcp"]["networks"] if network not in others | external]
     assert own == ["mcp-db"]
 
 
 def run_make_secrets(tmp_path: Path, env_file: str) -> subprocess.CompletedProcess[str]:
     ops = tmp_path / "ops"
-    ops.mkdir()
+    (ops / "secrets").mkdir(parents=True)
+    # The key pair is made only when missing; LibreSSL (macOS) can't make Ed25519 keys, the server's OpenSSL can.
+    for key in ("juku_delegation_signing_key", "juku_mcp_delegation_public_key"):
+        (ops / "secrets" / key).write_text("placeholder\n", encoding="utf-8")
     shutil.copy(OPS / "make-secrets.sh", ops / "make-secrets.sh")
     (ops / ".env").write_text(env_file, encoding="utf-8")
     return subprocess.run(["bash", str(ops / "make-secrets.sh")], capture_output=True, text=True, check=False)  # noqa: S603, S607

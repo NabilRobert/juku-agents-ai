@@ -93,17 +93,19 @@ budget:
 database:
   connection_limit: 20
   # Left free for the provider's admin login: setup, or a psql session.
-  reserved_for_admin: 2
+  reserved_for_admin: 1
   # juku_app: the web app's pools on the app and dict databases.
   app_pool: 3
   app_dict_pool: 2
-  # juku_app too: a hand-run command (juku invite, delete-learner) beside the app.
+  # juku_app too: a hand-run command (juku invite, delete-learner) or the
+  # nightly state check, beside the app.
   app_commands: 1
   # juku_mcp: Juku's MCP server's pools.
   mcp_pool: 3
   mcp_dict_pool: 2
-  # juku_ops: cron jobs use one connection each; two may overlap.
-  ops_connections: 2
+  # juku_ops: one connection per job; the heartbeat, the audit import and
+  # the nightly state check can start in the same minute (ops/crontab).
+  ops_connections: 3
   # juku_migrator: migrations and partition upkeep, one at a time.
   migrator_connections: 1
   # dict_owner: the dictionary reload, run by hand.

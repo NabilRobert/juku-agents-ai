@@ -47,15 +47,21 @@ def settings() -> AppSettings:
     return AppSettings()  # pyright: ignore[reportCallIssue] (fields come from the environment)
 
 
-def databases(config: AppSettings, rules: Rules) -> Databases:  # noqa: ARG001 (EDD stub; sized next commit)
+def databases(config: AppSettings, rules: Rules) -> Databases:
+    """The web app's pools: fixed sizes from the rule file, no overflow, so juku_app stays within its share."""
+    budget = rules.database
     return Databases(
-        app=create_async_engine(config.app_database_url), dictionary=create_async_engine(config.dict_database_url)
+        app=create_async_engine(config.app_database_url, pool_size=budget.app_pool, max_overflow=0),
+        dictionary=create_async_engine(config.dict_database_url, pool_size=budget.app_dict_pool, max_overflow=0),
     )
 
 
-def command_databases(config: AppSettings) -> Databases:
+def command_databases(config: AppSettings, rules: Rules) -> Databases:
+    """A hand-run command's pools, beside the running app: its own share of juku_app's connections."""
+    size = rules.database.app_commands
     return Databases(
-        app=create_async_engine(config.app_database_url), dictionary=create_async_engine(config.dict_database_url)
+        app=create_async_engine(config.app_database_url, pool_size=size, max_overflow=0),
+        dictionary=create_async_engine(config.dict_database_url, pool_size=size, max_overflow=0),
     )
 
 
@@ -112,7 +118,7 @@ def invite(count: Annotated[int, typer.Option(min=1, max=100, help="How many cod
     config = settings()
 
     async def run() -> list[str]:
-        db = command_databases(config)
+        db = command_databases(config, load_rules())
         try:
             return await invites.issue_codes(db.app, count)
         finally:
@@ -129,7 +135,7 @@ def delete_learner(public_id: str) -> None:
     config = settings()
 
     async def run() -> dict[str, int]:
-        db = command_databases(config)
+        db = command_databases(config, load_rules())
         try:
             learner = await engine.get_learner(db, public_id)
             return await privacy.delete_learner(db.app, learner.id)
