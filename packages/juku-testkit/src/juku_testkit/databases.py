@@ -18,6 +18,7 @@ import uuid
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
@@ -197,3 +198,29 @@ async def dict_engine(dictionary_database: TestDatabase) -> AsyncIterator[AsyncE
         yield engine
     finally:
         await engine.dispose()
+
+
+@pytest.fixture(scope="session")
+async def mirrored_dictionary(app_database: TestDatabase, dictionary_database: TestDatabase) -> None:
+    """The app database's copy of the dictionary's index (ADR-026), synced once per run."""
+    from juku_data.dictionary.sync import sync_index
+
+    app = create_async_engine(app_database.sqlalchemy_url)
+    dictionary = create_async_engine(dictionary_database.sqlalchemy_url)
+    try:
+        await sync_index(dictionary, app)
+    finally:
+        await app.dispose()
+        await dictionary.dispose()
+
+
+@pytest.fixture
+async def engine_databases(
+    mirrored_dictionary: None,  # noqa: ARG001 (needed for its effect: the mirror is synced)
+    app_engine: AsyncEngine,
+    dict_engine: AsyncEngine,
+) -> AsyncIterator[Any]:
+    """The learning engine's two databases (juku_data.engine.Databases), ready to use."""
+    from juku_data.engine import Databases
+
+    yield Databases(app=app_engine, dictionary=dict_engine)

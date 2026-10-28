@@ -1,0 +1,117 @@
+{
+ "known_words": 61,
+ "recommendations": [
+  {
+   "word_id": "537f8af3d6",
+   "word": "一つ",
+   "level": 5,
+   "new_kanji": "一",
+   "leverage": 9
+  },
+  {
+   "word_id": "9d8f862791",
+   "word": "一",
+   "level": 5,
+   "new_kanji": "一",
+   "leverage": 9
+  },
+  {
+   "word_id": "3a2de0afca",
+   "word": "大きな",
+   "level": 5,
+   "new_kanji": "大",
+   "leverage": 9
+  },
+  {
+   "word_id": "8fa5a63fc7",
+   "word": "大きい",
+   "level": 5,
+   "new_kanji": "大",
+   "leverage": 9
+  },
+  {
+   "word_id": "358fc382cb",
+   "word": "年",
+   "level": 5,
+   "new_kanji": "年",
+   "leverage": 8
+  },
+  {
+   "word_id": "782272bfda",
+   "word": "物",
+   "level": 5,
+   "new_kanji": "物",
+   "leverage": 8
+  },
+  {
+   "word_id": "ce75c75644",
+   "word": "今",
+   "level": 5,
+   "new_kanji": "今",
+   "leverage": 7
+  },
+  {
+   "word_id": "0c1dbd4838",
+   "word": "二つ",
+   "level": 5,
+   "new_kanji": "二",
+   "leverage": 6
+  },
+  {
+   "word_id": "34108268e1",
+   "word": "二",
+   "level": 5,
+   "new_kanji": "二",
+   "leverage": 6
+  },
+  {
+   "word_id": "63bc7722fa",
+   "word": "生まれる",
+   "level": 5,
+   "new_kanji": "生",
+   "leverage": 6
+  }
+ ],
+ "reading_sentences": [
+  {
+   "sentence_id": 1781,
+   "new_word_id": "6c0551dd8a"
+  },
+  {
+   "sentence_id": 3372,
+   "new_word_id": "76502785af"
+  },
+  {
+   "sentence_id": 4491,
+   "new_word_id": "a6b276960f"
+  },
+  {
+   "sentence_id": 5237,
+   "new_word_id": "13ab63d79a"
+  },
+  {
+   "sentence_id": 5632,
+   "new_word_id": "45f5de7d2d"
+  },
+  {
+   "sentence_id": 11725,
+   "new_word_id": "0c08f09a61"
+  },
+  {
+   "sentence_id": 1794,
+   "new_word_id": "731e27d6bb"
+  },
+  {
+   "sentence_id": 503,
+   "new_word_id": "e37a087c0f"
+  },
+  {
+   "sentence_id": 825,
+   "new_word_id": "da545eed32"
+  },
+  {
+   "sentence_id": 1813,
+   "new_word_id": "08ca0a613f"
+  }
+ ]
+}

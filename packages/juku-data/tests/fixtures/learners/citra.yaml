@@ -1,0 +1,13 @@
+# An N4 learner in WITA (UTC+8). The day boundary is the learner's own:
+# 学校's two answers fall on one UTC day but two local days, so it's known;
+# 先生's fall on two UTC days but one local day, so it isn't.
+public_id: fix-citra
+target_level: 4
+timezone: Asia/Makassar
+exam_date: 2026-12-06
+events:
+  - {at: "2026-11-01T20:00:00+08:00", type: marked_known, first: 150, level: 5}
+  - {at: "2026-11-02T23:30:00+08:00", type: quiz_meaning, word: 学校/がっこう, correct: true}
+  - {at: "2026-11-03T00:30:00+08:00", type: quiz_meaning, word: 学校/がっこう, correct: true}
+  - {at: "2026-11-03T07:30:00+08:00", type: quiz_reading, word: 先生/せんせい, correct: true}
+  - {at: "2026-11-03T09:00:00+08:00", type: quiz_reading, word: 先生/せんせい, correct: true}

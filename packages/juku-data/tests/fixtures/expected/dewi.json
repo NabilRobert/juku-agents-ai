@@ -1,0 +1,117 @@
+{
+ "known_words": 1,
+ "recommendations": [
+  {
+   "word_id": "54e1f7a772",
+   "word": "合う",
+   "level": 4,
+   "new_kanji": "合",
+   "leverage": 16
+  },
+  {
+   "word_id": "675232ef05",
+   "word": "間に合う",
+   "level": 4,
+   "new_kanji": "合",
+   "leverage": 16
+  },
+  {
+   "word_id": "2d86d7e0fc",
+   "word": "場合",
+   "level": 4,
+   "new_kanji": "合",
+   "leverage": 16
+  },
+  {
+   "word_id": "7a84208708",
+   "word": "要る",
+   "level": 5,
+   "new_kanji": "要",
+   "leverage": 9
+  },
+  {
+   "word_id": "160a8399af",
+   "word": "安全",
+   "level": 4,
+   "new_kanji": "全",
+   "leverage": 9
+  },
+  {
+   "word_id": "356e03170b",
+   "word": "付く",
+   "level": 4,
+   "new_kanji": "付",
+   "leverage": 9
+  },
+  {
+   "word_id": "de815ae4e6",
+   "word": "予習",
+   "level": 4,
+   "new_kanji": "予",
+   "leverage": 9
+  },
+  {
+   "word_id": "721424863e",
+   "word": "表",
+   "level": 4,
+   "new_kanji": "表",
+   "leverage": 8
+  },
+  {
+   "word_id": "0ddf8d04c2",
+   "word": "日記",
+   "level": 4,
+   "new_kanji": "記",
+   "leverage": 8
+  },
+  {
+   "word_id": "ecb83e16fd",
+   "word": "支度",
+   "level": 4,
+   "new_kanji": "支",
+   "leverage": 8
+  }
+ ],
+ "reading_sentences": [
+  {
+   "sentence_id": 1781,
+   "new_word_id": "6c0551dd8a"
+  },
+  {
+   "sentence_id": 3372,
+   "new_word_id": "76502785af"
+  },
+  {
+   "sentence_id": 4491,
+   "new_word_id": "a6b276960f"
+  },
+  {
+   "sentence_id": 5237,
+   "new_word_id": "13ab63d79a"
+  },
+  {
+   "sentence_id": 5632,
+   "new_word_id": "45f5de7d2d"
+  },
+  {
+   "sentence_id": 11725,
+   "new_word_id": "0c08f09a61"
+  },
+  {
+   "sentence_id": 1794,
+   "new_word_id": "731e27d6bb"
+  },
+  {
+   "sentence_id": 1813,
+   "new_word_id": "08ca0a613f"
+  },
+  {
+   "sentence_id": 10290,
+   "new_word_id": "3f5fcba58b"
+  },
+  {
+   "sentence_id": 11525,
+   "new_word_id": "3744253331"
+  }
+ ]
+}

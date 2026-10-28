@@ -1,0 +1,12 @@
+# An N5 learner who knows words sharing kanji (日, 曜, 一, 二), so those
+# kanji are known and words with them become candidates (ADR-010).
+public_id: fix-eka
+target_level: 5
+timezone: Asia/Jakarta
+exam_date: 2027-07-04
+events:
+  - {at: "2026-11-02T08:00:00+07:00", type: marked_known, word: 日曜日/にちようび}
+  - {at: "2026-11-02T08:01:00+07:00", type: marked_known, word: 一つ/ひとつ}
+  - {at: "2026-11-02T08:02:00+07:00", type: marked_known, word: 二つ/ふたつ}
+  - {at: "2026-11-02T08:03:00+07:00", type: marked_known, word: 今日/きょう}
+  - {at: "2026-11-02T08:04:00+07:00", type: marked_known, word: 学生/がくせい}

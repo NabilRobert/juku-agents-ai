@@ -1,0 +1,117 @@
+{
+ "known_words": 5,
+ "recommendations": [
+  {
+   "word_id": "3a2de0afca",
+   "word": "大きな",
+   "level": 5,
+   "new_kanji": "大",
+   "leverage": 9
+  },
+  {
+   "word_id": "8fa5a63fc7",
+   "word": "大きい",
+   "level": 5,
+   "new_kanji": "大",
+   "leverage": 9
+  },
+  {
+   "word_id": "5b303264b9",
+   "word": "大学",
+   "level": 5,
+   "new_kanji": "大",
+   "leverage": 9
+  },
+  {
+   "word_id": "358fc382cb",
+   "word": "年",
+   "level": 5,
+   "new_kanji": "年",
+   "leverage": 8
+  },
+  {
+   "word_id": "0020b9ee4e",
+   "word": "今年",
+   "level": 5,
+   "new_kanji": "年",
+   "leverage": 8
+  },
+  {
+   "word_id": "782272bfda",
+   "word": "物",
+   "level": 5,
+   "new_kanji": "物",
+   "leverage": 8
+  },
+  {
+   "word_id": "3554fb81b8",
+   "word": "一月",
+   "level": 5,
+   "new_kanji": "月",
+   "leverage": 6
+  },
+  {
+   "word_id": "3793173687",
+   "word": "今月",
+   "level": 5,
+   "new_kanji": "月",
+   "leverage": 6
+  },
+  {
+   "word_id": "5b9670420a",
+   "word": "手",
+   "level": 5,
+   "new_kanji": "手",
+   "leverage": 6
+  },
+  {
+   "word_id": "039a696225",
+   "word": "毎日",
+   "level": 5,
+   "new_kanji": "毎",
+   "leverage": 6
+  }
+ ],
+ "reading_sentences": [
+  {
+   "sentence_id": 1781,
+   "new_word_id": "6c0551dd8a"
+  },
+  {
+   "sentence_id": 3372,
+   "new_word_id": "76502785af"
+  },
+  {
+   "sentence_id": 4491,
+   "new_word_id": "a6b276960f"
+  },
+  {
+   "sentence_id": 5237,
+   "new_word_id": "13ab63d79a"
+  },
+  {
+   "sentence_id": 5632,
+   "new_word_id": "45f5de7d2d"
+  },
+  {
+   "sentence_id": 11725,
+   "new_word_id": "0c08f09a61"
+  },
+  {
+   "sentence_id": 1794,
+   "new_word_id": "731e27d6bb"
+  },
+  {
+   "sentence_id": 1813,
+   "new_word_id": "08ca0a613f"
+  },
+  {
+   "sentence_id": 10290,
+   "new_word_id": "3f5fcba58b"
+  },
+  {
+   "sentence_id": 11525,
+   "new_word_id": "3744253331"
+  }
+ ]
+}

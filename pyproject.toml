@@ -49,6 +49,8 @@ ignore = ["S101"]
 # Migrations and tests build SQL from fixed strings, never from input.
 "migrations/**" = ["S608"]
 "**/tests/**" = ["S105", "S106", "S608"]
+# Full-width and half-width characters are the point of the normalization tests.
+"**/tests/test_japanese.py" = ["RUF001"]
 
 [tool.pyright]
 include = ["packages", "migrations"]
