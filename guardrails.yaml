@@ -25,13 +25,24 @@ privacy:
 fitness:
   FF1:
     title: Query plans on a synthetic 5,000-learner database
-    status: pending
-    until: track A (slice 2)
+    status: active
     thresholds:
       # ADR-010's latency rule, for the learner who knows 4,000 words.
       recommend_words_max_ms: 200
       # A sequential scan of an event partition with more rows than this fails.
       max_event_seq_scan_rows: 1000
+      # Plan-cost ceilings for the 4,000-word learner, about twice the cost
+      # measured on 2026-10-28 (in brackets). A query whose plan gets worse
+      # fails here; raising a ceiling is a reviewed change to this file.
+      cost_recommend_words: 5000     # (2,591)
+      cost_coverage: 2000            # (948)
+      cost_known_count: 14000        # (6,857)
+      cost_known_ids: 14000          # (6,847)
+      cost_mistakes: 600             # (263)
+      cost_recent_activity: 50       # (19)
+      cost_reading_sentences: 6000   # (2,695)
+      cost_quiz_due_items: 50        # (12)
+      cost_quiz_in_progress: 14000   # (6,871)
   FF2:
     title: Hot paths read summaries only, never learning_events
     status: active
@@ -78,8 +89,7 @@ fitness:
     checked_by: lighthouse-ci
   FF13:
     title: Tool query plans stay under their cost ceilings, with JIT off
-    status: pending
-    until: track A (slice 2)
+    status: active
     thresholds:
       # Postgres's jit_above_cost default: below it, JIT never compiles a
       # plan, even if `jit = off` were lost from Juku's MCP role (spike 2).

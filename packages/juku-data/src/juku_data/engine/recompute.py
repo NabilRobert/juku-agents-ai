@@ -116,14 +116,26 @@ def kanji_query(state_table: str) -> str:
 
 
 def coverage_query(state_table: str, kanji_table: str) -> str:
-    """LE1's coverage: known words and kanji per level, for all five levels."""
+    """LE1's coverage: known words and kanji per level, for all five levels (zeros included)."""
     return f"""
+    WITH words AS (
+        SELECT s.learner_id, w.level, count(*) AS words_known
+        FROM {state_table} s JOIN learning.dictionary_words w ON w.word_id = s.item_id
+        WHERE s.is_known AND s.learner_id = ANY(:learner_ids)
+        GROUP BY s.learner_id, w.level
+    ),
+    kanji AS (
+        SELECT lk.learner_id, k.level, count(*) AS kanji_known
+        FROM {kanji_table} lk JOIN learning.dictionary_kanji k ON k.kanji = lk.kanji
+        WHERE lk.learner_id = ANY(:learner_ids)
+        GROUP BY lk.learner_id, k.level
+    )
     SELECT l.id AS learner_id, levels.level::smallint AS level,
-           (SELECT count(*) FROM {state_table} s JOIN learning.dictionary_words w ON w.word_id = s.item_id
-            WHERE s.learner_id = l.id AND s.is_known AND w.level = levels.level)::integer AS words_known,
-           (SELECT count(*) FROM {kanji_table} lk JOIN learning.dictionary_kanji k ON k.kanji = lk.kanji
-            WHERE lk.learner_id = l.id AND k.level = levels.level)::integer AS kanji_known
-    FROM learning.learners l CROSS JOIN generate_series(1, 5) AS levels(level)
+           coalesce(w.words_known, 0)::integer AS words_known, coalesce(k.kanji_known, 0)::integer AS kanji_known
+    FROM learning.learners l
+    CROSS JOIN generate_series(1, 5) AS levels(level)
+    LEFT JOIN words w ON w.learner_id = l.id AND w.level = levels.level
+    LEFT JOIN kanji k ON k.learner_id = l.id AND k.level = levels.level
     WHERE l.id = ANY(:learner_ids)
     """  # noqa: S608
 

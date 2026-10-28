@@ -24,7 +24,8 @@ from juku_testkit.databases import TestDatabase
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the synthetic database lands in the next commit")
+# Building the synthetic database takes a minute or two the first time; it's then kept.
+pytestmark = pytest.mark.timeout(900)
 
 WARM_UP_RUNS = 3
 TIMED_RUNS = 10
@@ -71,8 +72,9 @@ def nodes(plan: dict[str, Any]) -> Iterator[dict[str, Any]]:
         yield from nodes(child)
 
 
-async def test_the_heavy_learner_knows_4000_words(synthetic: Databases, heavy: Learner) -> None:
-    assert len(await known_word_ids(synthetic.app, heavy.id)) == HEAVY_LEARNER_KNOWN_WORDS
+async def test_the_heavy_learner_knows_at_least_4000_words(synthetic: Databases, heavy: Learner) -> None:
+    # 4,000 marked known, plus the few its quiz answers taught it.
+    assert len(await known_word_ids(synthetic.app, heavy.id)) >= HEAVY_LEARNER_KNOWN_WORDS
 
 
 @pytest.mark.fitness("FF1")
