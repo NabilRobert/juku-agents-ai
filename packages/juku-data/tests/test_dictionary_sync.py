@@ -68,3 +68,16 @@ async def test_a_failed_download_says_what_answered(tmp_path: Path) -> None:
     client = httpx.AsyncClient(transport=httpx.MockTransport(lambda _request: httpx.Response(404)))
     with pytest.raises(DictionaryError, match="answered 404"):
         await fetch_dictionary(tmp_path, client)
+
+
+async def test_after_a_sync_every_learner_is_rebuilt_against_the_new_mirror(
+    engine_databases: object, dict_engine: AsyncEngine, app_engine: AsyncEngine
+) -> None:
+    from juku_data.engine import Databases, verify_state
+    from juku_data.engine.recompute import rebuild_everyone
+
+    assert isinstance(engine_databases, Databases)
+    await sync_index(dict_engine, app_engine)
+    rebuilt = await rebuild_everyone(app_engine, batch_size=7)
+    assert rebuilt == await count(app_engine, "SELECT count(*) FROM learning.learners")
+    assert await verify_state(engine_databases) == []

@@ -23,14 +23,13 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from juku_data.engine.recompute import MARKED_KNOWN, QUIZ_MEANING, rebuild_learners
+from juku_data.engine.recompute import MARKED_KNOWN, QUIZ_MEANING, rebuild_everyone
 
 SYNTHETIC_LEARNERS = 5000
 HEAVY_LEARNER_PUBLIC_ID = "syn-heavy"
 HEAVY_LEARNER_KNOWN_WORDS = 4000
 QUIZ_ANSWERS_PER_LEARNER = 100
 WORDS_IN_PROGRESS = 60
-REBUILD_BATCH = 250
 
 CREATE_LEARNERS = """
 INSERT INTO learning.learners (public_id, cohort_id, nickname, target_level, timezone)
@@ -90,6 +89,9 @@ class SyntheticReport:
 async def build_synthetic(app: AsyncEngine, *, learners: int = SYNTHETIC_LEARNERS) -> SyntheticReport:
     """Fill an empty, migrated app database (with its dictionary mirror synced) with synthetic learners."""
     started = time.perf_counter()
+    async with app.connect() as connection:
+        if await connection.scalar(text("SELECT EXISTS (SELECT 1 FROM learning.learners)")):
+            raise ValueError("this database already has learners: the synthetic ones go only into an empty one")
     async with app.begin() as connection:
         await connection.execute(
             text(CREATE_LEARNERS), {"learners": learners, "heavy_public_id": HEAVY_LEARNER_PUBLIC_ID}
@@ -100,16 +102,8 @@ async def build_synthetic(app: AsyncEngine, *, learners: int = SYNTHETIC_LEARNER
         await connection.execute(text(WORD_ORDER))
         await connection.execute(text(MARKS))
         await connection.execute(text(ANSWERS), {"answers": QUIZ_ANSWERS_PER_LEARNER, "in_progress": WORDS_IN_PROGRESS})
-        learner_ids = [
-            int(learner_id)
-            for learner_id in await connection.scalars(
-                text("SELECT id FROM learning.learners WHERE public_id LIKE 'syn-%' ORDER BY id")
-            )
-        ]
         events = int(await connection.scalar(text("SELECT count(*) FROM learning.learning_events")) or 0)
-    for start in range(0, len(learner_ids), REBUILD_BATCH):
-        async with app.begin() as connection:
-            await rebuild_learners(connection, learner_ids[start : start + REBUILD_BATCH])
+    rebuilt = await rebuild_everyone(app)
     async with app.begin() as connection:
         await connection.execute(text("ANALYZE"))
-    return SyntheticReport(learners=len(learner_ids), events=events, seconds=time.perf_counter() - started)
+    return SyntheticReport(learners=rebuilt, events=events, seconds=time.perf_counter() - started)

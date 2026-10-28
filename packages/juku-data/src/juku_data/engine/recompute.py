@@ -19,7 +19,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from juku_data.engine.state import CORRECT_DAYS_TO_KNOW, LAST_BOX, LEITNER_INTERVAL_DAYS
 
@@ -222,6 +222,8 @@ SUMMARIES = [
 ]
 ALL_LEARNERS = "SELECT id FROM learning.learners ORDER BY id"
 DIFFERENCES_SHOWN = 3
+# Learners rebuilt per transaction when rebuilding everyone: small enough to keep memory and locks short.
+REBUILD_BATCH = 250
 
 
 async def _learner_ids(connection: AsyncConnection, learner_ids: Sequence[int] | None) -> list[int]:
@@ -256,6 +258,16 @@ async def rebuild_learners(connection: AsyncConnection, learner_ids: Sequence[in
                 f"SELECT {summary.columns} FROM pg_temp.{EXPECTED_TABLE[summary.table]}"
             )
         )
+
+
+async def rebuild_everyone(app: AsyncEngine, *, batch_size: int = REBUILD_BATCH) -> int:
+    """Rebuild every learner, a batch per transaction (after a dictionary sync, or for the synthetic database)."""
+    async with app.connect() as connection:
+        learner_ids = await _learner_ids(connection, None)
+    for start in range(0, len(learner_ids), batch_size):
+        async with app.begin() as connection:
+            await rebuild_learners(connection, learner_ids[start : start + batch_size])
+    return len(learner_ids)
 
 
 async def _differences(connection: AsyncConnection, summary: Summary, learner_ids: list[int]) -> list[str]:

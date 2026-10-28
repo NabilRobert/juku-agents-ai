@@ -2,9 +2,11 @@
 
     juku-data fetch-dictionary   download the pinned OpenJLPT files and check them
     juku-data load-dictionary    rebuild the dict database from them (about 3 s)
-    juku-data sync-index         copy the dictionary's index into the app database
+    juku-data sync-index         copy the dictionary's index into the app database, then rebuild every learner
+    juku-data build-synthetic    fill an empty app database with 5,000 synthetic learners (FF1, load tests)
 
-After a load, run sync-index: the app's summaries read the mirror.
+After a load, run sync-index: the app's summaries read the mirror, and the
+learners' candidates depend on it.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ from juku_data.dictionary.fetch import fetch_dictionary
 from juku_data.dictionary.load import LoadReport, load_dictionary
 from juku_data.dictionary.source import DictionaryError, verify_source
 from juku_data.dictionary.sync import SyncReport, sync_index
+from juku_data.engine.recompute import rebuild_everyone
 from juku_data.settings import DataSettings, require
 
 app = typer.Typer(help="Juku's dictionary and learner-state jobs.", no_args_is_help=True)
@@ -78,10 +81,11 @@ def load_dictionary_command() -> None:
         typer.echo(f"WORD IDS THAT DISAPPEARED ({len(report.disappeared_ids)}): {', '.join(report.disappeared_ids)}")
 
 
-async def _sync(dict_url: str, app_url: str) -> SyncReport:
+async def _sync(dict_url: str, app_url: str) -> tuple[SyncReport, int]:
     dict_engine, app_engine = create_async_engine(dict_url), create_async_engine(app_url)
     try:
-        return await sync_index(dict_engine, app_engine)
+        report = await sync_index(dict_engine, app_engine)
+        return report, await rebuild_everyone(app_engine)
     finally:
         await dict_engine.dispose()
         await app_engine.dispose()
@@ -91,13 +95,36 @@ async def _sync(dict_url: str, app_url: str) -> SyncReport:
 def sync_index_command() -> None:
     """Copy the dictionary's index columns into the app database."""
     config = settings()
-    report = asyncio.run(
+    report, rebuilt = asyncio.run(
         _sync(
             require(config.dict_database_url, "dict_database_url"), require(config.app_database_url, "app_database_url")
         )
     )
     typer.echo(f"mirrored {report.words} words, {report.word_kanji} word kanji, {report.kanji} kanji")
+    typer.echo(f"rebuilt the summaries of {rebuilt} learners against it")
     if report.items_missing_from_dictionary:
         missing = report.items_missing_from_dictionary
         typer.echo(f"LEARNER ITEMS NOT IN THE DICTIONARY ({len(missing)}): {', '.join(missing)}")
         raise typer.Exit(1)
+
+
+@app.command("build-synthetic")
+def build_synthetic_command() -> None:
+    """Fill an empty app database with 5,000 synthetic learners, for measuring (never production)."""
+    from juku_data.synthetic import build_synthetic
+
+    url = require(settings().app_database_url, "app_database_url")
+
+    async def run() -> str:
+        engine = create_async_engine(url)
+        try:
+            report = await build_synthetic(engine)
+        finally:
+            await engine.dispose()
+        return f"{report.learners} learners, {report.events} events, in {report.seconds:.0f} s"
+
+    try:
+        typer.echo("built " + asyncio.run(run()))
+    except ValueError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
