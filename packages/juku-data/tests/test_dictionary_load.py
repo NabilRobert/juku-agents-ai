@@ -18,9 +18,6 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-# EDD: the loader is a stub until the next commit; these name what it must do.
-pending_loader = pytest.mark.xfail(strict=True, reason="the loader lands in the next commit")
-
 
 def test_a_changed_file_is_refused_before_anything_is_loaded(tmp_path: Path) -> None:
     folder = require_openjlpt()
@@ -48,19 +45,16 @@ async def table_md5(engine: AsyncEngine, table: str) -> str:
     return str(value)
 
 
-@pending_loader
 @pytest.mark.parametrize(("table", "count"), sorted(EXPECTED_ROW_COUNTS.items()))
 async def test_the_load_has_the_builds_row_counts(dict_engine: AsyncEngine, table: str, count: int) -> None:
     assert await scalar(dict_engine, f"SELECT count(*) FROM ojlpt.{table}") == count
 
 
-@pending_loader
 @pytest.mark.parametrize(("table", "md5"), sorted(EXPECTED_TABLE_MD5.items()))
 async def test_the_load_reproduces_spike_1_row_for_row(dict_engine: AsyncEngine, table: str, md5: str) -> None:
     assert await table_md5(dict_engine, table) == md5
 
 
-@pending_loader
 async def test_the_load_records_its_version(dict_engine: AsyncEngine) -> None:
     assert await scalar(dict_engine, "SELECT openjlpt_commit FROM ojlpt.meta") == OPENJLPT_COMMIT
     sqlite_sha256 = sha256_of(require_openjlpt() / "openjlpt.sqlite")
@@ -74,7 +68,6 @@ async def word_id(engine: AsyncEngine, word: str) -> str:
     return found
 
 
-@pending_loader
 async def test_each_word_lists_the_kanji_in_its_spelling(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         kanji = await connection.scalars(
@@ -84,7 +77,6 @@ async def test_each_word_lists_the_kanji_in_its_spelling(dict_engine: AsyncEngin
         assert list(kanji) == ["一"]
 
 
-@pending_loader
 async def test_a_kana_only_word_counts_as_common(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         commonness = await connection.scalar(
@@ -93,7 +85,6 @@ async def test_a_kana_only_word_counts_as_common(dict_engine: AsyncEngine) -> No
     assert commonness == 0
 
 
-@pending_loader
 async def test_a_words_commonness_is_its_rarest_kanjis_frequency_rank(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         expected = await connection.scalar(
@@ -109,7 +100,6 @@ async def test_a_words_commonness_is_its_rarest_kanjis_frequency_rank(dict_engin
     assert actual == expected
 
 
-@pending_loader
 async def test_leverage_counts_the_words_at_or_below_a_level_with_the_kanji(dict_engine: AsyncEngine) -> None:
     n5_words_with_day = await scalar(
         dict_engine,
@@ -120,7 +110,6 @@ async def test_leverage_counts_the_words_at_or_below_a_level_with_the_kanji(dict
     assert isinstance(leverage, int) and leverage > 0
 
 
-@pending_loader
 async def test_the_supplement_words_are_loaded_with_no_level(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         rows = (await connection.execute(text("SELECT word, jmdict_id FROM ojlpt.supplement_word ORDER BY id"))).all()
@@ -140,20 +129,17 @@ async def sentence_words(engine: AsyncEngine, ja: str) -> set[str]:
         return set(found)
 
 
-@pending_loader
 async def test_a_sentence_maps_each_content_word_to_one_word_id(dict_engine: AsyncEngine) -> None:
     expected = {await word_id(dict_engine, word) for word in ("信号", "青", "変わる")}
     assert await sentence_words(dict_engine, "信号が青に変わったわよ。") == expected
 
 
-@pending_loader
 async def test_a_supplement_word_maps_in_a_sentence(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         mapped = await connection.scalar(text("SELECT count(*) FROM ojlpt.sentence_word WHERE word_id = 'sup-1497610'"))
     assert isinstance(mapped, int) and mapped > 0
 
 
-@pending_loader
 async def test_reading_practice_maps_about_as_much_as_spike_4_measured(dict_engine: AsyncEngine) -> None:
     """Spike 4: 90.7% of content tokens map to one word; 63-66% of sentences map completely."""
     tokens, mapped = (
@@ -168,7 +154,6 @@ async def test_reading_practice_maps_about_as_much_as_spike_4_measured(dict_engi
     assert sentences_mapped / sentences_total >= 0.63
 
 
-@pending_loader
 async def test_the_reader_role_can_read_but_not_write(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         await connection.execute(text("SET ROLE dict_reader"))
@@ -178,7 +163,6 @@ async def test_the_reader_role_can_read_but_not_write(dict_engine: AsyncEngine) 
         await connection.rollback()
 
 
-@pending_loader
 async def test_the_model_facing_views_have_comments(dict_engine: AsyncEngine) -> None:
     missing = await scalar(
         dict_engine,
@@ -188,7 +172,6 @@ async def test_the_model_facing_views_have_comments(dict_engine: AsyncEngine) ->
     assert missing is None
 
 
-@pending_loader
 async def test_a_reload_without_a_word_reports_the_word_as_disappeared(tmp_path: Path) -> None:
     """The update policy: OpenJLPT's IDs are stable, and an ID that vanishes is reported, not ignored."""
     import sqlite3
@@ -199,12 +182,12 @@ async def test_a_reload_without_a_word_reports_the_word_as_disappeared(tmp_path:
     database: TestDatabase = await asyncio.to_thread(create_database, "juku_test_reload")
     engine = create_async_engine(database.sqlalchemy_url)
     try:
-        first = await load_dictionary(engine, verify_source(folder))
+        first = await load_dictionary(engine, verify_source(folder), with_reading_index=False)
         assert first.disappeared_ids == []
         with sqlite3.connect(tmp_path / "openjlpt.sqlite") as connection:
             connection.execute("DELETE FROM vocab WHERE word = '一つ'")
         changed = verify_source(tmp_path, expected_sqlite_sha256=sha256_of(tmp_path / "openjlpt.sqlite"))
-        second: LoadReport = await load_dictionary(engine, changed)
+        second: LoadReport = await load_dictionary(engine, changed, with_reading_index=False)
         assert second.disappeared_ids == ["537f8af3d6"]
         assert second.row_counts["vocab"] == EXPECTED_ROW_COUNTS["vocab"] - 1
     finally:

@@ -55,6 +55,8 @@ include = ["packages", "migrations"]
 exclude = ["spikes", "**/node_modules", "**/.venv"]
 strict = ["packages/*/src"]
 pythonVersion = "3.12"
+# Hand-written stubs for libraries that ship no types (SudachiPy).
+stubPath = "typings"
 venvPath = "."
 venv = ".venv"
 
