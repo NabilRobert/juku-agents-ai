@@ -55,9 +55,11 @@ It runs on the same stack as the others:
 **Status: building.** Track D (the skeleton, CI and monitoring), track A
 (the data and the learning engine), track B (Juku's MCP server, identity
 and guardrails), track C (the thin app, with chat on a scripted model)
-and slice 4 (memory: evidence-checked notes the learner can correct) are
-in; the weekly pipeline follows ([slice plan](docs/planning/slice-plan.md)).
-Nothing is deployed and no model has been called.
+slice 4 (memory: evidence-checked notes the learner can correct) and
+slice 6's pipeline half (Keiko, Nikki and Tadashi on scripted models, with
+code's own checks) are in; evals with real models, then deploying, follow
+([slice plan](docs/planning/slice-plan.md)). Nothing is deployed and no
+model has been called.
 
 ## Run it
 
@@ -97,10 +99,10 @@ uv run juku render-previews --out build/previews
 | `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan |
 | `packages/juku-mcp/` | Juku's MCP server (`juku-mcp serve`): the learner's data, read-only, scoped by the delegation token in each call's `_meta`; `attacks/` holds the SAF1 attack suite and its committed prediction |
 | `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep, the nightly state check |
-| `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion |
+| `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion; and the weekly pipeline (`juku run-weekly --due`, `app/src/juku_app/pipeline/`) with the Run Inspector |
 | `app/web/` | The two Vue islands, chat and quiz (Vite, Vitest), with FE7's size budget and FF12's Lighthouse config |
 | `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
-| `evals/` | Agent eval tasks in agent-eval-harness's format, with their fixture learners: `memory/` holds MEM1's 15 tasks |
+| `evals/` | Agent evals and their fixture learners: `memory/` holds MEM1's 15 tasks (agent-eval-harness's format), `pipeline/` the weekly pipeline's 10 learners and the planted bad outputs |
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
 | `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |

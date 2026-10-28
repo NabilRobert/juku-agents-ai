@@ -12,7 +12,9 @@ The weekly pipeline (`juku run-weekly`) and memory consolidation
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -25,16 +27,22 @@ from juku_common.delegation import Signer
 from juku_common.rules import load_rules
 from juku_data import engine
 from juku_data.engine import Databases
+from juku_ops.jobs import recorded_run
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from juku_app import invites, privacy
+from juku_app.budget import BudgetGuard
 from juku_app.logs import configure_logging
 from juku_app.moderation import PendingModerator
+from juku_app.pipeline.crew import CrewModels, build_crew, keiko_toolset
+from juku_app.pipeline.feedback import JOB_NAME as FEEDBACK_JOB
+from juku_app.pipeline.feedback import draft_feedback
+from juku_app.pipeline.run import PipelineServices, RunOutcome, run_due
 from juku_app.settings import AppSettings
 from juku_app.telemetry import install_tracing
 from juku_app.web import WebDeps, create_web_app
@@ -68,16 +76,24 @@ def chat_model(config: AppSettings) -> Model:
     return FunctionModel(unavailable, stream_function=unavailable_stream)
 
 
-def build_app(config: AppSettings) -> FastAPI:
+def signing_key(config: AppSettings) -> ed25519.Ed25519PrivateKey:
     key = serialization.load_pem_private_key(config.delegation_signing_key.encode(), password=None)
     if not isinstance(key, ed25519.Ed25519PrivateKey):
         raise SystemExit("JUKU_DELEGATION_SIGNING_KEY isn't an Ed25519 private key: make one with ops/make-secrets.sh")
+    return key
+
+
+def admin_ids(config: AppSettings) -> frozenset[str]:
+    return frozenset(part.strip() for part in config.admin_public_ids.split(",") if part.strip())
+
+
+def build_app(config: AppSettings) -> FastAPI:
     rules = load_rules()
     return create_web_app(
         WebDeps(
             db=databases(config),
             rules=rules,
-            signer=Signer(key, rules),
+            signer=Signer(signing_key(config), rules),
             session_secret=config.session_secret,
             model=chat_model(config),
             juku_mcp_url=config.juku_mcp_url,
@@ -85,8 +101,75 @@ def build_app(config: AppSettings) -> FastAPI:
             moderator=PendingModerator(),
             crisis_line=config.crisis_line,
             secure_cookies=config.secure_cookies,
+            admin_public_ids=admin_ids(config),
         )
     )
+
+
+def pipeline_services(config: AppSettings) -> PipelineServices:
+    """The weekly crew on the chat's model (ADR-011), Keiko reaching Juku's MCP server with her own key."""
+    rules = load_rules()
+    db = databases(config)
+    model = chat_model(config)
+    crew = build_crew(
+        CrewModels(keiko=model, nikki=model, tadashi=model),
+        keiko_toolset(config.juku_mcp_url, config.keiko_gateway_key),
+    )
+    return PipelineServices(
+        db=db, rules=rules, guard=BudgetGuard(db.app, rules), signer=Signer(signing_key(config), rules), crew=crew
+    )
+
+
+def ops_engine(config: AppSettings) -> AsyncEngine:
+    if config.ops_database_url is None:
+        raise SystemExit("JUKU_OPS_DATABASE_URL is not set: the pipeline's jobs record their runs as the jobs' role")
+    return create_async_engine(config.ops_database_url, pool_size=1, max_overflow=0)
+
+
+@app.command("run-weekly")
+def run_weekly_command(
+    due: Annotated[
+        bool, typer.Option("--due", help="Run every learner whose Sunday 18:00 has come, and queued replans.")
+    ] = False,
+) -> None:
+    """The weekly pipeline (cron, hourly): each due learner's report, then any replans Shiori queued."""
+    if not due:
+        raise SystemExit("run-weekly needs --due: it runs the learners whose weekly run is due")
+    config = settings()
+    services, ops = pipeline_services(config), ops_engine(config)
+
+    async def run() -> list[RunOutcome]:
+        try:
+            return await run_due(services, ops, datetime.now(UTC))
+        finally:
+            await ops.dispose()
+            await services.db.app.dispose()
+            await services.db.dictionary.dispose()
+
+    outcomes = asyncio.run(run())
+    counts = Counter(outcome.status for outcome in outcomes)
+    typer.echo(
+        "weekly runs: " + (", ".join(f"{status} {count}" for status, count in sorted(counts.items())) or "none due")
+    )
+
+
+@app.command("draft-feedback")
+def draft_feedback_command() -> None:
+    """Draft prompt changes from last week's recurring issues, for Arthur (AG4). Nothing is applied."""
+    config = settings()
+    services, ops = pipeline_services(config), ops_engine(config)
+
+    async def run() -> int:
+        try:
+            async with recorded_run(ops, FEEDBACK_JOB):
+                drafts = await draft_feedback(services.db.app, chat_model(config), services.rules, datetime.now(UTC))
+            return len(drafts)
+        finally:
+            await ops.dispose()
+            await services.db.app.dispose()
+            await services.db.dictionary.dispose()
+
+    typer.echo(f"feedback drafts: {asyncio.run(run())} (see the Run Inspector; nothing is applied)")
 
 
 @app.command()

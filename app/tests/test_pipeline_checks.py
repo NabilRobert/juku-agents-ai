@@ -20,8 +20,6 @@ from juku_data.engine.models import (
 )
 from juku_data.memory import EvidenceEvent, Memory, MemoryNote, NoteProposal
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the pipeline lands in the next commit")
-
 
 def candidate(word_id: str, level: int = 5) -> RecommendedWord:
     return RecommendedWord(
@@ -180,49 +178,56 @@ def test_a_plans_explanation_is_held_to_the_facts_too(rules: Rules) -> None:
 
 def test_a_report_of_cited_facts_passes(rules: Rules) -> None:
     facts = sample_facts()
-    assert check_report(GOOD_REPORT, plan(), facts, facts, rules) == []
+    assert check_report(GOOD_REPORT, facts, facts, rules) == []
 
 
 def test_a_number_not_in_the_facts_is_blocked(rules: Rules) -> None:
     facts = sample_facts()
     report = "Minggu ini kamu menjawab 13 kuis [ref:activity]."
-    assert kinds(check_report(report, plan(), facts, facts, rules)) == {"number_not_in_facts"}
+    assert kinds(check_report(report, facts, facts, rules)) == {"number_not_in_facts"}
 
 
 def test_the_weeks_dates_and_word_levels_are_not_counted_as_claims(rules: Rules) -> None:
     facts = sample_facts()
     report = "Laporan 2026-11-02 sampai 2026-11-08: 12 kuis [ref:activity], kata N5 [ref:c5]."
-    assert check_report(report, plan(), facts, facts, rules) == []
+    assert check_report(report, facts, facts, rules) == []
 
 
 def test_a_report_without_a_citation_is_blocked(rules: Rules) -> None:
     facts = sample_facts()
-    assert kinds(check_report("Minggu ini kamu menjawab 12 kuis.", plan(), facts, facts, rules)) == {"missing_citation"}
+    assert kinds(check_report("Minggu ini kamu menjawab 12 kuis.", facts, facts, rules)) == {"missing_citation"}
 
 
 def test_a_citation_to_something_not_in_the_facts_is_blocked(rules: Rules) -> None:
     facts = sample_facts()
     report = "Minggu ini kamu menjawab 12 kuis [ref:activity] [ref:invented]."
-    assert kinds(check_report(report, plan(), facts, facts, rules)) == {"unknown_citation"}
+    assert kinds(check_report(report, facts, facts, rules)) == {"unknown_citation"}
 
 
 def test_citing_a_note_the_learner_has_since_removed_is_a_stale_claim(rules: Rules) -> None:
     facts, fresh = sample_facts(notes=("note-1",)), sample_facts(notes=())
     report = "Kamu sering salah membaca [ref:note-1]."
-    assert kinds(check_report(report, plan(), facts, fresh, rules)) == {"stale_claim"}
+    assert kinds(check_report(report, facts, fresh, rules)) == {"stale_claim"}
+
+
+def test_citing_a_note_taken_back_before_the_run_is_a_stale_claim(rules: Rules) -> None:
+    facts = sample_facts(notes=())
+    report = "Kamu sering salah membaca [ref:note-7]."
+    assert kinds(check_report(report, facts, facts, rules, frozenset({"note-7"}))) == {"stale_claim"}
+    assert kinds(check_report(report, facts, facts, rules)) == {"unknown_citation"}
 
 
 def test_citing_a_mistake_answered_since_is_a_stale_claim(rules: Rules) -> None:
     facts, fresh = sample_facts(mistakes=("m1",)), sample_facts(mistakes=())
     report = "Ulangi kata ini [ref:m1]."
-    assert kinds(check_report(report, plan(review_word_ids=[]), facts, fresh, rules)) == {"stale_claim"}
+    assert kinds(check_report(report, facts, fresh, rules)) == {"stale_claim"}
 
 
 @pytest.mark.guardrail("pipeline.report_max_words")
 def test_a_report_over_the_word_limit_is_blocked(rules: Rules) -> None:
     facts = sample_facts()
     long_report = GOOD_REPORT + " kata" * rules.pipeline.report_max_words
-    assert kinds(check_report(long_report, plan(), facts, facts, rules)) == {"too_long"}
+    assert kinds(check_report(long_report, facts, facts, rules)) == {"too_long"}
 
 
 # --- approval: Pitstop's decideApproval, plus code's issues ---

@@ -176,3 +176,42 @@ What went wrong while building, and what changed because of it
   last 30 days, a 13th note and a duplicate. The table refuses a category
   the rule file doesn't allow. Refusals are counted by reason, never with
   their text (MEM2).
+
+## Slice 6, the pipeline half (2026-10-29)
+
+- **The fixtures came first:** 10 learners (MEM1's four and six more, one
+  in Tokyo whose week turns at her own midnight), each with gold facts from
+  one reference query, and six planted bad outputs. A scripted crew reads
+  the JSON facts the run sends it: the faithful crew's reports are
+  published as written; every planted output is blocked in code although
+  Tadashi is scripted to approve it, and the learner gets the facts-only
+  report. That is slice 6's "Done when": a planted bad number, an off-level
+  word and a stale claim are each blocked in code.
+- **Pitstop's critic, ported.** Severities, approval decided in code, and
+  at most 2 revisions, from gads-case-study e15697e (critic.ts and
+  criticLoop.ts); the feedback job from its weeklyFeedback.ts. Juku adds
+  code's own checks, which block whatever Tadashi says.
+- **A stale claim the facts couldn't see.** The planted case cites a note
+  Gita removed the day before the run, so it was never in the run's facts,
+  and the first version called it an unknown citation: blocked, but not
+  for the right reason. Removed, wrong and lapsed notes are never shown to
+  agents, so code now checks citations against them too, and calls a hit
+  what it is: stale memory (MEM4).
+- **A planted number had to be one no fact holds.** The first planted
+  report said 12 quizzes; a candidate's leverage could be 12, and any
+  number in the facts is allowed. It says 987 now.
+- **Without a model key** the app's stand-in model answers in plain text,
+  which can't be a plan: the run now ends in the facts-only report instead
+  of failing.
+- **The dead-man's switch** is two alerts: the existing "missed run" for the
+  hourly cron job (`run-weekly` in expected_jobs), and a new one counting
+  learners with no report an hour after their Sunday 18:00
+  (`monitoring.pipeline_overdue_at`). Both are queries Grafana runs as
+  `grafana_reader`; the Telegram side is checked on the server (slice 8).
+- **Mutation checks:** 26 breaks, by hand, in the checks, the approval, the
+  revisions, the run claim and lease (FF7), the budget, the schedule, the
+  replan's delegation, the feedback job's privacy, the inspector's access
+  and the overdue function: each fails a test.
+- **Not done here:** FF6 (token ceilings) needs a tokenizer, and none is on
+  ADR-025's approved list; it stays pending for Arthur. The paid runs are
+  slice 7, with Arthur's OK.

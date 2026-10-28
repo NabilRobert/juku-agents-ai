@@ -21,8 +21,6 @@ from juku_testkit.memory_fixtures import PIPELINE_EVALS, LoadedFixture, load_mem
 from pipeline_helpers import crew_of, faithful_report, planted_keiko, planted_nikki, services_for, sunday_evening
 from sqlalchemy import text
 
-EDD = pytest.mark.xfail(strict=True, reason="EDD: the pipeline lands in the next commits")
-
 FIXTURES = cast(dict[str, Any], yaml.safe_load((PIPELINE_EVALS / "fixtures.yaml").read_text(encoding="utf-8")))
 PLANTED = cast(dict[str, Any], yaml.safe_load((PIPELINE_EVALS / "planted.yaml").read_text(encoding="utf-8")))
 LEARNERS = {str(item["name"]): item for item in FIXTURES["learners"]}
@@ -38,7 +36,6 @@ def test_there_are_fixtures_for_ten_learners() -> None:
     assert len(LEARNERS) == 10
 
 
-@EDD
 @pytest.mark.parametrize("name", sorted(LEARNERS))
 async def test_the_facts_match_the_gold_from_sql(engine_databases: Databases, rules: Rules, name: str) -> None:
     loaded = await load(engine_databases, rules, name)
@@ -72,7 +69,6 @@ async def test_the_facts_match_the_gold_from_sql(engine_databases: Databases, ru
     assert gathered == gold
 
 
-@EDD
 @pytest.mark.parametrize("name", sorted(LEARNERS))
 async def test_a_faithful_crews_report_is_published_as_written(
     engine_databases: Databases, rules: Rules, name: str
@@ -132,7 +128,6 @@ async def slots_for(db: Databases, loaded: LoadedFixture) -> dict[str, Any]:
     }
 
 
-@EDD
 @pytest.mark.parametrize("case_id", sorted(CASES))
 async def test_a_planted_bad_output_is_blocked_in_code_and_the_facts_only_report_goes_out(
     engine_databases: Databases, rules: Rules, case_id: str
@@ -164,3 +159,15 @@ async def test_a_planted_bad_output_is_blocked_in_code_and_the_facts_only_report
         kinds = [{issue["kind"] for issue in issues} for issues in reviews]
     assert len(kinds) == 1 + rules.pipeline.max_revisions
     assert all(case["expect"] in found for found in kinds), kinds
+
+
+@pytest.mark.parametrize("name", sorted(LEARNERS))
+async def test_the_facts_only_report_passes_codes_own_checks(
+    engine_databases: Databases, rules: Rules, name: str
+) -> None:
+    """The fallback can't be blocked: every number is a fact, every sentence cites its section."""
+    from juku_app.pipeline.checks import check_report
+
+    loaded = await load(engine_databases, rules, name)
+    facts = await gather_facts(engine_databases, loaded.learner, sunday_evening(loaded.learner.timezone))
+    assert check_report(facts_only_report(facts), facts, facts, rules) == []

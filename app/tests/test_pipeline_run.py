@@ -29,9 +29,7 @@ from pipeline_helpers import (
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import text
-from web_helpers import client_for, deps, sign_up
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the pipeline lands in the next commit")
+from web_helpers import client_for, csrf_of, deps, sign_up
 
 
 async def fixture_learner(db: Databases, rules: Rules, name: str = "joko") -> Learner:
@@ -162,6 +160,21 @@ async def test_each_agent_call_is_recorded_against_the_reports_pool(engine_datab
     assert calls == 4  # Keiko, Tadashi on the plan, Nikki, Tadashi on the report
 
 
+async def test_a_model_that_cant_give_a_valid_plan_ends_in_the_facts_only_report(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    """Without a model key, the app's stand-in model answers in plain text: the learner still gets a report."""
+    learner = await fixture_learner(engine_databases, rules)
+
+    def chatty(_messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[TextPart("Maaf, belum tersedia.")])
+
+    outcome = await run_weekly(
+        services_for(engine_databases, rules, crew_of(keiko=chatty)), learner, sunday_evening(learner.timezone)
+    )
+    assert outcome.status == "fallback"
+
+
 # --- memory: Keiko's proposals go through juku_data.memory (MEM-R2) ---
 
 
@@ -243,6 +256,20 @@ async def test_a_due_run_not_finished_within_the_hour_shows_as_overdue(
     assert before >= 1
     await run_weekly(services_for(engine_databases, rules, crew_of()), learner, sunday_evening(learner.timezone))
     assert int(await scalar(engine_databases, query, now=late)) == before - 1
+
+
+def test_the_overdue_alert_uses_the_rule_files_day_hour_and_grace(rules: Rules) -> None:
+    import yaml
+    from juku_testkit.databases import repo_root
+
+    path = repo_root() / "ops" / "grafana" / "provisioning" / "alerting" / "rules.yaml"
+    groups = yaml.safe_load(path.read_text(encoding="utf-8"))["groups"]
+    [rule] = [rule for group in groups for rule in group["rules"] if rule["uid"] == "juku-pipeline-overdue"]
+    pipeline = rules.pipeline
+    expected = (
+        f"pipeline_overdue_at(now(), {pipeline.due_weekday}, {pipeline.due_hour}, {pipeline.overdue_after_minutes})"
+    )
+    assert expected in rule["data"][0]["model"]["rawSql"]
 
 
 # --- request_replan (SM4): a Keiko run under a chain delegated from Shiori ---
@@ -341,18 +368,17 @@ async def test_the_run_inspector_is_for_arthur_only(engine_databases: Databases,
     async with client_for(deps(engine_databases)) as other:
         await sign_up(other, other_code, nickname="Bukan")
         assert (await other.get("/admin/runs")).status_code == 404
-    arthur_id = f"arthur-{uuid.uuid4().hex[:6]}"
+    async with client_for(deps(engine_databases)) as first_visit:
+        await sign_up(first_visit, arthur_code, nickname="Arthur")
+    arthur_id = str(await scalar(engine_databases, "SELECT public_id FROM learning.learners WHERE nickname = 'Arthur'"))
     async with client_for(deps(engine_databases, admin_public_ids=frozenset({arthur_id}))) as arthur:
-        await sign_up(arthur, arthur_code, nickname="Arthur")
-        async with engine_databases.app.begin() as connection:
-            await connection.execute(
-                text("UPDATE learning.learners SET public_id = :p WHERE nickname = 'Arthur'"), {"p": arthur_id}
-            )
+        page = await arthur.get("/masuk")
+        await arthur.post("/masuk", data={"code": arthur_code, "csrf": csrf_of(page)})
         runs = await arthur.get("/admin/runs")
         detail = await arthur.get(f"/admin/runs/{outcome.run_id}")
     assert runs.status_code == 200 and f"/admin/runs/{outcome.run_id}" in runs.text
     assert detail.status_code == 200
-    for part in ("keiko", "nikki", "tadashi", "published"):
+    for part in ("keiko", "nikki", "grade A", "published"):
         assert part in detail.text
 
 

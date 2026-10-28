@@ -169,8 +169,7 @@ fitness:
     until: slice 6 (the pipeline)
   FF7:
     title: Idempotent weekly runs
-    status: pending
-    until: slice 6 (the pipeline)
+    status: active
   FF8:
     title: Guardrail, delegation and isolation suites
     status: active

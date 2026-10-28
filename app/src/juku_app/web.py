@@ -14,6 +14,7 @@ no model or MCP key (UI2): it talks only to this app.
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import time
 from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
@@ -25,7 +26,7 @@ from typing import Any, Literal, cast
 from zoneinfo import ZoneInfo
 
 import structlog
-from fastapi import Depends, FastAPI, Form, Request
+from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -58,6 +59,25 @@ TIMEZONES = ("Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura", "Asia/Tokyo")
 LEVELS = (5, 4, 3, 2)
 # Enough batches for a long session; a client can't ask for an unbounded slice.
 MAX_QUIZ_BATCH = 20
+# The Run Inspector's lists: enough to see the week, small enough to load at once.
+INSPECTOR_ROWS = 50
+CITATION_MARKER = re.compile(r"\s*\[ref:[^\]\s]+\]")
+LATEST_RUNS = """
+SELECT r.id, l.public_id, r.week_start, r.kind, r.status, r.attempts, r.started_at, r.finished_at
+FROM app.pipeline_runs r JOIN learning.learners l ON l.id = r.learner_id ORDER BY r.id DESC LIMIT :limit
+"""
+LATEST_DRAFTS = (
+    "SELECT week_start, agent, patterns, draft, status FROM app.prompt_feedback ORDER BY id DESC LIMIT :limit"
+)
+ONE_RUN = """
+SELECT r.id, l.public_id, r.week_start, r.kind, r.status, r.attempts, r.started_at, r.finished_at, r.facts
+FROM app.pipeline_runs r JOIN learning.learners l ON l.id = r.learner_id WHERE r.id = :id
+"""
+RUN_ATTEMPTS = """
+SELECT o.agent, o.attempt, o.content, c.grade, c.issues, c.code_issues, c.is_approved, c.reason
+FROM app.agent_outputs o JOIN app.critic_reviews c ON c.output_id = o.id WHERE o.run_id = :id ORDER BY o.id
+"""
+RUN_REPORT = "SELECT body, is_fallback FROM app.reports WHERE run_id = :id"
 # get_memory names notes `note-<id>`, so Shiori can cite them; the page's URLs use the same.
 NOTE_PREFIX = "note-"
 # remove_note or mark_note_wrong: the learner's two corrections to a note.
@@ -76,6 +96,8 @@ class WebDeps:
     moderator: Moderator
     crisis_line: str
     secure_cookies: bool = True
+    # Who may open the Run Inspector (AG3): Arthur's own public ID, from the settings.
+    admin_public_ids: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -467,6 +489,50 @@ def create_web_app(deps: WebDeps) -> FastAPI:
         except UnknownWordError:
             return Response(status_code=404)
         return Response(status_code=204)
+
+    @app.get("/laporan")
+    async def report_page(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008
+        """The learner's latest weekly report (AG1), with the citation markers kept out of their way."""
+        async with db.app.connect() as connection:
+            latest = (
+                await connection.execute(
+                    text(
+                        "SELECT week_start, body, is_fallback FROM app.reports WHERE learner_id = :id "
+                        "ORDER BY week_start DESC LIMIT 1"
+                    ),
+                    {"id": current.learner.id},
+                )
+            ).first()
+        report = None
+        if latest is not None:
+            report = {"week_start": latest.week_start, "body": CITATION_MARKER.sub("", str(latest.body)).strip()}
+        return render(request, "laporan.html", page=current, report=report)
+
+    async def admin(learner: Learner = Depends(signed_in)) -> Learner:  # noqa: B008
+        """Arthur only: anyone else gets the same 404 as a page that doesn't exist."""
+        if learner.public_id not in deps.admin_public_ids:
+            raise HTTPException(status_code=404)
+        return learner
+
+    @app.get("/admin/runs", dependencies=[Depends(admin)])
+    async def admin_runs(request: Request) -> HTMLResponse:
+        """The Run Inspector's index (AG3): the latest runs, and the feedback job's drafts (AG4)."""
+        async with db.app.connect() as connection:
+            runs = (await connection.execute(text(LATEST_RUNS), {"limit": INSPECTOR_ROWS})).mappings().all()
+            drafts = (await connection.execute(text(LATEST_DRAFTS), {"limit": INSPECTOR_ROWS})).mappings().all()
+        return views.TemplateResponse(request, "admin_runs.html", {"runs": runs, "drafts": drafts})
+
+    @app.get("/admin/runs/{run_id}", dependencies=[Depends(admin)])
+    async def admin_run(request: Request, run_id: int) -> HTMLResponse:
+        """One run: its facts, every draft, every review with code's issues, the decision, the report."""
+        async with db.app.connect() as connection:
+            run = (await connection.execute(text(ONE_RUN), {"id": run_id})).mappings().first()
+            if run is None:
+                raise HTTPException(status_code=404)
+            attempts = (await connection.execute(text(RUN_ATTEMPTS), {"id": run_id})).mappings().all()
+            report = (await connection.execute(text(RUN_REPORT), {"id": run_id})).mappings().first()
+        context = {"run": run, "facts": json.dumps(run["facts"], ensure_ascii=False, indent=1), "attempts": attempts}
+        return views.TemplateResponse(request, "admin_run.html", {**context, "report": report})
 
     @app.get("/pengaturan")
     async def settings_page(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008

@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "juku-common",
     "juku-data",
+    "juku-ops",
     "argon2-cffi==25.1.0",
     "babel==2.18.0",
     "fastapi==0.162.0",
@@ -28,6 +29,7 @@ juku = "juku_app.cli:app"
 [tool.uv.sources]
 juku-common = { workspace = true }
 juku-data = { workspace = true }
+juku-ops = { workspace = true }
 
 [build-system]
 requires = ["hatchling==1.27.0"]

@@ -22,6 +22,8 @@ class AppSettings(BaseSettings):
     # Shiori reaches Juku's MCP server through the gateway's Juku route, with her own key.
     gateway_url: str = "http://mcp-gateway:8000"
     shiori_gateway_key: str | None = None
+    # Keiko's own gateway key, for her tool calls in the weekly pipeline (ADR-018: no key is shared).
+    keiko_gateway_key: str | None = None
     # Sumopod's OpenAI-compatible API (ADR-011). Without a key, the chat answers that it isn't available.
     model_base_url: str = "https://ai.sumopod.com/v1"
     model_api_key: str | None = None
@@ -29,6 +31,10 @@ class AppSettings(BaseSettings):
     # Indonesia's official mental-health line, checked by Arthur before launch (AG6).
     crisis_line: str = "(nomor belum diisi: lihat JUKU_CRISIS_LINE)"
     secure_cookies: bool = True
+    # The jobs' role, so the pipeline's cron commands record their runs for the "missed run" alert.
+    ops_database_url: str | None = None
+    # Arthur's public ID (comma-separated if more): who may open the Run Inspector (AG3).
+    admin_public_ids: str = ""
 
     @property
     def juku_mcp_url(self) -> str:

@@ -297,3 +297,15 @@ msgstr "kuis bacaan"
 
 msgid "sentence read"
 msgstr "kalimat dibaca"
+
+msgid "Report"
+msgstr "Laporan"
+
+msgid "Your weekly report"
+msgstr "Laporan mingguanmu"
+
+msgid "Week of"
+msgstr "Minggu mulai"
+
+msgid "Your first report comes on Sunday evening."
+msgstr "Laporan pertamamu datang hari Minggu sore."

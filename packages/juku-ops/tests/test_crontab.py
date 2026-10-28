@@ -8,12 +8,14 @@ from juku_testkit.databases import repo_root
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-JOB = re.compile(r"juku-ops (?P<job>[a-z-]+)")
+JOB = re.compile(r"juku(?:-ops)? (?P<job>[a-z-]+)")
 HEARTBEAT = "heartbeat"  # its staleness is the heartbeats row itself, not a job run
 
 
-def period_of(minute: str, hour: str) -> timedelta:
-    """The interval of the cron forms Juku uses: every minute, every N minutes, hourly, daily."""
+def period_of(minute: str, hour: str, weekday: str = "*") -> timedelta:
+    """The interval of the cron forms Juku uses: every minute, every N minutes, hourly, daily, weekly."""
+    if weekday.isdigit():
+        return timedelta(weeks=1)
     if (minute, hour) == ("*", "*"):
         return timedelta(minutes=1)
     if minute.startswith("*/") and hour == "*":
@@ -30,10 +32,10 @@ def scheduled_jobs(crontab: Path) -> dict[str, timedelta]:
     for line in crontab.read_text(encoding="utf-8").splitlines():
         if not line.strip() or line.lstrip().startswith("#") or "=" in line.split()[0]:
             continue
-        minute, hour, *_ = line.split()
+        minute, hour, _day, _month, weekday, *_ = line.split()
         found = JOB.search(line)
         if found and found["job"] != HEARTBEAT:
-            jobs[found["job"]] = period_of(minute, hour)
+            jobs[found["job"]] = period_of(minute, hour, weekday)
     return jobs
 
 
