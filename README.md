@@ -52,9 +52,9 @@ It runs on the same stack as the others:
   measures quality offline;
 - agent-observability (Project 6): traces each request and run.
 
-**Status: building.** Track D (the skeleton, CI and monitoring) is in;
-the data and learning engine, Juku's MCP server and the app follow, in
-that order ([slice plan](docs/planning/slice-plan.md)). Nothing is
+**Status: building.** Track D (the skeleton, CI and monitoring) and
+track A (the data and the learning engine) are in; Juku's MCP server and
+the app follow ([slice plan](docs/planning/slice-plan.md)). Nothing is
 deployed and no model has been called.
 
 ## Run it
@@ -68,14 +68,26 @@ make check    # lint, types, tests and fitness functions, migrations, secrets
 environment. Squawk, gitleaks and Lighthouse CI are skipped with a note if
 they aren't installed locally; CI installs them and fails instead.
 
+The tests load the dictionary from OpenJLPT's pinned build (commit
+`bf4e1ee`), expected in `data/raw/openjlpt-bf4e1ee/` (git-ignored):
+
+```bash
+uv run juku-data fetch-dictionary
+```
+
+The first run also builds a synthetic database of 5,000 learners for the
+query-plan checks (about 3 minutes); it's kept on the test server until
+the schema or the engine's write side changes.
+
 ## Layout
 
 | Folder | What it does |
 |---|---|
 | `packages/juku-common/` | What every service shares: the rule file loader (`guardrails.yaml`) and the hash-chained audit log |
-| `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep |
+| `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan |
+| `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep, the nightly state check |
 | `packages/juku-testkit/` | Test helpers: the fitness-function harness (a pytest plugin) and throwaway databases |
-| `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring` so far) |
+| `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
 | `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts |
 | `docs/planning/` | The plan: problem, requirements, decisions, slices, scale path, checks |

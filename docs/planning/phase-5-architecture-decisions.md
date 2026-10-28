@@ -816,6 +816,39 @@ budget-pool accounting (a few queries over recorded usage, on top of
 PydanticAI's per-run limits); and the citation and report checks, which
 are rules over IDs.
 
+### ADR-026: The dictionary's index is mirrored into the app database; the load is Python over COPY (track A, 2026-10-28)
+
+**Decision:**
+- **The few dictionary columns that learner state needs** (each word's
+  level and commonness, each word's kanji, each kanji's level, kanji
+  leverage) are copied from `dict` into the app database's
+  `learning.dictionary_*` tables by `juku-data sync-index`, after every
+  dictionary load, with the build they came from. About 34,000 small
+  rows. Every learner is then rebuilt against them.
+- So the incremental summaries (`learner_state`, `learner_kanji`,
+  `learner_coverage`, `learner_candidate`) are computed in one database,
+  in SQL, and `recommend_words` ranks one small table. Words' spellings,
+  readings and meanings still come from `dict`, by ID, in a second query
+  (ADR-006).
+- **The load** reads OpenJLPT's SQLite file with the standard library and
+  writes it with asyncpg's COPY into a staging schema, swapped in within
+  one transaction.
+
+**Options considered** (the folder's "reuse before building" rule):
+
+| Option | Verdict |
+|---|---|
+| **Mirror the index columns into the app database** | **Chosen.** One database for learner state, set-based SQL for the recompute (FF3) and the 5,000-learner build (FF1), and `dict` stays the only copy of the content |
+| `postgres_fdw`, joining across the databases | Rejected: an extension and a server definition to run and secure, and it couples the two databases ADR-016 keeps apart |
+| An in-memory index in Python | Rejected: memory in every process on a small server, and the synthetic database's rebuild would take minutes in Python |
+| One database with two schemas | Rejected: ADR-016's split keeps MCP-backbone's login away from learner data by construction, not by grants alone |
+| **pgloader** for the load (spike 1's suggestion) | Rejected: the load needs transforms pgloader doesn't do (levels as numbers, examples unnested, SudachiPy's reading index), and its image would be a new download. asyncpg is already in the stack |
+
+**Measured:** a load takes about 3 s and reproduces spike 1's md5 of
+every table. With the candidates kept incrementally, `recommend_words`
+takes 4.4 ms for a learner who knows 4,000 words (spike 2's per-call
+query: 231 ms at p95). Both are checked on every commit (FF1, FF13).
+
 ### Later (Could), recorded so they aren't re-decided
 
 - **The text speaking partner (X3):**

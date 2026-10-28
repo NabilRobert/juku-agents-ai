@@ -33,3 +33,38 @@ What went wrong while building, and what changed because of it
   mid-file, a bad timestamp). The survivors left are equivalent (a no-op
   `cast`, `strict=` on zips of equal length, the default text encoding)
   or only change an error message's wording.
+
+## Track A: the data and the learning engine (2026-10-28)
+
+- **A rewrite reintroduced a bug the spike had avoided.** Spike 2 split a
+  word into letters under the alias `ch`; the production version named it
+  `character`, which is also a column of the kanji table, so the
+  "is it a kanji?" subquery compared the column with itself and every
+  letter counted. The first test of the derived tables (`一つ` should
+  have one kanji) caught it.
+- **FF3 found a real disagreement on its first run.** The recompute
+  counted a day on which a learner only unmarked a word as a day of
+  activity, with all counts zero; the incremental path, correctly, made
+  no row. The recompute now leaves unmarks out.
+- **Two recompute queries were too slow at 5,000 learners.** Building the
+  synthetic database showed a correlated subquery per word for the
+  Leitner box, and one per learner and level for coverage, each scanning
+  an unindexed temporary table: 16.5 s for 250 learners. Both became
+  set-based (a window, and two grouped joins): about 4 s. FF3 stayed green
+  across both changes.
+- **A test leaked state into others.** A quiz test graded answers on a
+  shared fixture learner, so whether another test saw an empty mistakes
+  queue depended on the order. Tests that write now make their own
+  learner, and the drift test deletes the learner it corrupts.
+- **The incremental recommender is fast.** 4.4 ms for the 4,000-word
+  learner against spike 2's 231 ms p95, because it now ranks a few hundred
+  rows instead of re-deriving the known kanji on every call.
+- **mutmut** runs on the engine's pure rules (`state.py`, `japanese.py`):
+  89 of 99 mutants killed at first; the survivors showed untested counts on
+  a wrong answer, `last_seen_at`, and romaji with a space. With those
+  tests, 99 of 99. The database-backed modules would rebuild the test
+  databases for every mutant, so their rules were broken by hand instead:
+  eight in the engine (the candidates' affected words, kanji coverage,
+  the same-day rule, the Leitner reset, the variety cap, the gap-first
+  order, unmarking in the recompute, the plan's rounding) and one query
+  for FF1. Each made a test fail.
