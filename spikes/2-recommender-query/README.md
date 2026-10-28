@@ -6,7 +6,17 @@ Both runs are below; the OpenJLPT one is the plan.
 
 ## On OpenJLPT, with ADR-010's rewritten ordering (the plan)
 
-**Pass on a quiet machine; borderline under heavy load.**
+**Pass at the rule's sizes; the recommender degrades beyond them.**
+- **A later, quieter rerun** (load average about 5, recorded in
+  `results-*-quieter.md`): the worst call at 0, 100 and 500 known words
+  was **102 ms with jit off and 123 ms with jit on**. That passes, and
+  it's the run to quote.
+- **Beyond the rule, at 4,000 known words:** `recommend_words` (N3) reached
+  a p95 of **231 ms and a max of 649 ms** on that quieter run. N5–N2 is
+  about 4,700 entries, so an advanced learner gets there. The reading query
+  stayed at 24 ms p50.
+
+Earlier runs:
 - **On the first, quiet run:** the worst single call was 62 ms with jit on
   and 91 ms with jit off, at 0, 100 and 500 known words, N5–N2, through
   the MCP server.
@@ -68,9 +78,12 @@ off; [openjlpt/results-jit-off.md](openjlpt/results-jit-off.md), and
 **What it changes:**
 - With OpenJLPT, spike 2's LE4 concern goes away: the reading query no
   longer crosses 200 ms.
-- The recommender at N2 needs a look in slice 2: a quiet-machine
-  baseline, and if needed, precomputing each learner's candidate set as
-  their known words change (the scale path's incremental summaries).
+- **Proposed for slice 2: keep each learner's candidate set incrementally**
+  (unknown words with at most one unknown kanji, and that kanji), updated
+  as words become known. That's the scale path's incremental-summary
+  pattern. The recommender then ranks a small table rather than
+  re-deriving the known kanji per call, which is what grows with the known
+  set. FF1 times it at 4,000 known words.
 - The other proposals stand: `jit = off` on the role, the EXPLAIN/JIT
   fitness check, and the two-database read.
 - Where words with no new kanji rank is now ADR-010's leverage-0 case.
