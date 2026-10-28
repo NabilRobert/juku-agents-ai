@@ -25,7 +25,8 @@ BEGIN
 END
 $$;
 
-GRANT dict_reader TO juku_mcp;
+-- The MCP server and the app read the dictionary (the app for quizzes and word details).
+GRANT dict_reader TO juku_mcp, juku_app;
 
 -- Spike 2: JIT compilation cost about 300 ms on the recommender's plan, so
 -- it's off for the MCP server's queries (ADR-010, fitness function FF13).

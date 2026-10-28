@@ -55,6 +55,8 @@ secrets:
   juku_app_database_url: {file: ./secrets/juku_app_database_url}
   juku_ops_database_url: {file: ./secrets/juku_ops_database_url}
   juku_migrator_database_url: {file: ./secrets/juku_migrator_database_url}
+  juku_dict_database_url: {file: ./secrets/juku_dict_database_url}
+  juku_dict_owner_database_url: {file: ./secrets/juku_dict_owner_database_url}
   juku_mcp_app_database_url: {file: ./secrets/juku_mcp_app_database_url}
   juku_mcp_dict_database_url: {file: ./secrets/juku_mcp_dict_database_url}
   juku_delegation_signing_key: {file: ./secrets/juku_delegation_signing_key}
@@ -128,17 +130,23 @@ services:
       JUKU_GATEWAY_URL: ${JUKU_GATEWAY_URL:-http://mcp-gateway:8000}
       JUKU_GATEWAY_AUDIT_LOG: /audit/gateway/audit.jsonl
       JUKU_JUKU_MCP_AUDIT_LOG: /audit/juku-mcp/audit.jsonl
+      JUKU_OPENJLPT_DIR: /data/openjlpt
       OTEL_EXPORTER_OTLP_ENDPOINT: ${JUKU_OTLP_ENDPOINT:-}
     secrets:
       - juku_app_database_url
       - juku_ops_database_url
       - juku_migrator_database_url
+      - juku_dict_database_url
+      # Used only by `juku-data load-dictionary`, run by hand after the pin moves.
+      - juku_dict_owner_database_url
       - juku_delegation_signing_key
       - juku_session_secret
     volumes:
       # The audit logs, read-only: the cron import verifies and loads them.
       - juku-mcp-audit:/audit/juku-mcp:ro
       - ${JUKU_GATEWAY_AUDIT_DIR:-./gateway-audit}:/audit/gateway:ro
+      # The pinned OpenJLPT files (juku-data fetch-dictionary), read-only.
+      - ${JUKU_OPENJLPT_HOST_DIR:-../data/raw/openjlpt-bf4e1ee}:/data/openjlpt:ro
     mem_limit: 256m
     memswap_limit: 256m
 

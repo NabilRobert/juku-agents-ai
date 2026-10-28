@@ -60,6 +60,10 @@ jobs:
           curl -sSfL "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt" | grep " ${archive}$" | sha256sum -c -
           tar -xzf "${archive}" gitleaks
           sudo install gitleaks /usr/local/bin/gitleaks
+      # The pinned OpenJLPT build (commit bf4e1ee), checked against its SHA-256,
+      # for the dictionary and learning-engine tests.
+      - name: Fetch the dictionary
+        run: uv run --frozen juku-data fetch-dictionary --to data/raw/openjlpt-bf4e1ee
       - name: Install Lighthouse CI (FF12)
         run: npm install -g "@lhci/cli@${LHCI_VERSION}"
       - run: make check

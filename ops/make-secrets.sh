@@ -24,6 +24,8 @@ make_secret juku_ops_database_url "url juku_ops app"
 make_secret juku_migrator_database_url "url juku_migrator app"
 make_secret juku_mcp_app_database_url "url juku_mcp app"
 make_secret juku_mcp_dict_database_url "url juku_mcp dict"
+make_secret juku_dict_database_url "url juku_app dict"
+make_secret juku_dict_owner_database_url "url dict_owner dict"
 make_secret juku_session_secret "openssl rand -hex 32"
 make_secret grafana_admin_password "openssl rand -hex 16"
 if [[ ! -s juku_delegation_signing_key ]]; then
