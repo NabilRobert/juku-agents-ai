@@ -53,8 +53,9 @@ It runs on the same stack as the others:
 - agent-observability (Project 6): traces each request and run.
 
 **Status: building.** Track D (the skeleton, CI and monitoring), track A
-(the data and the learning engine) and track B (Juku's MCP server,
-identity and guardrails) are in; the app follows ([slice
+(the data and the learning engine), track B (Juku's MCP server, identity
+and guardrails) and track C (the thin app, with chat on a scripted model)
+are in; memory and the weekly pipeline follow ([slice
 plan](docs/planning/slice-plan.md)). Nothing is deployed and no model has
 been called.
 
@@ -80,6 +81,14 @@ The first run also builds a synthetic database of 5,000 learners for the
 query-plan checks (about 3 minutes); it's kept on the test server until
 the schema or the engine's write side changes.
 
+The app itself, `juku serve`, needs the two databases, Juku's MCP server
+and the secrets in `ops/compose.yaml`; it runs there, not on a laptop. Its
+pages can be looked at without any of that, rendered with sample data:
+
+```bash
+uv run juku render-previews --out build/previews
+```
+
 ## Layout
 
 | Folder | What it does |
@@ -88,8 +97,10 @@ the schema or the engine's write side changes.
 | `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan |
 | `packages/juku-mcp/` | Juku's MCP server (`juku-mcp serve`): the learner's data, read-only, scoped by the delegation token in each call's `_meta`; `attacks/` holds the SAF1 attack suite and its committed prediction |
 | `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep, the nightly state check |
+| `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion |
+| `app/web/` | The two Vue islands, chat and quiz (Vite, Vitest), with FE7's size budget and FF12's Lighthouse config |
 | `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
-| `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`) |
+| `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
 | `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
 | `docs/planning/` | The plan: problem, requirements, decisions, slices, scale path, checks |

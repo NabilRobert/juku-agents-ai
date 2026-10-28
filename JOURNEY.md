@@ -96,3 +96,45 @@ What went wrong while building, and what changed because of it
 - **G1 is checked, not claimed.** A guardrail harness lists every rule in
   guardrails.yaml's guardrail sections and fails make check if one has no
   test marked with it.
+
+## Track C: the thin app, with chat on a scripted model (2026-10-28)
+
+- **Every model in the tests is scripted.** Shiori runs on PydanticAI's
+  `FunctionModel`, so the chat, its tools through Juku's MCP server, the
+  budget guard and the citation check are all exercised at $0. Streaming
+  needed a `stream_function` beside the plain one: without it, the
+  streamed chat failed while the plain one passed.
+- **OpenTelemetry allows one tracer provider per process.** The server's
+  tests and the app's each wanted their own, and a second one is silently
+  ignored. Tracing set-up moved to `juku_common/telemetry.py`, and the
+  test kit has one shared span fixture.
+- **Partitions are tables too.** Deletion and export find the learner's
+  tables by their `learner_id` column, and `information_schema` lists each
+  monthly partition as a table of its own, so events would have been
+  counted twice. The code and its test read `pg_class` without partitions
+  instead.
+- **A test agreed with its mutant.** Making the per-learner daily cap
+  count from midnight UTC instead of the learner's midnight survived: the
+  test's two moments fell on the same day in both timezones. It now uses
+  06:00 and 08:00 in Jakarta, which fall on two different days in UTC.
+- **Mutation checks.** The budget guard's caps, the deletion's cascade,
+  six points in the chat flow (moderation, the budget check, the citation
+  check, the tool results it checks against, the per-call record, the
+  usage record) and the pages' consent
+  gate and CSRF check: each fails a test when broken. The consent gate had
+  no test at first; one was added before checking it.
+- **npm skipped Rollup's native binary** (npm's optional-dependency bug),
+  so Vitest couldn't start after a clean install. Rollup is pinned
+  through `overrides` instead.
+- **A Vitest test found a hidden button.** An answer with no streamed
+  text (a refusal, say) showed no rating buttons, because the answer only
+  appeared once text arrived. It now appears when the stream is done.
+- **FE7, measured:** the chat page loads 29.1 KB of JavaScript, the quiz
+  28.7 KB, every other page 2.2 KB; the CSS is 2.2 KB (all gzipped).
+  `make check` fails past the budget.
+- **Not run here:** Lighthouse (FF12) needs Chrome, so it runs in CI
+  only; the image's Python stages need base images that weren't cached,
+  so only its Node stage was built.
+- **Waiting on Arthur:** the moderation checker (until it's chosen, the
+  checker flags nothing, and the distress path is tested with a stand-in),
+  and a verified crisis line number for `JUKU_CRISIS_LINE`.
