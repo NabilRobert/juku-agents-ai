@@ -1,0 +1,25 @@
+# MEM1 fixture: a fact that changed. 食べる was marked known, then missed
+# twice; 水 was unmarked; 読む was misread three times, which Keiko noted.
+public_id: mem-fajar
+nickname: Fajar
+target_level: 5
+timezone: Asia/Jakarta
+events:
+  - {label: k_taberu, at: "2026-10-20T19:00:00+07:00", type: marked_known, word: 食べる/たべる}
+  - {label: k_nomu, at: "2026-10-20T19:01:00+07:00", type: marked_known, word: 飲む/のむ}
+  - {label: k_mizu, at: "2026-10-20T19:02:00+07:00", type: marked_known, word: 水/みず}
+  - {label: k_yama, at: "2026-10-20T19:03:00+07:00", type: marked_known, word: 山/やま}
+  - {label: k_gakkou, at: "2026-10-20T19:04:00+07:00", type: marked_known, word: 学校/がっこう}
+  - {label: r1, at: "2026-11-02T19:00:00+07:00", type: quiz_reading, word: 読む/よむ, correct: false}
+  - {label: t1, at: "2026-11-03T19:10:00+07:00", type: quiz_meaning, word: 食べる/たべる, correct: false}
+  - {label: r2, at: "2026-11-04T19:00:00+07:00", type: quiz_reading, word: 読む/よむ, correct: false}
+  - {label: t2, at: "2026-11-05T19:10:00+07:00", type: quiz_meaning, word: 食べる/たべる, correct: false}
+  - {label: r3, at: "2026-11-06T19:00:00+07:00", type: quiz_reading, word: 読む/よむ, correct: false}
+  - {label: u_mizu, at: "2026-11-06T19:30:00+07:00", type: unmarked_known, word: 水/みず}
+  - {label: c_yama, at: "2026-11-07T19:00:00+07:00", type: quiz_meaning, word: 山/やま, correct: true}
+proposals:
+  - {at: "2026-11-06T20:00:00+07:00", by: keiko, category: recurring_confusion,
+     text: "Sering salah membaca 読む.", evidence: [r1, r2, r3], expect: accepted}
+  # Two rows can't show a recurring pattern (MEM-R2: at least three).
+  - {at: "2026-11-06T20:01:00+07:00", by: keiko, category: recurring_confusion,
+     text: "Sering salah menjawab kuis.", evidence: [r1, t1], expect: too_little_evidence}

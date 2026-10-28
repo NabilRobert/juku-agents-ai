@@ -1,0 +1,32 @@
+# MEM1 fixture: notes the learner corrected. A pace note stays; a confusion
+# note was removed (and can't come back for 30 days); an example-preference
+# note was marked wrong; a note about work was refused.
+public_id: mem-gita
+nickname: Gita
+target_level: 4
+timezone: Asia/Jakarta
+events:
+  - {label: p1, at: "2026-11-01T20:00:00+07:00", type: marked_known, word: 意見/いけん}
+  - {label: c1, at: "2026-11-02T20:00:00+07:00", type: quiz_meaning, word: 約束/やくそく, correct: false}
+  - {label: e1, at: "2026-11-02T20:10:00+07:00", type: sentence_read, sentence: 1}
+  - {label: p2, at: "2026-11-03T20:00:00+07:00", type: marked_known, word: 政治/せいじ}
+  - {label: c2, at: "2026-11-03T20:05:00+07:00", type: quiz_meaning, word: 約束/やくそく, correct: false}
+  - {label: e2, at: "2026-11-03T20:10:00+07:00", type: sentence_read, sentence: 2}
+  - {label: c3, at: "2026-11-04T20:00:00+07:00", type: quiz_meaning, word: 約束/やくそく, correct: false}
+  - {label: e3, at: "2026-11-04T20:10:00+07:00", type: sentence_read, sentence: 3}
+  - {label: p3, at: "2026-11-05T20:00:00+07:00", type: marked_known, word: 経済/けいざい}
+proposals:
+  - {at: "2026-11-05T21:00:00+07:00", by: keiko, category: pace,
+     text: "Menandai sekitar satu kata baru setiap dua hari.", evidence: [p1, p2, p3], expect: accepted}
+  - {at: "2026-11-05T21:01:00+07:00", by: keiko, category: recurring_confusion,
+     text: "Sering tertukar arti 約束.", evidence: [c1, c2, c3], expect: accepted}
+  - {at: "2026-11-05T21:02:00+07:00", by: keiko, category: preferred_example,
+     text: "Suka belajar dari kalimat contoh.", evidence: [e1, e2, e3], expect: accepted}
+  - {at: "2026-11-05T21:03:00+07:00", by: keiko, category: work,
+     text: "Belajar setelah pulang kerja.", evidence: [p1, p2, p3], expect: forbidden_category}
+  # After the learner removed the confusion note, the same kind of note is held back for 30 days.
+  - {at: "2026-11-07T21:00:00+07:00", by: keiko, category: recurring_confusion,
+     text: "Sering salah arti 約束.", evidence: [c1, c2, c3], expect: suppressed_after_removal}
+actions:
+  - {at: "2026-11-07T09:00:00+07:00", remove: 1}
+  - {at: "2026-11-07T09:01:00+07:00", mark_wrong: 2}

@@ -1,0 +1,24 @@
+# MEM1 fixture: stale memory. An early-October note about misreading 経験 lapses
+# at the weekly consolidation, because she has read it right twice since
+# (MEM4). Notes about health are refused, by category and by content.
+public_id: mem-hana
+nickname: Hana
+target_level: 4
+timezone: Asia/Jakarta
+events:
+  - {label: m1, at: "2026-10-01T19:00:00+07:00", type: quiz_reading, word: 経験/けいけん, correct: false}
+  - {label: m2, at: "2026-10-03T19:00:00+07:00", type: quiz_reading, word: 経験/けいけん, correct: false}
+  - {label: m3, at: "2026-10-05T19:00:00+07:00", type: quiz_reading, word: 経験/けいけん, correct: false}
+  - {label: g1, at: "2026-11-04T19:00:00+07:00", type: quiz_reading, word: 経験/けいけん, correct: true}
+  - {label: g2, at: "2026-11-04T19:05:00+07:00", type: quiz_reading, word: 準備/じゅんび, correct: true}
+  - {label: g3, at: "2026-11-05T19:00:00+07:00", type: quiz_reading, word: 経験/けいけん, correct: true}
+  - {label: g4, at: "2026-11-05T19:05:00+07:00", type: quiz_meaning, word: 説明/せつめい, correct: true}
+proposals:
+  - {at: "2026-10-06T20:00:00+07:00", by: keiko, category: recurring_confusion,
+     text: "Sering salah membaca 経験.", evidence: [m1, m2, m3], expect: accepted}
+  - {at: "2026-11-05T21:00:00+07:00", by: keiko, category: health,
+     text: "Sering lelah saat belajar malam.", evidence: [g1, g2, g3], expect: forbidden_category}
+  - {at: "2026-11-05T21:01:00+07:00", by: keiko, category: pace,
+     text: "Belajar pelan karena sedang sakit.", evidence: [g1, g2, g3], expect: forbidden_content}
+actions:
+  - {at: "2026-11-08T03:10:00+07:00", consolidate: true}
