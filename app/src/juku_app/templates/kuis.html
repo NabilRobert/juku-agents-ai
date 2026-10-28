@@ -2,7 +2,8 @@
 {% block title %}{{ _("Quiz") }}{% endblock %}
 {% block content %}
 <h1 class="text-xl font-bold">{{ _("Quiz") }}</h1>
-<div id="quiz-island"><noscript>{{ _("The quiz needs JavaScript.") }}</noscript></div>
+<div id="quiz-island" data-more-url="/kuis/data"><noscript>{{ _("The quiz needs JavaScript.") }}</noscript></div>
 <script type="application/json" id="quiz-data">{{ quiz_json | safe }}</script>
+<script type="application/json" id="quiz-copy">{{ {"correct": _("Correct!"), "wrong": _("Not quite. The answer:"), "next": _("Next"), "done": _("Done for now. Well done!")} | tojson }}</script>
 {{ island("quiz") }}
 {% endblock %}

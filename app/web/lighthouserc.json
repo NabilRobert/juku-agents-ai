@@ -1,0 +1,25 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "../../build/previews",
+      "url": [
+        "http://localhost/beranda.html",
+        "http://localhost/kuis.html",
+        "http://localhost/chat.html",
+        "http://localhost/bacaan.html",
+        "http://localhost/rencana.html"
+      ],
+      "numberOfRuns": 1
+    },
+    "assert": {
+      "assertions": {
+        "resource-summary:script:size": ["error", { "maxNumericValue": 102400 }],
+        "resource-summary:stylesheet:size": ["error", { "maxNumericValue": 30720 }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "total-blocking-time": ["error", { "maxNumericValue": 200 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }]
+      }
+    },
+    "upload": { "target": "filesystem", "outputDir": "../../build/lighthouse" }
+  }
+}

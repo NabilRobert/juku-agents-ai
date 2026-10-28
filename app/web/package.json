@@ -8,7 +8,7 @@
     "build": "vue-tsc --noEmit && vite build",
     "test": "vitest run",
     "budget": "node scripts/check-budget.mjs",
-    "check": "npm run test"
+    "check": "npm run test && npm run build && npm run budget"
   },
   "dependencies": {
     "vue": "3.5.44",

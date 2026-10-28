@@ -58,6 +58,8 @@ class ChatAnswer:
     text: str
     is_verified: bool
     stopped_because: str | None = None
+    # The stored answer's ID, for rating it (UI3); None when the turn ended before the model.
+    message_id: int | None = None
 
 
 async def _before_the_model(
@@ -76,13 +78,15 @@ async def _before_the_model(
     return None
 
 
-async def _store(services: ChatServices, learner: Learner, question: str, answer: ChatAnswer, now: datetime) -> None:
+async def _store(services: ChatServices, learner: Learner, question: str, answer: ChatAnswer, now: datetime) -> int:
+    """Store the question and the answer; return the answer's ID."""
+    stored = 0
     async with services.app.begin() as connection:
         for role, body, verified in (("learner", question, None), ("shiori", answer.text, answer.is_verified)):
-            await connection.execute(
+            stored = await connection.scalar(
                 text(
                     "INSERT INTO app.chat_messages (learner_id, role, body, is_verified, created_at, expires_at) "
-                    "VALUES (:learner, :role, :body, :verified, :at, :expires)"
+                    "VALUES (:learner, :role, :body, :verified, :at, :expires) RETURNING id"
                 ),
                 {
                     "learner": learner.id,
@@ -93,6 +97,7 @@ async def _store(services: ChatServices, learner: Learner, question: str, answer
                     "expires": now + TEXT_RETENTION,
                 },
             )
+    return int(stored)
 
 
 async def _finish(
@@ -100,8 +105,8 @@ async def _finish(
 ) -> ChatAnswer:
     check = check_citations(output, run.tool_results)
     answer = ChatAnswer(output, is_verified=check.is_verified)
-    await _store(services, learner, question, answer, now)
-    return answer
+    message_id = await _store(services, learner, question, answer, now)
+    return ChatAnswer(output, is_verified=check.is_verified, message_id=message_id)
 
 
 async def ask(services: ChatServices, learner: Learner, question: str, now: datetime) -> ChatAnswer:

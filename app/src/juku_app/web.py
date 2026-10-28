@@ -55,6 +55,8 @@ CHAT_HISTORY = 20
 DELETE_CONFIRMATION = "HAPUS"
 TIMEZONES = ("Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura", "Asia/Tokyo")
 LEVELS = (5, 4, 3, 2)
+# Enough batches for a long session; a client can't ask for an unbounded slice.
+MAX_QUIZ_BATCH = 20
 
 
 @dataclass(frozen=True)
@@ -194,7 +196,9 @@ def create_web_app(deps: WebDeps) -> FastAPI:
         return RedirectResponse(exception.location, status_code=303)
 
     def render(request: Request, name: str, **context: Any) -> HTMLResponse:
-        return views.TemplateResponse(request, name, {"csrf": csrf_token(request), **context})
+        # The page's name, for real-user timings (FE8): "beranda" for /beranda.
+        page_name = request.url.path.strip("/").split("/")[0] or "root"
+        return views.TemplateResponse(request, name, {"csrf": csrf_token(request), "page_name": page_name, **context})
 
     async def nickname_of(learner: Learner) -> str:
         async with db.app.connect() as connection:
@@ -339,6 +343,12 @@ def create_web_app(deps: WebDeps) -> FastAPI:
         made = await engine.make_quiz(db, current.learner.id, current.today)
         return render(request, "kuis.html", page=current, quiz_json=made.model_dump_json())
 
+    @app.get("/kuis/data")
+    async def quiz_batch(batch: int = 0, current: Page = Depends(page)) -> JSONResponse:  # noqa: B008
+        """The next ten questions, for the quiz island to fetch before it runs out (FE6)."""
+        made = await engine.make_quiz(db, current.learner.id, current.today, batch=max(0, min(batch, MAX_QUIZ_BATCH)))
+        return JSONResponse(made.model_dump(mode="json"))
+
     @app.post("/kuis/jawab", dependencies=[Depends(header_csrf)])
     async def answer_quiz(answer: QuizAnswer, current: Page = Depends(page)) -> JSONResponse:  # noqa: B008
         try:
@@ -384,7 +394,11 @@ def create_web_app(deps: WebDeps) -> FastAPI:
         async def events() -> AsyncIterator[dict[str, str]]:
             async for piece in ask_streaming(chat, current.learner, question.question, datetime.now(UTC)):
                 if isinstance(piece, ChatAnswer):
-                    done = {"is_verified": piece.is_verified, "stopped_because": piece.stopped_because}
+                    done = {
+                        "is_verified": piece.is_verified,
+                        "stopped_because": piece.stopped_because,
+                        "message_id": piece.message_id,
+                    }
                     yield {"event": "done", "data": json.dumps(done)}
                 else:
                     yield {"event": "delta", "data": piece}

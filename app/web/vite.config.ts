@@ -3,14 +3,14 @@
 // folder; app/src/juku_app/assets.py reads the manifest to emit each page's tags.
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
-import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
   base: "/static/dist/",
   build: {
-    outDir: fileURLToPath(new URL("../src/juku_app/static/dist", import.meta.url)),
+    // Relative to this folder: into the Python package, where the app serves /static/.
+    outDir: "../src/juku_app/static/dist",
     emptyOutDir: true,
     manifest: true,
     rollupOptions: {

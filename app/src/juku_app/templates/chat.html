@@ -10,5 +10,6 @@
   {% endfor %}
 </ul>
 <div id="chat-island"><noscript>{{ _("The chat needs JavaScript.") }}</noscript></div>
+<script type="application/json" id="chat-copy">{{ {"placeholder": _("Write your question"), "send": _("Send"), "unverified": _("unverified"), "helpful": _("Helpful"), "unhelpful": _("Not helpful")} | tojson }}</script>
 {{ island("chat") }}
 {% endblock %}

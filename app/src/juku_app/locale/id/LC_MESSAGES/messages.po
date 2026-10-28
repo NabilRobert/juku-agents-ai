@@ -40,6 +40,9 @@ msgstr "Chat"
 msgid "Consent"
 msgstr "Persetujuan"
 
+msgid "Correct!"
+msgstr "Benar!"
+
 msgid "Count me in the group's anonymous weekly summary (optional)."
 msgstr "Hitung saya dalam ringkasan mingguan kelompok tanpa nama (opsional)."
 
@@ -51,6 +54,9 @@ msgstr "Terhapus"
 
 msgid "Deleting removes everything about you from Juku now. Type HAPUS to confirm."
 msgstr "Menghapus akan membuang semua datamu dari Juku sekarang juga. Ketik HAPUS untuk memastikan."
+
+msgid "Done for now. Well done!"
+msgstr "Selesai untuk sekarang. Bagus!"
 
 msgid "Download my data"
 msgstr "Unduh data saya"
@@ -69,6 +75,9 @@ msgstr "Mulai"
 
 msgid "Hello"
 msgstr "Halo"
+
+msgid "Helpful"
+msgstr "Membantu"
 
 msgid "Home"
 msgstr "Beranda"
@@ -97,11 +106,20 @@ msgstr "Level"
 msgid "New word"
 msgstr "Kata baru"
 
+msgid "Next"
+msgstr "Berikutnya"
+
 msgid "Nickname (not your real name)"
 msgstr "Nama panggilan (bukan nama asli)"
 
 msgid "No sentences yet: learn a few words first."
 msgstr "Belum ada kalimat: pelajari beberapa kata dulu."
+
+msgid "Not helpful"
+msgstr "Tidak membantu"
+
+msgid "Not quite. The answer:"
+msgstr "Belum tepat. Jawabannya:"
 
 msgid "Notice version"
 msgstr "Versi pemberitahuan"
@@ -129,6 +147,9 @@ msgstr "Rekomendasi"
 
 msgid "Save"
 msgstr "Simpan"
+
+msgid "Send"
+msgstr "Kirim"
 
 msgid "Settings"
 msgstr "Pengaturan"
@@ -165,6 +186,9 @@ msgstr "Kata"
 
 msgid "Words you know"
 msgstr "Kata yang kamu kuasai"
+
+msgid "Write your question"
+msgstr "Tulis pertanyaanmu"
 
 msgid "You know every word in these sentences but one."
 msgstr "Kamu sudah tahu semua kata di kalimat ini, kecuali satu."

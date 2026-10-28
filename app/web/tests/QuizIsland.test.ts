@@ -5,19 +5,19 @@ import QuizIsland from "../src/islands/QuizIsland.vue";
 const copy = { correct: "Benar!", wrong: "Belum tepat. Jawabannya:", next: "Berikutnya", done: "Selesai" };
 const quiz = {
   items: [
-    { word_id: "w1", kind: "meaning", prompt: "食べる", options: ["to drink", "to eat", "to see", "to go"] },
-    { word_id: "w2", kind: "reading", prompt: "水", options: ["みず", "ひ", "やま", "かわ"] },
+    { word_id: "w1", kind: "meaning" as const, prompt: "食べる", options: ["to drink", "to eat", "to see", "to go"] },
+    { word_id: "w2", kind: "reading" as const, prompt: "水", options: ["みず", "ひ", "やま", "かわ"] },
   ],
 };
 
 describe("QuizIsland", () => {
-  it.fails("shows the first question and its four options", () => {
+  it("shows the first question and its four options", () => {
     const wrapper = mount(QuizIsland, { props: { quiz, copy, csrf: "t" } });
     expect(wrapper.text()).toContain("食べる");
     expect(wrapper.findAll("button.option")).toHaveLength(4);
   });
 
-  it.fails("sends the chosen option with the CSRF token and shows the server's verdict", async () => {
+  it("sends the chosen option with the CSRF token and shows the server's verdict", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ is_correct: false, correct_option: "to eat" }), { status: 200 }),
     );
@@ -33,8 +33,9 @@ describe("QuizIsland", () => {
     vi.unstubAllGlobals();
   });
 
-  it.fails("moves on, and says it's done after the last question", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ is_correct: true, correct_option: "x" }))));
+  it("moves on, and says it's done after the last question", async () => {
+    // A fresh response each call: a body can be read only once.
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ is_correct: true, correct_option: "x" }))));
     const wrapper = mount(QuizIsland, { props: { quiz, copy, csrf: "t" } });
     for (let index = 0; index < 2; index += 1) {
       await wrapper.findAll("button.option")[1]!.trigger("click");

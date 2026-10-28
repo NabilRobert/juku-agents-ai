@@ -3,6 +3,7 @@
     juku serve                     the web app (in its container)
     juku invite --count 10         make invite codes; they're shown once, and only their hashes are kept
     juku delete-learner PUBLIC_ID  "Hapus data saya" for someone who has lost their code
+    juku render-previews           static copies of the pages, for Lighthouse CI (FF12)
 
 The weekly pipeline (`juku run-weekly`) and memory consolidation
 (`juku consolidate`) arrive with slices 6 and 4.
@@ -12,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -131,3 +133,14 @@ def delete_learner(public_id: str) -> None:
 
     removed = asyncio.run(run())
     typer.echo("deleted: " + ", ".join(f"{table} {count}" for table, count in removed.items()))
+
+
+@app.command("render-previews")
+def render_previews_command(
+    out: Annotated[Path, typer.Option(help="Folder for the HTML files.")] = Path("build/previews"),
+) -> None:
+    """Render each page with sample data, beside the built islands, for Lighthouse CI."""
+    from juku_app.previews import render_previews
+
+    for path in render_previews(out):
+        typer.echo(path)

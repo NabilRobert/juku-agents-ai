@@ -52,15 +52,15 @@ secrets:
 	$(WITH_TOOL) gitleaks "brew install gitleaks" gitleaks git --no-banner --redact --config .gitleaks.toml .
 	$(WITH_TOOL) gitleaks "brew install gitleaks" gitleaks dir --no-banner --redact --config .gitleaks.toml .
 
-# The Vue islands (track C): tests, type check and the production build.
+# The Vue islands: Vitest, the type check and production build, and FE7's size budget.
 frontend:
-	@if [[ ! -f $(WEB_DIR)/package.json ]]; then echo "skipped: no frontend yet ($(WEB_DIR))"; exit 0; fi; \
-	cd $(WEB_DIR) && npm run --silent check
+	cd $(WEB_DIR) && npm ci --prefer-offline --no-audit --no-fund --silent && npm run --silent check
 
-# FF12: the frontend budget on Lighthouse's mobile profile.
+# FF12: the frontend budget on Lighthouse's mobile profile, on static copies of the pages
+# (the frontend step has just built the islands).
 lighthouse:
-	@if [[ ! -f $(WEB_DIR)/package.json ]]; then echo "skipped: no frontend yet ($(WEB_DIR))"; exit 0; fi; \
-	$(WITH_TOOL) lhci "FF12: npm install -g @lhci/cli@0.15.1" lhci autorun --config=$(WEB_DIR)/lighthouserc.json
+	$(UV) run --frozen juku render-previews --out $(BUILD)/previews >/dev/null
+	cd $(WEB_DIR) && ../../$(WITH_TOOL) lhci "FF12: npm install -g @lhci/cli@0.15.1" lhci autorun --config=lighthouserc.json
 
 # mutmut 3 runs one package at a time (each has its own [tool.mutmut]); survivors are listed.
 mutation:

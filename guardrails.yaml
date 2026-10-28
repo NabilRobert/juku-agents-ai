@@ -149,9 +149,17 @@ fitness:
     checked_by: agent-eval-harness
   FF12:
     title: Frontend budget (Lighthouse CI, mobile)
-    status: pending
-    until: track C (slice 5)
+    status: active
     checked_by: lighthouse-ci
+    thresholds:
+      # FE7: per page, compressed; Lighthouse's mobile profile. Lab runs can't
+      # measure INP, so Total Blocking Time stands in for it there; real INP
+      # comes from the web-vitals island (FE8).
+      javascript_kb: 100
+      css_kb: 30
+      largest_contentful_paint_ms: 2500
+      total_blocking_time_ms: 200
+      cumulative_layout_shift: 0.1
   FF13:
     title: Tool query plans stay under their cost ceilings, with JIT off
     status: active

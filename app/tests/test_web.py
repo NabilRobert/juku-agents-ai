@@ -134,6 +134,7 @@ async def test_chat_streams_an_answer_as_server_sent_events(engine_databases: Da
     assert "event: delta" in response.text
     assert "event: done" in response.text
     assert "tidak ada di data" in response.text
+    assert '"message_id": ' in response.text  # so the island can rate this answer
 
 
 async def test_a_rating_is_stored(engine_databases: Databases) -> None:
@@ -233,3 +234,13 @@ async def test_a_signed_in_learner_without_current_consent_is_asked_again(engine
         for path in ("/beranda", "/kuis", "/chat"):
             response = await client.get(path)
             assert (response.status_code, response.headers["location"]) == (303, "/persetujuan"), path
+
+
+async def test_the_quiz_island_can_fetch_the_next_batch(engine_databases: Databases) -> None:
+    code = (await issue_codes(engine_databases.app, 1))[0]
+    async with client_for(deps(engine_databases)) as client:
+        await sign_up(client, code)
+        first = (await client.get("/kuis/data?batch=0")).json()
+        second = (await client.get("/kuis/data?batch=1")).json()
+    assert len(first["items"]) == 10
+    assert {item["word_id"] for item in first["items"]}.isdisjoint(item["word_id"] for item in second["items"])

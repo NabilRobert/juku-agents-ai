@@ -15,7 +15,7 @@ function stream(text: string): Response {
 }
 
 describe("ChatIsland", () => {
-  it.fails("streams the answer piece by piece and labels an unverified one", async () => {
+  it("streams the answer piece by piece and labels an unverified one", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       stream('event: delta\r\ndata: Pelajari \r\n\r\nevent: delta\r\ndata: 食べる.\r\n\r\nevent: done\r\ndata: {"is_verified": false, "stopped_because": null, "message_id": 7}\r\n\r\n'),
     );
@@ -30,7 +30,7 @@ describe("ChatIsland", () => {
     vi.unstubAllGlobals();
   });
 
-  it.fails("rates an answer by its message ID", async () => {
+  it("rates an answer by its message ID", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(stream('event: done\r\ndata: {"is_verified": true, "stopped_because": null, "message_id": 9}\r\n\r\n'))
