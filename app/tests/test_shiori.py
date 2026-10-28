@@ -33,10 +33,8 @@ from juku_testkit.privacy import PLANTED_QUESTION, find_text
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models import Model
-from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, DeltaToolCalls, FunctionModel
 from sqlalchemy import text
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: Shiori and the chat land in the next commit")
 
 NOW = datetime(2026, 11, 10, 9, 0, tzinfo=UTC)
 
@@ -131,16 +129,29 @@ def tool_returns(messages: list[ModelMessage]) -> list[ToolReturnPart]:
 def citing(word_id: str | None) -> FunctionModel:
     """Asks for recommendations, then answers citing `word_id` (or the first word returned, if None)."""
 
-    def step(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+    def answer_text(messages: list[ModelMessage]) -> str | None:
         returns = tool_returns(messages)
         if not returns:
-            return ModelResponse(parts=[ToolCallPart(tool_name="recommend_words", args={})])
+            return None
         returned: Any = returns[-1].content
         body = returned if isinstance(returned, dict) else json.loads(str(returned))
-        cited = word_id or body["words"][0]["word_id"]
-        return ModelResponse(parts=[TextPart(f"Pelajari kata ini dulu [ref:{cited}].")])
+        return f"Pelajari kata ini dulu [ref:{word_id or body['words'][0]['word_id']}]."
 
-    return FunctionModel(step)
+    def step(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        answer = answer_text(messages)
+        if answer is None:
+            return ModelResponse(parts=[ToolCallPart(tool_name="recommend_words", args={})])
+        return ModelResponse(parts=[TextPart(answer)])
+
+    async def stream(messages: list[ModelMessage], _info: AgentInfo) -> AsyncIterator[str | DeltaToolCalls]:
+        answer = answer_text(messages)
+        if answer is None:
+            yield {0: DeltaToolCall(name="recommend_words", json_args="{}")}
+            return
+        for word in answer.split(" "):
+            yield word + " " if not answer.endswith(word) else word
+
+    return FunctionModel(step, stream_function=stream)
 
 
 def never_called() -> FunctionModel:
@@ -193,19 +204,20 @@ async def test_each_tool_call_leaves_a_per_call_record_and_the_run_its_cost(
 
 @pytest.mark.fitness("FF9")
 async def test_the_question_reaches_no_record_and_no_span(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
+    spans: InMemorySpanExporter,
 ) -> None:
-    from juku_app.telemetry import install_tracing
-
     assert clean_budget
-    exporter = InMemorySpanExporter()
-    install_tracing(exporter)
     await ask(services(citing(None), juku_url, key, engine_databases), studying, PLANTED_QUESTION, NOW)
     async with engine_databases.app.connect() as connection:
         assert await find_text(connection, "monitoring", "PLANTED-7f3a") == []
-    spans = exporter.get_finished_spans()
-    assert spans, "the run made no spans: the probe proves nothing"
-    for span in spans:
+    finished = spans.get_finished_spans()
+    assert finished, "the run made no spans: the probe proves nothing"
+    for span in finished:
         values = [str(value) for value in (span.attributes or {}).values()]
         values += [str(value) for event in span.events for value in (event.attributes or {}).values()]
         assert not any("PLANTED-7f3a" in value for value in values), span.name
@@ -225,7 +237,7 @@ async def test_the_guard_stops_chat_before_the_model_is_called(
         )
     answer = await ask(services(never_called(), juku_url, key, engine_databases), studying, "halo", NOW)
     assert answer.stopped_because == "chat_pool_spent"
-    assert "fitur gratis" in answer.text  # the $0 features keep working, and the learner is told
+    assert "fitur gratis" in answer.text.lower()  # the $0 features keep working, and the learner is told
 
 
 async def test_a_message_suggesting_self_harm_gets_the_fixed_reply_and_no_model_call(
