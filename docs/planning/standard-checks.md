@@ -82,8 +82,8 @@ rule.
 - [ ] The exact commands are drafted for Arthur, with what each one does.
       Security settings are never changed through another session.
 - [ ] A rollback for each step is written down before it runs.
-- [ ] A backup is taken, and restored once on the laptop to prove it
-      works.
+- [ ] A backup is taken (the database provider's, or a `pg_dump`), and
+      restored once into a scratch database to prove it works.
 - [ ] The environment holds only the keys this service needs (listed and
       compared).
 - [ ] Memory caps are in the compose file. `docker compose config` is

@@ -515,29 +515,84 @@ hour.
 - *Writing the evals after the agent works:* the tasks would then be
   shaped by what the agent already does.
 
-### ADR-016: Hosting is Docker Compose on the shared server
+### ADR-016: Hosting is Docker Compose on the shared server, with a managed database
+
+*Revised 2026-10-29: the database moved from a container on the shared
+server to a managed Postgres that Arthur procured.*
 
 **Decision:**
 
-| Container | Contents | Memory cap |
+| Where | Contents | Memory cap |
 |---|---|---|
-| `app` | FastAPI app and pipeline workers. Non-root, read-only filesystem, `cap_drop: ALL` | 256 MB |
-| `juku-mcp` | Juku's MCP server | 128 MB |
-| `db` | `postgres:16` with two databases: `app` (progress, memory, records, `monitoring`) and `dict`. Each login reaches only what it needs | 384 MB |
-| `grafana` | Grafana OSS, provisioned from files | 384 MB (spike 3) |
+| `app` container | FastAPI app and pipeline workers. Non-root, read-only filesystem, `cap_drop: ALL` | 256 MB |
+| `juku-mcp` container | Juku's MCP server | 128 MB |
+| `grafana` container | Grafana OSS, provisioned from files | 384 MB (spike 3) |
+| Managed Postgres 16 (outside the server) | Two databases: `app` (progress, memory, records, `monitoring`) and `dict`. One login per service, each reaching only what it needs | The provider's plan: 5 GB disk, 1 GB RAM, about 20 connections |
 
+- The database is run by a managed database provider in Indonesia. It
+  isn't publicly reachable, every connection uses TLS, and the provider
+  keeps 7-day encrypted backups.
 - Only `app` and `grafana` are reached from outside, through the server's
   existing proxy.
-- The gateway and MCP-backbone run as they already do. Placing the gateway
+- `juku-mcp` reaches the database on a network of its own (`mcp-db`), so
+  it still shares no network with the app. That network can reach any
+  address; a firewall rule on the server narrows it to the database's
+  host and port. That's a server step, done by Arthur.
+- The gateway and MCP-backbone run as they already do. MCP-backbone gets
+  its own read-only login on `dict` (`mcp_backbone`). Placing the gateway
   in front of both MCP servers for this app is a server step done by
   Arthur or the server session.
+- **Set-up:** `ops/make-secrets.sh` makes each login's password and URL;
+  Arthur then runs `ops/db/setup.sh` once with the provider's admin
+  login, which makes the roles, the databases and their grants. That
+  login needn't be a superuser.
 
-**Why:** isolated from the other projects' data, capped, and the same
-pattern as the Pitstop demo.
+**The connection budget.** The provider allows about 20 connections to
+the cluster. Left alone, the services could open about 58 (SQLAlchemy's
+default pool is 5 plus 10 overflow, for each of four engines). So
+guardrails.yaml's `database` section shares the 20 out: each pool has a
+fixed size and no overflow, and each login role's `CONNECTION LIMIT` is
+its share, so Postgres refuses the connection that would pass it. The
+rule file refuses to load if the shares add up to more than the limit.
 
-**Rejected:**
-- *Separate Postgres containers:* about 100 MB more, for isolation that
-  roles already give.
+| Login | Share | For |
+|---|---|---|
+| The provider's admin | 1 | set-up, a psql session |
+| `juku_app` | 6 | the app's pools (3 on `app`, 2 on `dict`), plus one for a hand-run command or the nightly check |
+| `juku_mcp` | 5 | its pools (3 on `app`, 2 on `dict`) |
+| `juku_ops` | 3 | cron jobs; three can start in the same minute |
+| `juku_migrator` | 1 | migrations and partition upkeep |
+| `dict_owner` | 1 | the dictionary reload |
+| `grafana_reader` | 2 | Grafana's data source |
+| `mcp_backbone` | 1 | MCP-backbone's dictionary reads |
+
+**Why:** a managed database takes backups, upgrades and disk off the
+shared server, and frees its 384 MB there. Keeping it in Indonesia means
+learners' data is stored in their own country; only chat and report
+facts go abroad, to the model provider. The containers keep the same
+isolation and caps as the Pitstop demo.
+
+**Consequences:**
+- A third party now stores learners' data. The consent notice (version
+  2026-10-29) and the privacy section of the Phase 2 requirements say
+  so. The provider isn't named in this public repo, only its region.
+- Backups are the provider's 7-day encrypted ones, which is what the
+  deletion page already promises. The standard checks' restore test
+  restores one of them (or a `pg_dump`) into a scratch database.
+- Every query crosses the network, a few milliseconds more than a local
+  container. FF1's latency budget is measured on the local test server,
+  so its numbers don't include that hop; worth measuring once when slice
+  8 deploys.
+- The connection budget is a reviewed limit: a new service, or a bigger
+  pool, means taking connections from another share or a bigger plan.
+
+**Options considered:**
+- *A `postgres:16` container on the shared server* (the first version of
+  this decision): 384 MB of the small server's memory, and backups,
+  upgrades and disk to run by hand. Replaced once the managed database
+  was available.
+- *Separate Postgres containers per database:* about 100 MB more, for
+  isolation that roles already give.
 - *Using MCP-backbone's own Postgres:* it would share a cluster with
   MCP-backbone's key data.
 

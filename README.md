@@ -81,9 +81,10 @@ The first run also builds a synthetic database of 5,000 learners for the
 query-plan checks (about 3 minutes); it's kept on the test server until
 the schema or the engine's write side changes.
 
-The app itself, `juku serve`, needs the two databases, Juku's MCP server
-and the secrets in `ops/compose.yaml`; it runs there, not on a laptop. Its
-pages can be looked at without any of that, rendered with sample data:
+The app itself, `juku serve`, needs the managed database (set up once
+with `ops/db/setup.sh`, ADR-016), Juku's MCP server and the secrets in
+`ops/compose.yaml`; it runs there, not on a laptop. Its pages can be
+looked at without any of that, rendered with sample data:
 
 ```bash
 uv run juku render-previews --out build/previews
@@ -102,7 +103,7 @@ uv run juku render-previews --out build/previews
 | `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
-| `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
+| `ops/` | Deployment: `compose.yaml`, the managed database's roles and set-up script, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
 | `docs/planning/` | The plan: problem, requirements, decisions, slices, scale path, checks |
 | `spikes/` | The week-0 spikes' code and results, kept as evidence (not linted) |
 
