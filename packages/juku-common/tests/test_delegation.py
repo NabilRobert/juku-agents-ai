@@ -15,8 +15,6 @@ from juku_common.delegation import Grant, RefusedError, Signer, Verifier
 from juku_common.rules import Rules, load_rules
 from jwt.utils import base64url_decode, base64url_encode
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the token library lands in the next commit")
-
 NOW = datetime(2026, 11, 2, 9, 0, tzinfo=UTC)
 SHIORI_TOOLS = ["get_progress", "get_memory", "request_replan"]
 
@@ -225,3 +223,20 @@ def test_the_caller_rule_comes_from_the_rule_file(key: ed25519.Ed25519PrivateKey
     assert refusal(behind_gateway, shiori_token(signer)) == "no_caller"
     direct = Verifier(key.public_key(), with_rules(rules, require_gateway_caller=False))
     assert direct.verify(shiori_token(signer), "get_progress", now=NOW)
+
+
+@pytest.mark.parametrize("token", ["not-a-token", "a.b.c"])
+def test_a_malformed_token_is_refused(verifier: Verifier, token: str) -> None:
+    assert refusal(verifier, token) == "invalid_token"
+
+
+def test_a_token_missing_a_required_claim_is_refused(signer: Signer, verifier: Verifier) -> None:
+    claims = claims_of(shiori_token(signer))
+    del claims["jti"]
+    assert refusal(verifier, signer.sign_claims(claims)) == "invalid_token"
+
+
+def test_a_parent_whose_chain_is_not_the_hops_tail_is_refused(signer: Signer, verifier: Verifier) -> None:
+    parent = signer.sign_claims(claims_of(shiori_token(signer)) | {"act": {"sub": "agent:keiko"}})
+    child = claims_of(keiko_token(signer, shiori_token(signer))) | {"parent": parent}
+    assert refusal(verifier, signer.sign_claims(child)) == "parent_mismatch"
