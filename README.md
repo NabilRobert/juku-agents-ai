@@ -52,10 +52,11 @@ It runs on the same stack as the others:
   measures quality offline;
 - agent-observability (Project 6): traces each request and run.
 
-**Status: building.** Track D (the skeleton, CI and monitoring) and
-track A (the data and the learning engine) are in; Juku's MCP server and
-the app follow ([slice plan](docs/planning/slice-plan.md)). Nothing is
-deployed and no model has been called.
+**Status: building.** Track D (the skeleton, CI and monitoring), track A
+(the data and the learning engine) and track B (Juku's MCP server,
+identity and guardrails) are in; the app follows ([slice
+plan](docs/planning/slice-plan.md)). Nothing is deployed and no model has
+been called.
 
 ## Run it
 
@@ -83,13 +84,14 @@ the schema or the engine's write side changes.
 
 | Folder | What it does |
 |---|---|
-| `packages/juku-common/` | What every service shares: the rule file loader (`guardrails.yaml`) and the hash-chained audit log |
+| `packages/juku-common/` | What every service shares: the rule file loader (`guardrails.yaml`), the hash-chained audit log, and the delegation tokens (signer and verifier) |
 | `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan |
+| `packages/juku-mcp/` | Juku's MCP server (`juku-mcp serve`): the learner's data, read-only, scoped by the delegation token in each call's `_meta`; `attacks/` holds the SAF1 attack suite and its committed prediction |
 | `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep, the nightly state check |
-| `packages/juku-testkit/` | Test helpers: the fitness-function harness (a pytest plugin) and throwaway databases |
+| `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
-| `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts |
+| `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
 | `docs/planning/` | The plan: problem, requirements, decisions, slices, scale path, checks |
 | `spikes/` | The week-0 spikes' code and results, kept as evidence (not linted) |
 

@@ -849,6 +849,34 @@ every table. With the candidates kept incrementally, `recommend_words`
 takes 4.4 ms for a learner who knows 4,000 words (spike 2's per-call
 query: 231 ms at p95). Both are checked on every commit (FF1, FF13).
 
+### ADR-027: What building Juku's MCP server settled (track B, 2026-10-28)
+
+**Decisions, refining ADR-006 and ADR-018:**
+- **`request_replan` writes one table.** The MCP role may INSERT into
+  `learning.replan_requests` and nowhere else (no UPDATE or DELETE, no
+  events, no nicknames). The cap (`replan.max_requests_per_day`) is
+  checked under a unique key per learner and local day, so two calls at
+  once still queue one.
+- **The server checks each token's tools against the agent's list** in
+  guardrails.yaml, not only against the token, and the app's signer
+  refuses to mint wider. A tool outside an agent's list is refused even
+  without the gateway (SAF1: spike 6's server allowed it directly).
+- **The replay cache is in memory** (one process, 60-second tokens). At
+  scale it moves to Postgres or Valkey (scale path).
+- **`search_words` searches the dict database for now**, ranked as
+  OpenJLPT's `search_vocab` ranks. Installing OpenJLPT's package means a
+  git dependency whose `setup.py` runs at install, which waits for
+  Arthur's OK; the tool's contract is the same either way, so swapping
+  it in changes no snapshot.
+
+**Options considered:**
+
+| Question | Options | Chosen, and why |
+|---|---|---|
+| Where `request_replan` queues | A JSONL queue file; the app polling Juku's audit log; one table with an INSERT-only grant | **The table:** the cap needs a transaction and a unique key, and a grant the tests can probe ("a write is refused at the tool and at the database") |
+| Which MCP server API | The SDK's high-level `MCPServer`; its low-level `Server` | **Low-level:** each call's `_meta` reaches the handler directly, and tool schemas are written out, for FF5's snapshot (spike 6 used it) |
+| Word search until OpenJLPT's package is approved | Wait; pg_trgm or PGroonga; plain SQL over the build | **Plain SQL:** no new extension, the same data, the same ranking; replaced when the package is approved |
+
 ### Later (Could), recorded so they aren't re-decided
 
 - **The text speaking partner (X3):**

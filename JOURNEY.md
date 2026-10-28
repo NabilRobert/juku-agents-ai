@@ -68,3 +68,31 @@ What went wrong while building, and what changed because of it
   the same-day rule, the Leitner reset, the variety cap, the gap-first
   order, unmarking in the recompute, the plan's rounding) and one query
   for FF1. Each made a test fail.
+
+## Track B: Juku's MCP server, identity and guardrails (2026-10-28)
+
+- **Installing OpenJLPT's Python package was refused** by the session's
+  permission check: it's a git dependency whose `setup.py` runs at
+  install. Not worked around. `search_words` searches the same build in
+  the dict database meanwhile (ADR-027), and the swap waits for Arthur's
+  OK.
+- **The in-memory MCP client couldn't live in a pytest fixture.** anyio's
+  cancel scopes must be left in the task that entered them, and
+  pytest-asyncio sets a fixture up and tears it down in different tasks.
+  Each client now lives in a background task of its own for the test.
+- **A lifespan wrapper called itself.** Wrapping the MCP SDK's lifespan
+  looked it up at call time, after it had been replaced by the wrapper:
+  a recursion at start-up, caught by the HTTP test. It's captured first
+  now.
+- **Mutation checks.** Disabling each of the token verifier's 21
+  refusals in turn: 19 failed a test at first; a malformed token and a
+  parent from another chain had none. With those, 21 of 21. The server's
+  own four refusals, the caller binding and the replan cap: each fails a
+  test when broken.
+- **SAF1: 15 of 15 as predicted, both ways.** The two attacks predicted to
+  succeed directly did, and none did through the patched gateway. The
+  gateway's rules detector flagged none of the planted instructions; the
+  defence was Juku's server refusing what they asked for.
+- **G1 is checked, not claimed.** A guardrail harness lists every rule in
+  guardrails.yaml's guardrail sections and fails make check if one has no
+  test marked with it.
