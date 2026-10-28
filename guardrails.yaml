@@ -27,6 +27,11 @@ fitness:
     title: Query plans on a synthetic 5,000-learner database
     status: pending
     until: track A (slice 2)
+    thresholds:
+      # ADR-010's latency rule, for the learner who knows 4,000 words.
+      recommend_words_max_ms: 200
+      # A sequential scan of an event partition with more rows than this fails.
+      max_event_seq_scan_rows: 1000
   FF2:
     title: Hot paths read summaries only, never learning_events
     status: active
@@ -75,3 +80,7 @@ fitness:
     title: Tool query plans stay under their cost ceilings, with JIT off
     status: pending
     until: track A (slice 2)
+    thresholds:
+      # Postgres's jit_above_cost default: below it, JIT never compiles a
+      # plan, even if `jit = off` were lost from Juku's MCP role (spike 2).
+      jit_above_cost: 100000

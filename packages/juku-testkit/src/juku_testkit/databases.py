@@ -224,3 +224,38 @@ async def engine_databases(
     from juku_data.engine import Databases
 
     yield Databases(app=app_engine, dictionary=dict_engine)
+
+
+async def _admin_scalar(query: str, parameters: dict[str, Any]) -> Any:
+    engine = create_async_engine(as_sqlalchemy_url(admin_url()), connect_args={"timeout": CONNECT_TIMEOUT_SECONDS})
+    try:
+        async with engine.connect() as connection:
+            from sqlalchemy import text
+
+            return await connection.scalar(text(query), parameters)
+    finally:
+        await engine.dispose()
+
+
+def database_names(prefix: str) -> list[str]:
+    """The databases on the test server whose names start with `prefix`."""
+    names = asyncio.run(
+        _admin_scalar(
+            "SELECT array_agg(datname ORDER BY datname) FROM pg_database WHERE datname LIKE :p", {"p": f"{prefix}%"}
+        )
+    )
+    return list(names or [])
+
+
+def create_named_database(name: str) -> TestDatabase:
+    """A new, empty database with exactly this name (for caches kept between runs)."""
+    try:
+        asyncio.run(_admin_execute(f'CREATE DATABASE "{name}"'))
+    except (OSError, TimeoutError, DBAPIError, InterfaceError, OperationalError) as exc:
+        _skip_or_fail(f"no test Postgres at {admin_url()} ({type(exc).__name__})")
+    return TestDatabase(name=name, url=url_for(name))
+
+
+def rename_database(database: TestDatabase, new_name: str) -> TestDatabase:
+    asyncio.run(_admin_execute(f'ALTER DATABASE "{database.name}" RENAME TO "{new_name}"'))
+    return TestDatabase(name=new_name, url=url_for(new_name))
