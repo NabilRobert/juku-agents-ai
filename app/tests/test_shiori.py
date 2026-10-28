@@ -5,30 +5,22 @@ model is called; per-call records and traces hold no content; a
 fabricated citation is flagged. Also AG6's fixed reply, and the run cap.
 """
 
-import asyncio
 import json
-import socket
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import pytest
-import uvicorn
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_app.budget import BudgetGuard
 from juku_app.chat import ChatAnswer, ChatServices, ask, ask_streaming
 from juku_app.moderation import Verdict
 from juku_app.shiori import build_shiori, juku_toolset
 from juku_common.delegation import Signer
-from juku_common.rules import Rules, load_rules
+from juku_common.rules import load_rules
 from juku_data.engine import Databases, mark_known, recommend_words
 from juku_data.engine.models import Learner
-from juku_mcp.app import create_app
-from juku_mcp.settings import McpSettings
-from juku_testkit.databases import TestDatabase
 from juku_testkit.privacy import PLANTED_QUESTION, find_text
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
@@ -49,53 +41,6 @@ class FlagAll:
     async def check(self, message: str) -> Verdict:
         assert message
         return Verdict(suggests_self_harm=True)
-
-
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
-
-
-def direct_rules() -> Rules:
-    rules = load_rules()
-    return rules.model_copy(
-        update={"delegation": rules.delegation.model_copy(update={"require_gateway_caller": False})}
-    )
-
-
-@pytest.fixture
-def key() -> ed25519.Ed25519PrivateKey:
-    return ed25519.Ed25519PrivateKey.generate()
-
-
-@pytest.fixture
-async def juku_url(
-    app_database: TestDatabase,
-    dictionary_database: TestDatabase,
-    key: ed25519.Ed25519PrivateKey,
-    tmp_path: Path,
-    mirrored_dictionary: None,
-) -> AsyncIterator[str]:
-    """Juku's MCP server over HTTP, reached directly (the gateway's place in production)."""
-    assert mirrored_dictionary is None
-    pem = key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
-    settings = McpSettings(
-        app_database_url=app_database.sqlalchemy_url,
-        dict_database_url=dictionary_database.sqlalchemy_url,
-        delegation_public_key=pem.decode(),
-        audit_log=tmp_path / "juku-mcp.jsonl",
-    )
-    port = free_port()
-    server = uvicorn.Server(uvicorn.Config(create_app(settings, direct_rules()), port=port, log_level="warning"))
-    task = asyncio.create_task(server.serve())
-    while not server.started:
-        await asyncio.sleep(0.05)
-    try:
-        yield f"http://127.0.0.1:{port}/mcp"
-    finally:
-        server.should_exit = True
-        await task
 
 
 @pytest.fixture
@@ -162,28 +107,40 @@ def never_called() -> FunctionModel:
 
 
 async def test_an_answer_citing_a_returned_word_is_verified(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     assert clean_budget
-    answer = await ask(services(citing(None), juku_url, key, engine_databases), studying, "kata apa dulu?", NOW)
+    answer = await ask(services(citing(None), juku_mcp_url, key, engine_databases), studying, "kata apa dulu?", NOW)
     first = (await recommend_words(engine_databases, studying.id)).words[0].word_id
     assert (answer.is_verified, answer.stopped_because) == (True, None)
     assert first in answer.text
 
 
 async def test_a_fabricated_citation_is_flagged_unverified(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     assert clean_budget
-    answer = await ask(services(citing("ffffffffff"), juku_url, key, engine_databases), studying, "kata apa?", NOW)
+    answer = await ask(services(citing("ffffffffff"), juku_mcp_url, key, engine_databases), studying, "kata apa?", NOW)
     assert answer.is_verified is False
 
 
 async def test_each_tool_call_leaves_a_per_call_record_and_the_run_its_cost(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     assert clean_budget
-    await ask(services(citing(None), juku_url, key, engine_databases), studying, "kata apa?", NOW)
+    await ask(services(citing(None), juku_mcp_url, key, engine_databases), studying, "kata apa?", NOW)
     async with engine_databases.app.connect() as connection:
         record = (
             await connection.execute(
@@ -204,7 +161,7 @@ async def test_each_tool_call_leaves_a_per_call_record_and_the_run_its_cost(
 
 @pytest.mark.fitness("FF9")
 async def test_the_question_reaches_no_record_and_no_span(
-    juku_url: str,
+    juku_mcp_url: str,
     key: ed25519.Ed25519PrivateKey,
     engine_databases: Databases,
     studying: Learner,
@@ -212,7 +169,7 @@ async def test_the_question_reaches_no_record_and_no_span(
     spans: InMemorySpanExporter,
 ) -> None:
     assert clean_budget
-    await ask(services(citing(None), juku_url, key, engine_databases), studying, PLANTED_QUESTION, NOW)
+    await ask(services(citing(None), juku_mcp_url, key, engine_databases), studying, PLANTED_QUESTION, NOW)
     async with engine_databases.app.connect() as connection:
         assert await find_text(connection, "monitoring", "PLANTED-7f3a") == []
     finished = spans.get_finished_spans()
@@ -224,7 +181,11 @@ async def test_the_question_reaches_no_record_and_no_span(
 
 
 async def test_the_guard_stops_chat_before_the_model_is_called(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     assert clean_budget
     async with engine_databases.app.begin() as connection:
@@ -235,18 +196,22 @@ async def test_the_guard_stops_chat_before_the_model_is_called(
             ),
             {"at": NOW},
         )
-    answer = await ask(services(never_called(), juku_url, key, engine_databases), studying, "halo", NOW)
+    answer = await ask(services(never_called(), juku_mcp_url, key, engine_databases), studying, "halo", NOW)
     assert answer.stopped_because == "chat_pool_spent"
     assert "fitur gratis" in answer.text.lower()  # the $0 features keep working, and the learner is told
 
 
 async def test_a_message_suggesting_self_harm_gets_the_fixed_reply_and_no_model_call(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     assert clean_budget
     async with engine_databases.app.connect() as connection:
         before = int(await connection.scalar(text("SELECT count(*) FROM app.distress_events")) or 0)
-    answer = await ask(services(never_called(), juku_url, key, engine_databases, FlagAll()), studying, "...", NOW)
+    answer = await ask(services(never_called(), juku_mcp_url, key, engine_databases, FlagAll()), studying, "...", NOW)
     async with engine_databases.app.connect() as connection:
         after = int(await connection.scalar(text("SELECT count(*) FROM app.distress_events")) or 0)
     assert answer.stopped_because == "distress"
@@ -254,13 +219,17 @@ async def test_a_message_suggesting_self_harm_gets_the_fixed_reply_and_no_model_
 
 
 async def test_a_runaway_loop_stops_at_the_run_cap(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     def forever(_messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
         return ModelResponse(parts=[ToolCallPart(tool_name="get_progress", args={})])
 
     assert clean_budget
-    answer = await ask(services(FunctionModel(forever), juku_url, key, engine_databases), studying, "halo", NOW)
+    answer = await ask(services(FunctionModel(forever), juku_mcp_url, key, engine_databases), studying, "halo", NOW)
     assert answer.stopped_because == "run_limit"
     async with engine_databases.app.connect() as connection:
         requests = await connection.scalar(
@@ -270,12 +239,18 @@ async def test_a_runaway_loop_stops_at_the_run_cap(
 
 
 async def test_the_answer_streams_then_ends_with_its_check(
-    juku_url: str, key: ed25519.Ed25519PrivateKey, engine_databases: Databases, studying: Learner, clean_budget: object
+    juku_mcp_url: str,
+    key: ed25519.Ed25519PrivateKey,
+    engine_databases: Databases,
+    studying: Learner,
+    clean_budget: object,
 ) -> None:
     assert clean_budget
     pieces: list[str | ChatAnswer] = [
         piece
-        async for piece in ask_streaming(services(citing(None), juku_url, key, engine_databases), studying, "?", NOW)
+        async for piece in ask_streaming(
+            services(citing(None), juku_mcp_url, key, engine_databases), studying, "?", NOW
+        )
     ]
     final = pieces[-1]
     assert isinstance(final, ChatAnswer) and final.is_verified
