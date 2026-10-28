@@ -17,6 +17,7 @@ from juku_data.engine.models import Learner
 from juku_testkit.memory_fixtures import load_memory_fixture
 from pipeline_helpers import (
     approving_tadashi,
+    consented,
     crew_of,
     faithful_keiko,
     faithful_nikki,
@@ -35,7 +36,7 @@ from web_helpers import client_for, csrf_of, deps, sign_up
 async def fixture_learner(db: Databases, rules: Rules, name: str = "joko") -> Learner:
     source = "memory" if name in {"fajar", "gita", "hana", "indra"} else "pipeline"
     loaded = await load_memory_fixture(db, rules, name, suffix=f"-{uuid.uuid4().hex[:6]}", source=source)
-    return loaded.learner
+    return await consented(db, loaded.learner)
 
 
 async def scalar(db: Databases, sql: str, **parameters: Any) -> Any:
@@ -184,6 +185,7 @@ async def test_an_approved_plans_note_proposals_are_checked_and_stored_as_keikos
     loaded = await load_memory_fixture(
         engine_databases, rules, "nur", suffix=f"-{uuid.uuid4().hex[:6]}", source="pipeline"
     )
+    await consented(engine_databases, loaded.learner)
 
     def keiko(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         plan = faithful_plan(prompt_of(messages)["facts"])

@@ -82,6 +82,8 @@ class RunOutcome(BaseModel):
     run_id: int | None
     status: RunStatus
     report: str | None = None
+    # Why a run was skipped, when it was: consent_outdated.
+    reason: str | None = None
 
 
 class BudgetSpentError(Exception):

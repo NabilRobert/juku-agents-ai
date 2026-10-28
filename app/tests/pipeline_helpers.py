@@ -16,11 +16,13 @@ from zoneinfo import ZoneInfo
 
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_app.budget import BudgetGuard
+from juku_app.consent import ConsentAnswers, record_consent
 from juku_app.pipeline.crew import Crew, CrewModels, build_crew
 from juku_app.pipeline.run import PipelineServices
 from juku_common.delegation import Signer
 from juku_common.rules import Rules
 from juku_data.engine import Databases
+from juku_data.engine.models import Learner
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
@@ -119,3 +121,10 @@ def services_for(
         signer=Signer(key or ed25519.Ed25519PrivateKey.generate(), rules),
         crew=crew,
     )
+
+
+async def consented(db: Databases, learner: Learner) -> Learner:
+    """A fixture learner as a real one is: signed up, on the current consent notice."""
+    answers = ConsentAnswers(is_adult=True, accepts_service=True, accepts_aggregates=False, accepts_group_digest=False)
+    await record_consent(db.app, learner.id, answers)
+    return learner

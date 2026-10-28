@@ -18,7 +18,15 @@ from juku_app.pipeline.run import run_weekly
 from juku_common.rules import Rules
 from juku_data.engine import Databases
 from juku_testkit.memory_fixtures import PIPELINE_EVALS, LoadedFixture, load_memory_fixture
-from pipeline_helpers import crew_of, faithful_report, planted_keiko, planted_nikki, services_for, sunday_evening
+from pipeline_helpers import (
+    consented,
+    crew_of,
+    faithful_report,
+    planted_keiko,
+    planted_nikki,
+    services_for,
+    sunday_evening,
+)
 from sqlalchemy import text
 
 FIXTURES = cast(dict[str, Any], yaml.safe_load((PIPELINE_EVALS / "fixtures.yaml").read_text(encoding="utf-8")))
@@ -29,7 +37,9 @@ SOURCE_OF = {name: str(item["source"]) for name, item in LEARNERS.items()}
 
 
 async def load(db: Databases, rules: Rules, name: str) -> LoadedFixture:
-    return await load_memory_fixture(db, rules, name, suffix=f"-{uuid.uuid4().hex[:6]}", source=SOURCE_OF[name])
+    loaded = await load_memory_fixture(db, rules, name, suffix=f"-{uuid.uuid4().hex[:6]}", source=SOURCE_OF[name])
+    await consented(db, loaded.learner)
+    return loaded
 
 
 def test_there_are_fixtures_for_ten_learners() -> None:
