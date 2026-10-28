@@ -12,6 +12,7 @@ to start sooner.
 | P3 | The model budget is topped up ($5), and a new key is created with its cap (about $4.50) | Arthur, when building starts |
 | P4 | A subdomain for the app and one for the dashboard | Arthur |
 | P5 | Arthur has joined a JLPT study group as a member (any time; joining isn't building) | Arthur |
+| P6 | **The gateway forwards `_meta` and stamps the caller** (spike 6). Its `main` drops `_meta` today. The fix is spike 6's 6-line patch (`spikes/6-delegation-chain/gateway-meta-passthrough.patch`) plus a test that a client-sent caller is overwritten, made in the gateway's own repo on a branch. Minor: add a `__main__` guard to `mcp_gateway/cli.py`. **Needed before slice 3 runs through the gateway**, not only before launch | Arthur (gateway repo) |
 
 ## Spikes (local, $0)
 
@@ -39,6 +40,17 @@ guardrail. Git history is the evidence (Phase 1, EDD1).
 - the lists before paid runs, server steps and publishing.
 
 A failed check stops the step.
+
+**The guide (Arthur's "code humans can read" rule):** every slice
+updates `docs/guide.md` in the same commit as the code that makes it
+wrong. It covers:
+- the flow of one real request, with file and function names and a
+  Mermaid diagram;
+- a glossary of the repo's jargon;
+- "where to change things".
+
+The README keeps a layout section and the one command to run it.
+Slice 1 creates the guide.
 
 **Fitness functions (ADR-023)** join CI as their slice lands:
 - FF1–FF3 and FF6 with the learning engine and the pipeline;
@@ -87,7 +99,8 @@ before slice 7.
 
 **The measured basis:** agent-eval-harness ran 200 agent tasks over Pagila
 with this model for $0.534, about **$0.0027 a question**, including schema
-exploration and tool calls.
+exploration and tool calls. (Spike 5 found that the harness's cost leaves
+out cached tokens, so it errs about 1.5% low, not high: $0.537 with them.)
 
 **Most of Juku costs nothing.** Quizzes, recommendations, reading, the
 plan and the memory page make no model call. The model is used for chat
@@ -159,8 +172,13 @@ The planning figure is **$0.015 a report**.
 **Levers if spend runs high**, each measured, not assumed:
 1. Put the compact schema in the system prompt, so fewer calls go to
    `describe_table` (also an M3 change).
-2. Prompt caching on repeated prompts, if spike 5 shows Sumopod serves
-   cached input at a tenth of the price.
+2. **Prompt caching is automatic on Sumopod.** 32% of the harness's
+   prompt tokens were served cached (45–61% on multi-call suites),
+   reported in `prompt_tokens_details.cached_tokens` (spike 5). Keep the
+   static parts of each prompt first so it applies. Whether they're
+   billed at the table's $0.025/M is checked on Sumopod's billing page in
+   slice 7. The planning figures above assume no caching, so they err
+   high.
 3. Route "what should I learn" questions to the $0 recommender.
 4. gpt-5-nano as a fallback near a pool's end (Could; 91% vs 96% on
    Pagila).

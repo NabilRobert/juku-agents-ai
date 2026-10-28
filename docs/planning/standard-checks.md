@@ -18,7 +18,7 @@ CI. A red result blocks the merge.
 | Lint and format | ruff |
 | Types, strict on `src` | pyright |
 | Fast tests | pytest |
-| Fitness functions FF1–FF9 and FF12 (scale path) | pytest, Squawk, Lighthouse CI |
+| Fitness functions FF1–FF9, FF12 and FF13 (scale path) | pytest, Squawk, Lighthouse CI |
 | Secrets in the diff | gitleaks |
 | No content in records, traces or logs (FF9) | pytest |
 | MCP tool schemas match their snapshots (FF5) | pytest |
@@ -29,6 +29,10 @@ on purpose, see the test fail, then restore it. This is Arthur's standing
 rule.
 
 ## 2. End of every slice
+
+- [ ] `docs/guide.md` matches the code: the request flow (files and
+      functions), the glossary and "where to change things" are updated in
+      the same commit (Arthur's "code humans can read" rule).
 
 - [ ] The slice's "Done when" in the [slice plan](slice-plan.md) is met,
       and is shown by a command or a test, not by reading the code.

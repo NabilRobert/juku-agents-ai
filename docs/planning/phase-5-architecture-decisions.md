@@ -88,8 +88,16 @@ recorded separately.
   - stable IDs that survive data updates.
 
   It is CC BY-SA 4.0, with per-field attribution.
-- **A pinned release is loaded** (version and checksum recorded) from its
-  SQLite file into Juku's own Postgres database by a committed script.
+- **Pinned to a commit, not a release:** the data Juku needs (JMdict
+  links, 526 grammar points) exists only on OpenJLPT's `main`. Release
+  v0.2.0 is an older, thinner dataset, and PyPI's `openjlpt` is 0.1.0
+  (spike 1). So Juku pins commit **`bf4e1ee`** (2026-09-30) and records
+  its checksum. A committed script loads its SQLite file into Juku's own
+  Postgres (19 MB, about 2 s). The Python package is installed from that
+  same commit, as a git dependency.
+- **A small, reviewed supplement file** adds common words that are in
+  neither the JLPT lists nor OpenJLPT (父, 母, 顔, 多く, 人々…), with their
+  JMdict IDs, so reading practice can use them (spike 4).
 - **MCP-backbone serves it,** on its own workspace and key, through a
   read-only login. Fuzzy word search ("taberu", "食べる", a typo) uses
   OpenJLPT's own Python package (`pip install openjlpt`, ranked search
@@ -123,9 +131,9 @@ validated, cost-checked, capped and audited, over data someone else has
 already cleaned and licensed correctly.
 
 **Risk, and its mitigation:** OpenJLPT is young and effectively has one
-maintainer (release v0.2.0, July 2026). It's rebuilt from public sources
-by published scripts, so a pinned release keeps working even if the
-project stops. If it does stop, its scripts can be rerun, or the raw
+maintainer, and the data Juku uses isn't in a release yet. It's rebuilt
+from public sources by published scripts, so a pinned commit keeps
+working even if the project stops. If it does stop, its scripts can be rerun, or the raw
 sources loaded directly.
 
 **What it changes:**
@@ -189,11 +197,16 @@ otherwise have written and tested ourselves.
   mistakes, memory, recommendations, reading sentences, plan and recent
   activity.
 - The app mints a short-lived, signed token for one learner and one
-  purpose (a chat session or one pipeline run), and the MCP session is
-  opened with it.
+  purpose (a chat or one pipeline run), and **every MCP request carries it
+  in `_meta`.** MCP's 2026-07-28 revision is stateless, with no sessions,
+  so context travels per request (spike 6).
 - **No tool takes a learner ID.** Its database login reads only the
-  progress and memory tables and the dictionary, and writes nothing.
-- It sits behind the gateway, with its own allow-list entry per agent.
+  progress and memory tables and the dictionary, and writes nothing. It
+  reads the app and dictionary databases in two separate queries.
+- It sits behind the gateway, with its own allow-list entry per agent,
+  and has **no published port**. Spike 6 showed that, reached directly,
+  the attacks bound to an agent's key succeed. Through the gateway, all
+  15 attacks were refused.
 
 **Why:**
 - A generic SQL tool over learner data would let an agent read anyone's
@@ -310,8 +323,14 @@ and the commit that ports them names the source repo and commit.
   All of it in a `monitoring` schema.
 - **Dashboard:** one Grafana OSS container, with a Postgres data source
   on a read-only role. Dashboards and alert rules are provisioned from
-  committed files; loopback only, behind Arthur's login, capped at
-  256 MB. No panel can show one learner.
+  committed files; loopback only, behind Arthur's login, **capped at
+  384 MB**. Spike 3 measured 217 MB idle (median) and 249 MB at peak, so
+  a 256 MB cap left no headroom. Arthur kept Grafana on 2026-10-28, over
+  the cron-only fallback. The server's memory was checked the same day:
+  7.6 GB in total. The planned Grafana, Juku and Jaeger stack (about
+  1.4 GB) uses about 40% of what's safely free after a 20% margin, even
+  with dev tools attached. CPU (2 vCPUs) is the tighter resource, so
+  every container keeps a hard memory limit. No panel can show one learner.
 - **Alerts:** a heartbeat (the dead-man's switch), missed scheduled runs,
   budget thresholds, error rates, detector flags, a broken audit chain,
   and refused cross-learner attempts. They go to Arthur only.
@@ -367,6 +386,16 @@ tables as the evidence SQL.
 - **Reading practice (Should):** OpenJLPT's example sentences (from
   Tatoeba, with furigana), tokenized with SudachiPy and matched to word
   IDs. A sentence qualifies when every word in it is known except one.
+
+**Performance (spike 2):** on a quiet machine the worst call was 102 ms
+with Postgres's JIT off, and 123 ms with it on, against the 200 ms rule.
+An earlier version spent about 300 ms in JIT compilation. So:
+- `jit = off` is set on the Juku MCP server's database role;
+- a fitness check (FF13) fails if a tool query's plan cost jumps or JIT
+  turns on;
+- slice 2 records a quiet-machine baseline for `recommend_words` at N2.
+  If it nears 200 ms, each learner's candidates are precomputed when
+  their known words change.
 
 **Why:** explainable, testable to the exact row, and free. Agents add
 judgement and explanation on top, and never invent the facts.
@@ -488,7 +517,7 @@ hour.
 | `app` | FastAPI app and pipeline workers. Non-root, read-only filesystem, `cap_drop: ALL` | 256 MB |
 | `juku-mcp` | Juku's MCP server | 128 MB |
 | `db` | `postgres:16` with two databases: `app` (progress, memory, records, `monitoring`) and `dict`. Each login reaches only what it needs | 384 MB |
-| `grafana` | Grafana OSS, provisioned from files | 256 MB |
+| `grafana` | Grafana OSS, provisioned from files | 384 MB (spike 3) |
 
 - Only `app` and `grafana` are reached from outside, through the server's
   existing proxy.
@@ -529,8 +558,13 @@ Arthur isn't counted.
   - the audience (the Juku MCP server);
   - the expiry.
 
-  It travels in the MCP request's `_meta`, never as the gateway's
+  It travels in each MCP request's `_meta` under the reverse-DNS key
+  `io.github.nabilrobert.juku/delegation`, never as the gateway's
   credential.
+- **One single-use token per tool call,** signed with Ed25519 (PyJWT
+  `EdDSA`) and minted in PydanticAI's `process_tool_call` hook. A
+  delegated token embeds its parent, so narrowing can be checked rather
+  than trusted (spike 6: 22 tests, 20 of 20 mutants killed).
 - **Delegation only narrows.** The one multi-hop path is learner → Shiori
   → (`request_replan`) → Keiko → Juku MCP server. Each hop:
   - may only drop tools;
@@ -539,13 +573,21 @@ Arthur isn't counted.
 
   More than 2 agent hops is refused.
 - **Checked at both ends:** the Juku MCP server verifies the whole chain.
-  The gateway checks (Should, in the gateway repo) that the chain's last
-  actor is the agent whose key made the call.
+  The gateway **stamps the caller** (the agent whose key made the call)
+  into `_meta`, overwriting any caller a client sends, and the server
+  checks that the chain's last actor matches the stamp.
+- **The gateway must forward `_meta`.** Its `main` drops it today (spike
+  6), so a 6-line patch with a test, in the gateway's own repo, is a
+  prerequisite before slice 3 (slice plan, P6).
+- **"No token passthrough"** (a MUST in the spec) is met: the token is
+  audience-bound to Juku's server, and the gateway neither uses nor
+  validates it; it authenticates with its own key.
 - **Visible:** every hop is logged with its chain, and the learner's "who
   accessed my data" page lists agent, tool and time.
-- **Before fixing the details,** spike 6 reads the MCP authorization spec
-  current at build time. Arthur notes that a July 2026 revision tightened
-  it.
+- **Spec checked (spike 6):** MCP 2026-07-28 makes requests stateless,
+  requires audience validation, forbids token passthrough, and wants
+  reverse-DNS prefixes on custom `_meta` keys. It still says nothing about
+  delegation chains, which is the gap this ADR fills.
 
 **Why:**
 - "Who is this agent, and what may it do for whom" has no settled standard
@@ -784,6 +826,6 @@ are rules over IDs.
 |---|---|---|
 | 1 | The repo name | `juku-agents`. Arthur renames the folder before anything goes to GitHub |
 | 2 | The alert contact point (ADR-009) | A Telegram bot that messages only Arthur |
-| 3 | Grafana or cron-only monitoring (ADR-009) | Grafana, if spike 3's idle memory fits; otherwise cron alerts |
+| 3 | Grafana or cron-only monitoring (ADR-009) | **Grafana, capped at 384 MB** (Arthur, 2026-10-28, after spike 3 measured 217–249 MB idle) |
 | 4 | The gateway's per-key rate limit and actor check (ADR-012, ADR-018) | Both built in the gateway repo before launch, as gateway work |
 | 5 | Time budget and launch timing | As fast as possible: about 3–4 weeks of building in parallel tracks, once the gates are cleared. Launch as soon as the launch gate passes, with the counted window starting at launch even if it spans the December exam (Phase 2, Time budget) |

@@ -51,7 +51,7 @@ Two rules:
   overhead: about **60 MB a week, about 3 GB a year**;
 - summaries: about 5,000 learners × about 2,000 items each, at about
   50 bytes: about 0.5 GB;
-- the dictionary: about 1 GB (spike 1 measures it).
+- the dictionary: **about 20 MB** with OpenJLPT, or about 0.3 GB with a full JMdict import (spike 1).
 
 One ordinary Postgres server handles that. The pressure at scale is in
 model cost and provider limits, not in the data.
@@ -137,6 +137,7 @@ what statistics at this sample size can't.
 | FF9 | **No content in records or traces** | Privacy | A planted question text shows up in per-call records, spans or the audit log | Every commit |
 | FF10 | **Load** | Scale | The $0 path's p95 at N synthetic learners is worse than the recorded baseline by more than 20% | Before each release, and on demand (Locust, $0) |
 | FF12 | **Frontend budget** (Lighthouse CI, mobile profile) | Speed on learners' phones | Over 100 KB of JavaScript on a page, or LCP > 2.5 s, INP > 200 ms or CLS > 0.1 | Every commit |
+| FF13 | **Tool query plans** (spike 2) | Tool latency | A tool query's plan cost jumps over its recorded ceiling, or Postgres's JIT turns on for it (`jit = off` on Juku's role) | Every commit |
 | FF11 | **Agent quality** (harness regression gate) | Quality | The harness reports a regression on the chat, memory or pipeline task sets | On every prompt, tool or model change, scripted parts at $0. The paid run needs Arthur's OK |
 
 The thresholds are recorded in `guardrails.yaml`, next to the other

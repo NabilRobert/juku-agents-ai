@@ -54,8 +54,12 @@ build goes in slices ([slice plan](slice-plan.md)).
   a stated reason for each word.
 - **LE4. Reading practice (Should):** OpenJLPT's example sentences (from
   Tatoeba, with furigana), tokenized with SudachiPy and matched to word
-  IDs, in which every word but one is known. Coverage is measured in
-  spike 4.
+  IDs, in which every word but one is known.
+  - Grammar tokens (ない and OpenJLPT's grammar patterns) count as grammar,
+    not as unknown words.
+  - Function words, names and numbers count as known.
+  - Spike 4: 90.7% of content tokens map to one word; 63–66% of
+    sentences qualify.
 - **LE5. Pace planner (Should):** from the exam date and the current
   coverage, the words a week needed to reach a target coverage. The
   formula is committed and shown to the learner.
@@ -71,10 +75,12 @@ build goes in slices ([slice plan](slice-plan.md)).
   learner-scoped tools: `get_progress`, `get_mistakes`, `recommend_words`,
   `find_reading_sentences`, `get_plan`, `get_recent_activity`,
   `get_memory`.
-- **SM2. Identity comes from the session, never from arguments.**
+- **SM2. Identity comes from a signed token, never from arguments.**
   - The app mints a short-lived, signed token for one learner and one
-    purpose (chat, or one pipeline run), and opens the MCP session with
-    it.
+    purpose (chat, or one pipeline run). Every MCP request carries it in
+    `_meta`, since MCP 2026-07-28 has no sessions.
+  - The server has no published port; it's reachable only through the
+    gateway.
   - No tool takes a learner ID.
   - A test shows that no call can return another learner's rows
     (Phase 1, M7).
@@ -111,8 +117,11 @@ current at build time before fixing the details. Arthur notes that a July
     - the allowed tools;
     - the audience (the Juku MCP server);
     - the expiry.
-  - It travels in the MCP request's `_meta`, which the gateway passes
-    through unchanged (spike 6 checks this).
+  - It travels in each request's `_meta`, under the key
+    `io.github.nabilrobert.juku/delegation`. One single-use token per
+    tool call, minted in PydanticAI's `process_tool_call`.
+  - The gateway **must forward** `_meta` and stamp the caller. Its `main`
+    drops `_meta` today, so the fix is a prerequisite (slice plan, P6).
   - It is never the gateway's own credential: no token passthrough.
 - **ID-R3. Delegation only narrows.** In the one multi-hop path, learner →
   Shiori → Keiko → Juku MCP server, the token Keiko gets has:
@@ -581,7 +590,7 @@ by SM2.
 | **Must** | ID-R1–R3, ID-R5: per-agent identities, delegation chains that only narrow, logging; ID-R4 at the Juku MCP server |
 | **Must** | The guardrails table, each guardrail with its test; the humans-in-the-loop map |
 | **Must** | SAF-R1 and SAF-R2 with the scripted agent; evaluation-driven order (each agent's tasks committed before its code) |
-| **Must** | The data design in the scale path (events, summaries, separate text, `cohort_id`, timezones); fitness functions FF1–FF9 and FF11 in CI |
+| **Must** | The data design in the scale path (events, summaries, separate text, `cohort_id`, timezones); fitness functions FF1–FF9, FF11 and FF13 in CI |
 | **Must** | AG6 (a learner in distress); JI1 (input normalization); the dictionary update policy; "Unduh data saya"; the processing-abroad wording |
 | **Must** | FE1–FE7: server-rendered pages with Vue islands, per-page bundles and lazy loading, system Japanese fonts, `<ruby>`, compression and caching, the performance budget in CI |
 | **Must** | AG1–AG3, AG5: the weekly pipeline with critic and code approval, scheduling with a dead-man's switch, run records, the cited chat |
