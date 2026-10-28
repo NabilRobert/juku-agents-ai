@@ -15,6 +15,8 @@ from juku_common.delegation import Grant, RefusedError, Signer, Verifier
 from juku_common.rules import Rules, load_rules
 from jwt.utils import base64url_decode, base64url_encode
 
+pytestmark = pytest.mark.fitness("FF8")
+
 NOW = datetime(2026, 11, 2, 9, 0, tzinfo=UTC)
 SHIORI_TOOLS = ["get_progress", "get_memory", "request_replan"]
 

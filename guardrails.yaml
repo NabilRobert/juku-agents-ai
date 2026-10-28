@@ -100,8 +100,7 @@ fitness:
     checked_by: squawk
   FF5:
     title: MCP tool schemas match their snapshots
-    status: pending
-    until: track B (slice 3)
+    status: active
   FF6:
     title: Prompt and context token ceilings
     status: pending
@@ -112,8 +111,7 @@ fitness:
     until: slice 6 (the pipeline)
   FF8:
     title: Guardrail, delegation and isolation suites
-    status: pending
-    until: track B (slice 3)
+    status: active
   FF9:
     title: No content in records, traces or logs
     status: active
