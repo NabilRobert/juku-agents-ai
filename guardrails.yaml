@@ -63,6 +63,28 @@ agents:
 replan:
   max_requests_per_day: 1
 
+# Spend (ADR-012, Phase 2 B1-B3; the cost model in the slice plan). The
+# app's budget guard checks these before every model call. Reports have a
+# reserved pool, so chat can't starve them; chat has daily caps and a hard
+# stop. The key cap at the provider is the backstop, not the first line.
+budget:
+  # gpt-5-mini through Sumopod, US dollars per million tokens (the harness's
+  # prices.yaml, from Sumopod's table, checked 2026-10-23). Cached input is
+  # charged at the full input price, so recorded cost errs high (B2).
+  input_usd_per_million: 0.25
+  output_usd_per_million: 2.00
+  reports_pool_usd: 0.90
+  chat_pool_usd: 1.20
+  chat_daily_global_usd: 0.20
+  chat_daily_questions_per_learner: 20
+  # PydanticAI's UsageLimits on each run: a runaway loop stops here.
+  chat_run_request_limit: 6
+  chat_run_total_tokens_limit: 20000
+  report_run_request_limit: 8
+  report_run_total_tokens_limit: 40000
+  # Budget alerts fire at these shares of each pool (M5).
+  alert_fractions: [0.5, 0.8, 1.0]
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as

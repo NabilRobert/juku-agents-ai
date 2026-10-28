@@ -7,15 +7,16 @@ name = "juku-agents"
 version = "0.0.0"
 description = "Juku: an agentic JLPT learning platform for Indonesian learners"
 requires-python = ">=3.12,<3.13"
-dependencies = ["juku-common", "juku-data", "juku-mcp", "juku-ops"]
+dependencies = ["juku-app", "juku-common", "juku-data", "juku-mcp", "juku-ops"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["packages/*", "app"]
 
 [tool.uv.sources]
+juku-app = { workspace = true }
 juku-common = { workspace = true }
 juku-data = { workspace = true }
 juku-mcp = { workspace = true }
@@ -57,9 +58,9 @@ ignore = ["S101"]
 "**/tests/test_search_words.py" = ["RUF001"]
 
 [tool.pyright]
-include = ["packages", "migrations"]
+include = ["packages", "app", "migrations"]
 exclude = ["spikes", "**/node_modules", "**/.venv"]
-strict = ["packages/*/src"]
+strict = ["packages/*/src", "app/src"]
 pythonVersion = "3.12"
 # Hand-written stubs for libraries that ship no types (SudachiPy).
 stubPath = "typings"
@@ -69,7 +70,7 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["packages"]
+testpaths = ["packages", "app"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"

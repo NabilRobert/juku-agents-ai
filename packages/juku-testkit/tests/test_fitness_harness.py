@@ -26,6 +26,18 @@ agents:
   keiko: [get_progress]
 replan:
   max_requests_per_day: 1
+budget:
+  input_usd_per_million: 0.25
+  output_usd_per_million: 2.00
+  reports_pool_usd: 0.90
+  chat_pool_usd: 1.20
+  chat_daily_global_usd: 0.20
+  chat_daily_questions_per_learner: 20
+  chat_run_request_limit: 6
+  chat_run_total_tokens_limit: 20000
+  report_run_request_limit: 8
+  report_run_total_tokens_limit: 40000
+  alert_fractions: [0.5, 0.8, 1.0]
 fitness:
   FF3:
     title: Incremental state equals a full recompute

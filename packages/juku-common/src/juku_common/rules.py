@@ -95,6 +95,30 @@ class ReplanRules(Section):
     max_requests_per_day: int = Field(ge=1)
 
 
+class BudgetRules(Section):
+    """B1 and B2: prices, the two pools and the caps."""
+
+    input_usd_per_million: float = Field(gt=0)
+    output_usd_per_million: float = Field(gt=0)
+    reports_pool_usd: float = Field(gt=0)
+    chat_pool_usd: float = Field(gt=0)
+    chat_daily_global_usd: float = Field(gt=0)
+    chat_daily_questions_per_learner: int = Field(gt=0)
+    chat_run_request_limit: int = Field(gt=0)
+    chat_run_total_tokens_limit: int = Field(gt=0)
+    report_run_request_limit: int = Field(gt=0)
+    report_run_total_tokens_limit: int = Field(gt=0)
+    alert_fractions: list[float]
+
+    @model_validator(mode="after")
+    def _daily_cap_fits_the_pool(self) -> Self:
+        if self.chat_daily_global_usd > self.chat_pool_usd:
+            raise ValueError("chat_daily_global_usd can't be more than the whole chat pool")
+        if any(not 0 < fraction <= 1 for fraction in self.alert_fractions):
+            raise ValueError("alert_fractions are shares of a pool, between 0 and 1")
+        return self
+
+
 class Rules(Section):
     """The whole rule file."""
 
@@ -104,6 +128,7 @@ class Rules(Section):
     delegation: DelegationRules
     agents: dict[str, list[str]]
     replan: ReplanRules
+    budget: BudgetRules
     fitness: dict[str, FitnessFunction]
 
     @model_validator(mode="after")
