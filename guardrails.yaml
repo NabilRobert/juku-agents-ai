@@ -32,8 +32,7 @@ fitness:
     status: active
   FF3:
     title: Incremental state equals a full recompute
-    status: pending
-    until: track A (slice 2)
+    status: active
   FF4:
     title: Migrations are safe (Squawk)
     status: active

@@ -25,8 +25,6 @@ from juku_data.engine import (
 from juku_data.engine.models import Learner
 from sqlalchemy import text
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
-
 Replayed = dict[str, tuple[FixtureLearner, Learner]]
 WIB = ZoneInfo("Asia/Jakarta")
 

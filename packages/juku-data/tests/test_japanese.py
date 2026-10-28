@@ -3,8 +3,6 @@
 import pytest
 from juku_data.japanese import normalize_input, romaji_to_kana, to_hiragana
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
-
 
 @pytest.mark.parametrize(
     ("typed", "normalized"),

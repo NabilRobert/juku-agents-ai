@@ -21,8 +21,6 @@ from juku_data.engine.models import Learner
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
-
 EVENT_TABLE = "learning_events"
 
 

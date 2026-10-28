@@ -10,8 +10,6 @@ from juku_data.engine.api import record_quiz_answer
 from juku_data.engine.models import Learner, QuizKind
 from sqlalchemy import text
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
-
 WORKLOAD_SEED = 20261028
 WORKLOAD_EVENTS = 400
 

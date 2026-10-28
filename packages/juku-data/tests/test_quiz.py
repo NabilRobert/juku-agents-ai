@@ -4,11 +4,9 @@ from datetime import UTC, date, datetime
 
 import pytest
 from fixture_learners import FixtureLearner
-from juku_data.engine import Databases, grade_answer, make_quiz
+from juku_data.engine import Databases, create_learner, grade_answer, make_quiz
 from juku_data.engine.models import Learner, QuizItem
 from sqlalchemy import text
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
 
 Replayed = dict[str, tuple[FixtureLearner, Learner]]
 QUIZ_LENGTH = 10
@@ -87,14 +85,15 @@ async def test_a_kana_only_word_is_only_asked_for_its_meaning(
                 assert item.kind == "meaning", item
 
 
-async def test_grading_the_right_option_is_correct_and_any_other_is_not(
-    engine_databases: Databases, fixtures_and_learners: Replayed
-) -> None:
-    _, ayu = fixtures_and_learners["ayu"]
-    item = (await make_quiz(engine_databases, ayu.id, date(2026, 11, 8))).items[0]
-    right = await correct_option(engine_databases, ayu, item)
+async def test_grading_the_right_option_is_correct_and_any_other_is_not(engine_databases: Databases) -> None:
+    # A learner of its own: grading records answers, which the fixture learners mustn't get.
+    learner = await create_learner(engine_databases, nickname="grader", target_level=5)
+    item = (await make_quiz(engine_databases, learner.id, date(2026, 11, 8))).items[0]
+    right = await correct_option(engine_databases, learner, item)
     assert right in item.options
     wrong = next(option for option in item.options if option != right)
-    assert (await grade_answer(engine_databases, ayu.id, item.word_id, item.kind, right, datetime.now(UTC))).is_correct
-    graded = await grade_answer(engine_databases, ayu.id, item.word_id, item.kind, wrong, datetime.now(UTC))
+    at = datetime(2026, 11, 8, 9, 0, tzinfo=UTC)
+    assert (await grade_answer(engine_databases, learner.id, item.word_id, item.kind, right, at)).is_correct
+    graded = await grade_answer(engine_databases, learner.id, item.word_id, item.kind, wrong, at)
     assert not graded.is_correct
+    assert graded.correct_option == right

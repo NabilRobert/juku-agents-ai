@@ -95,7 +95,11 @@ async def test_the_activity_view_hides_days_with_fewer_learners_than_the_floor(
                 ),
                 {"id": learner_id, "day": day},
             )
-    rows = (await connection.execute(text("SELECT day, active_learners FROM monitoring.activity_by_day"))).all()
+    rows = (
+        await connection.execute(
+            text("SELECT day, active_learners FROM monitoring.activity_by_day WHERE day >= '2027-01-01' ORDER BY day")
+        )
+    ).all()
     assert [tuple(row) for row in rows] == [(date(2027, 1, 1), floor)]
 
 

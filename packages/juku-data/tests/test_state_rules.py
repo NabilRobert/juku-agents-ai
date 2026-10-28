@@ -2,15 +2,12 @@
 
 from datetime import UTC, date, datetime, timedelta
 
-import pytest
 from juku_data.engine.state import (
     ItemState,
     after_marked_known,
     after_quiz_answer,
     after_unmarked_known,
 )
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
 
 MONDAY = datetime(2026, 11, 2, 9, 0, tzinfo=UTC)
 

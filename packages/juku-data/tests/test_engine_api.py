@@ -19,8 +19,6 @@ from juku_data.engine import (
 )
 from oracle import load_oracle_dictionary, recommend
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the engine lands in the next commits")
-
 PUBLIC_ID_LENGTH = 16
 
 
