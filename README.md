@@ -52,8 +52,38 @@ It runs on the same stack as the others:
   measures quality offline;
 - agent-observability (Project 6): traces each request and run.
 
-**Status: planning.** No app code yet. Building starts after the
-prerequisites in the [slice plan](docs/planning/slice-plan.md) are met.
+**Status: building.** Track D (the skeleton, CI and monitoring) is in;
+the data and learning engine, Juku's MCP server and the app follow, in
+that order ([slice plan](docs/planning/slice-plan.md)). Nothing is
+deployed and no model has been called.
+
+## Run it
+
+```bash
+make db-up    # a throwaway postgres:16 on 127.0.0.1:55440, for the tests
+make check    # lint, types, tests and fitness functions, migrations, secrets
+```
+
+`uv` is the only thing to install first: `make check` runs `uv sync`'s
+environment. Squawk, gitleaks and Lighthouse CI are skipped with a note if
+they aren't installed locally; CI installs them and fails instead.
+
+## Layout
+
+| Folder | What it does |
+|---|---|
+| `packages/juku-common/` | What every service shares: the rule file loader (`guardrails.yaml`) and the hash-chained audit log |
+| `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep |
+| `packages/juku-testkit/` | Test helpers: the fitness-function harness (a pytest plugin) and throwaway databases |
+| `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring` so far) |
+| `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
+| `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts |
+| `docs/planning/` | The plan: problem, requirements, decisions, slices, scale path, checks |
+| `spikes/` | The week-0 spikes' code and results, kept as evidence (not linted) |
+
+A request's path through the code, the glossary and "where to change
+things" are in the guide, `docs/guide.md`, written once the four tracks
+are in.
 
 ## Planning docs
 
