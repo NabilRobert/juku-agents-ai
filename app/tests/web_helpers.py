@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -24,8 +25,16 @@ class AllowAll:
         return Verdict(suggests_self_harm=False)
 
 
+NOT_IN_DATA = "Maaf, tidak ada di data."
+
+
 def answer_from_the_data(_messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
-    return ModelResponse(parts=[TextPart("Maaf, tidak ada di data.")])
+    return ModelResponse(parts=[TextPart(NOT_IN_DATA)])
+
+
+async def stream_from_the_data(_messages: list[ModelMessage], _info: AgentInfo) -> AsyncIterator[str]:
+    for word in NOT_IN_DATA.split(" "):
+        yield word if NOT_IN_DATA.endswith(word) else word + " "
 
 
 def deps(db: Databases, juku_mcp_url: str = "http://127.0.0.1:9/mcp", **overrides: Any) -> WebDeps:
@@ -35,7 +44,7 @@ def deps(db: Databases, juku_mcp_url: str = "http://127.0.0.1:9/mcp", **override
         "rules": rules,
         "signer": Signer(ed25519.Ed25519PrivateKey.generate(), rules),
         "session_secret": "test-session-secret-not-a-real-one",
-        "model": FunctionModel(answer_from_the_data),
+        "model": FunctionModel(answer_from_the_data, stream_function=stream_from_the_data),
         "juku_mcp_url": juku_mcp_url,
         "shiori_gateway_key": None,
         "moderator": AllowAll(),

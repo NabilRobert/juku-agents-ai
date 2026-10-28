@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Chat") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Ask Shiori") }}</h1>
+<ul id="chat-history" class="space-y-2">
+  {% for message in messages %}
+  <li data-role="{{ message.role }}">{{ message.body }}
+    {% if message.role == "shiori" and not message.is_verified %}<span class="text-xs text-amber-700">{{ _("unverified") }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+<div id="chat-island"><noscript>{{ _("The chat needs JavaScript.") }}</noscript></div>
+{{ island("chat") }}
+{% endblock %}

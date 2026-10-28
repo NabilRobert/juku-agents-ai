@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Consent") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Before you start") }}</h1>
+{% include "consent/" ~ version ~ ".html" %}
+{% if error %}<p role="alert" class="text-red-700">{{ _("Juku is for people aged 18 or over, and needs your consent to the service.") }}</p>{% endif %}
+<form method="post" action="/persetujuan" class="mt-4 space-y-2">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label class="block"><input type="checkbox" name="is_adult"> {{ _("I am 18 or older.") }}</label>
+  <label class="block"><input type="checkbox" name="accepts_service"> {{ _("I agree to use the service as described above, including progress tracking, weekly reports and Shiori remembering how I learn.") }}</label>
+  <label class="block"><input type="checkbox" name="accepts_aggregates"> {{ _("Anonymous totals may appear in Arthur's public portfolio.") }}</label>
+  <label class="block"><input type="checkbox" name="accepts_group_digest"> {{ _("Count me in the group's anonymous weekly summary (optional).") }}</label>
+  <button type="submit" class="border px-3 py-1">{{ _("Agree and continue") }}</button>
+</form>
+<p class="text-xs">{{ _("Notice version") }} {{ version }}</p>
+{% endblock %}

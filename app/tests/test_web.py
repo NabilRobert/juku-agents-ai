@@ -10,8 +10,6 @@ from juku_data.engine import Databases
 from sqlalchemy import text
 from web_helpers import client_for, csrf_header, csrf_of, deps, found, sign_up
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the web app lands in the next commit")
-
 TEMPLATES = Path(__file__).resolve().parents[1] / "src" / "juku_app" / "templates"
 CATALOGUE = Path(__file__).resolve().parents[1] / "src" / "juku_app" / "locale" / "id" / "LC_MESSAGES" / "messages.po"
 
@@ -198,3 +196,40 @@ def test_every_phrase_in_the_templates_has_an_indonesian_translation() -> None:
     translated = {str(message.id) for message in catalogue if message.id and message.string}
     missing = sorted(used - translated)
     assert missing == []
+
+
+def test_the_about_page_carries_the_same_attribution_as_the_data_notice() -> None:
+    """D2: the page and juku-data's about_the_data.md say the same, so the licence duty can't drift."""
+    from importlib.resources import files
+
+    def flat(text: str) -> str:
+        return " ".join(text.replace("\n> ", " ").split())
+
+    notice = flat((files("juku_data") / "data" / "about_the_data.md").read_text(encoding="utf-8"))
+    page = flat((TEMPLATES / "tentang_data.html").read_text(encoding="utf-8"))
+    for needed in (
+        "which uses JMdict and KANJIDIC2 (EDRDG), Jonathan Waller's JLPT lists, and Tatoeba.",
+        "bf4e1ee",
+        "https://creativecommons.org/licenses/by-sa/4.0/",
+        "https://creativecommons.org/licenses/by/2.0/fr/",
+        "https://www.edrdg.org/edrdg/licence.html",
+        "Level JLPT adalah perkiraan.",
+    ):
+        assert needed in notice and needed in page, needed
+
+
+async def test_a_signed_in_learner_without_current_consent_is_asked_again(engine_databases: Databases) -> None:
+    """A new notice version, modelled by removing their record: no activity until they accept it."""
+    code = (await issue_codes(engine_databases.app, 1))[0]
+    async with client_for(deps(engine_databases)) as client:
+        await sign_up(client, code, nickname="Eka")
+        async with engine_databases.app.begin() as connection:
+            await connection.execute(
+                text(
+                    "DELETE FROM app.consents WHERE learner_id = "
+                    "(SELECT id FROM learning.learners WHERE nickname = 'Eka')"
+                )
+            )
+        for path in ("/beranda", "/kuis", "/chat"):
+            response = await client.get(path)
+            assert (response.status_code, response.headers["location"]) == (303, "/persetujuan"), path

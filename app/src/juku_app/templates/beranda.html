@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Home") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Hello") }}, {{ page.nickname }}</h1>
+<p>{{ _("Words you know") }}: {{ progress.known_words }}</p>
+<h2 class="mt-4 font-bold">{{ _("Recommendations") }}</h2>
+<ol class="space-y-2">
+  {% for word in words %}
+  <li>
+    <span lang="ja" class="text-lg">{{ word.word }}</span> <span lang="ja">({{ word.reading }})</span> · N{{ word.level }}
+    · {{ word.meanings[:2] | join("; ") }}
+    <div class="text-sm text-stone-600">{{ word.reason }}</div>
+    <form method="post" action="/kata/{{ word.word_id }}/dikuasai" data-word-id="{{ word.word_id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="text-sm underline">{{ _("I know this word") }}</button>
+    </form>
+  </li>
+  {% endfor %}
+</ol>
+{% endblock %}

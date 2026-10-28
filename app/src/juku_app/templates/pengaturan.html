@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Settings") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Settings") }}</h1>
+<form method="post" action="/pengaturan" class="space-y-2">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label class="block">{{ _("Target level") }}
+    <select name="target_level">{% for level in levels %}<option value="{{ level }}" {% if level == page.learner.target_level %}selected{% endif %}>N{{ level }}</option>{% endfor %}</select>
+  </label>
+  <label class="block">{{ _("Time zone") }}
+    <select name="timezone">{% for zone in timezones %}<option value="{{ zone }}" {% if zone == page.learner.timezone %}selected{% endif %}>{{ zone }}</option>{% endfor %}</select>
+  </label>
+  <label class="block">{{ _("Exam date (optional)") }} <input type="date" name="exam_date" value="{{ page.learner.exam_date or '' }}" class="border p-1"></label>
+  <button type="submit" class="border px-3 py-1">{{ _("Save") }}</button>
+</form>
+<h2 class="mt-6 font-bold">{{ _("Your data") }}</h2>
+<p><a href="/unduh-data" class="underline">{{ _("Download my data") }}</a></p>
+<form method="post" action="/hapus-data" class="mt-2 space-y-1">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p class="text-sm">{{ _("Deleting removes everything about you from Juku now. Type HAPUS to confirm.") }}</p>
+  {% if delete_error %}<p role="alert" class="text-red-700">{{ _("Type HAPUS to confirm.") }}</p>{% endif %}
+  <input name="confirm" autocomplete="off" class="border p-1">
+  <button type="submit" class="border px-3 py-1 text-red-700">{{ _("Delete my data") }}</button>
+</form>
+{% endblock %}
