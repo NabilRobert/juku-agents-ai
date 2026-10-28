@@ -18,7 +18,7 @@ function chunks(key, seen = new Set()) {
 }
 
 let failed = false;
-const pages = { chat: ["src/islands/chat.ts"], quiz: ["src/islands/quiz.ts"], other: [] };
+const pages = { chat: ["src/islands/chat.ts"], quiz: ["src/islands/quiz.ts"], memory: ["src/islands/memory.ts"], other: [] };
 for (const [page, islands] of Object.entries(pages)) {
   const keys = new Set();
   for (const island of ["src/islands/vitals.ts", ...islands]) chunks(island, keys);

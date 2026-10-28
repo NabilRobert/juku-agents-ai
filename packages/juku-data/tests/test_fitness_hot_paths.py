@@ -9,6 +9,7 @@ from fixture_learners import FixtureLearner
 from juku_data.engine import (
     Databases,
     find_reading_sentences,
+    get_known_words,
     get_mistakes,
     get_plan,
     get_progress,
@@ -18,6 +19,7 @@ from juku_data.engine import (
     recommend_words,
 )
 from juku_data.engine.models import Learner
+from juku_data.memory import get_memory
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -58,6 +60,8 @@ READS = {
     "get_plan": lambda db, learner: get_plan(db, learner.id, date(2026, 11, 8)),
     "get_recent_activity": lambda db, learner: get_recent_activity(db, learner.id, date(2026, 11, 8)),
     "make_quiz": lambda db, learner: make_quiz(db, learner.id, date(2026, 11, 8)),
+    "get_known_words": lambda db, learner: get_known_words(db, learner.id),
+    "get_memory": lambda db, learner: get_memory(db, learner.id, datetime(2026, 11, 8, tzinfo=UTC)),
 }
 
 

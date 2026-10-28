@@ -3,7 +3,6 @@
 import json
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from juku_app.invites import issue_codes
 from juku_common.rules import load_rules
 from juku_data.engine import Databases, mark_known
@@ -11,8 +10,6 @@ from juku_data.engine.api import record_quiz_answer
 from juku_data.memory import NoteProposal, propose_note
 from sqlalchemy import text
 from web_helpers import client_for, csrf_header, deps, found, sign_up
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: memory lands in the next commit")
 
 
 async def learner_id_of(db: Databases, nickname: str) -> int:

@@ -2,7 +2,6 @@
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from juku_common.delegation import Signer
 from juku_common.rules import Rules
 from juku_data.engine import Databases
@@ -12,9 +11,6 @@ from juku_data.memory import NoteProposal, propose_note
 from mcp import Client
 from mcp_helpers import Learners, call, token_for
 from sqlalchemy import text
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: memory lands in the next commit")
-
 
 NOW = datetime.now(UTC)
 

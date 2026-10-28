@@ -28,10 +28,3 @@ async def test_an_empty_or_overlong_query_is_refused(
 ) -> None:
     answer = await call(client, "search_words", token_for(signer, learners.a), {"query": query})
     assert (answer.is_error, answer.body["refused"]) == (True, "bad_arguments")
-
-
-async def test_get_memory_answers_until_memory_lands_in_slice_4(
-    client: Client, signer: Signer, learners: Learners
-) -> None:
-    answer = await call(client, "get_memory", token_for(signer, learners.a))
-    assert (answer.is_error, answer.body["notes"]) == (False, [])

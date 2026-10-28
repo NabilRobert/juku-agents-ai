@@ -27,6 +27,7 @@ from juku_common.delegation import AGENT_PREFIX, CALLER_META_KEY, META_KEY, Gran
 from juku_common.rules import Rules
 from juku_data import engine
 from juku_data.engine import Databases, LearnerNotFoundError
+from juku_data.memory import get_memory
 from mcp.server import Server, ServerRequestContext
 from mcp.types import CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, TextContent, Tool
 from sqlalchemy import text
@@ -36,7 +37,6 @@ from juku_mcp.telemetry import tracer
 from juku_mcp.tools import MAX_QUERY_LENGTH, SPECS, SPECS_BY_NAME, ToolCall, local_day, utc_now
 
 SERVER_NAME = "juku"
-MEMORY_PENDING = "Memory notes arrive in slice 4; none are stored yet."
 REPLAN_QUEUED = "Permintaan rencana baru sudah dikirim ke Keiko. Rencananya tetap diperiksa sebelum ditampilkan."
 REPLAN_LIMIT = "Hari ini sudah ada permintaan rencana baru. Coba lagi besok."
 
@@ -124,8 +124,8 @@ def _handlers(deps: ServerDeps) -> dict[str, Callable[[ToolCall], Awaitable[dict
     async def activity(call: ToolCall) -> dict[str, Any]:
         return (await engine.get_recent_activity(db, call.learner.id, _today(call))).model_dump(mode="json")
 
-    async def memory(_: ToolCall) -> dict[str, Any]:
-        return {"notes": [], "status": MEMORY_PENDING}
+    async def memory(call: ToolCall) -> dict[str, Any]:
+        return (await get_memory(db, call.learner.id, call.now)).model_dump(mode="json")
 
     async def search(call: ToolCall) -> dict[str, Any]:
         return {"words": await deps.words.search(str(call.arguments["query"]))}

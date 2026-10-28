@@ -63,6 +63,19 @@ class RecommendedWord(EngineModel):
     reason: str
 
 
+class KnownWord(EngineModel):
+    word_id: str
+    word: str
+    reading: str
+
+
+class KnownWords(EngineModel):
+    """The words the learner knows, latest first, for the memory page (MEM-R5); `total` counts them all."""
+
+    items: list[KnownWord]
+    total: int
+
+
 class Recommendations(EngineModel):
     """LE3: ten words to learn next (Susumu), each with its reason."""
 

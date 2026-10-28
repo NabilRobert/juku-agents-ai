@@ -25,9 +25,6 @@ from juku_data.memory.evidence import (
     shows_pattern,
 )
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: memory lands in the next commit")
-
-
 NOW = datetime(2026, 11, 8, 12, 0, tzinfo=UTC)
 LEARNER = 7
 
@@ -206,3 +203,86 @@ def test_right_answers_before_a_newer_miss_dont_contradict_it(memory: MemoryRule
         row(30, "quiz_reading", is_correct=False, days_ago=0.5),
     ]
     assert consolidation_decision("recurring_confusion", misses(), right_then_wrong, memory, NOW) == ("kept", RECURRED)
+
+
+# --- the gaps mutmut found (JOURNEY, slice 4) ---
+
+
+def test_an_unknown_category_shows_no_pattern() -> None:
+    assert not shows_pattern("favourite_food", misses())
+
+
+def test_a_right_answer_at_the_level_is_not_avoidance() -> None:
+    rows = [row(1, "unmarked_known", level=3), *[row(n, "quiz_meaning", level=3, is_correct=True) for n in (2, 3)]]
+    assert not shows_pattern("avoided_level", rows)
+
+
+def test_evidence_exactly_at_the_edge_of_the_window_is_still_recent(memory: MemoryRules) -> None:
+    edge = [*misses(days_ago=memory.evidence_max_age_days)][:1]
+    rows = [
+        *edge,
+        *[row(n, "quiz_reading", is_correct=False, days_ago=memory.evidence_max_age_days + 1) for n in (2, 3)],
+    ]
+    assert check_evidence("recurring_confusion", [1, 2, 3], rows, LEARNER, memory, NOW) is None
+
+
+def test_a_note_exactly_at_the_edge_of_the_window_is_kept(memory: MemoryRules) -> None:
+    edge = [row(n, "quiz_reading", is_correct=False, days_ago=memory.evidence_max_age_days + n - 1) for n in (1, 2, 3)]
+    assert consolidation_decision("recurring_confusion", edge, [], memory, NOW)[0] == "kept"
+
+
+def test_right_answers_on_another_word_or_of_another_kind_dont_contradict_a_confusion(memory: MemoryRules) -> None:
+    other_word = [row(20 + n, "quiz_reading", item="w2", is_correct=True, days_ago=0.5) for n in range(3)]
+    other_kind = [row(30 + n, "quiz_meaning", is_correct=True, days_ago=0.5) for n in range(3)]
+    for newer in (other_word, other_kind):
+        assert consolidation_decision("recurring_confusion", misses(), newer, memory, NOW)[0] == "kept"
+
+
+def test_right_answers_never_contradict_the_other_categories(memory: MemoryRules) -> None:
+    pace = [row(n, "marked_known", item=f"k{n}", days_ago=1 + n % 2) for n in range(3)]
+    right = [row(20 + n, "quiz_meaning", item=f"k{n}", is_correct=True, days_ago=0.5) for n in range(3)]
+    assert consolidation_decision("pace", pace, right, memory, NOW)[0] == "kept"
+
+
+def test_a_wrong_answer_of_another_kind_on_the_same_word_is_not_a_recurrence(memory: MemoryRules) -> None:
+    old = misses(days_ago=memory.evidence_max_age_days + 5)
+    other_kind = [row(20, "quiz_meaning", is_correct=False, days_ago=2)]
+    right = [row(21, "quiz_reading", is_correct=True, days_ago=2)]
+    for newer in (other_kind, right):
+        assert consolidation_decision("recurring_confusion", old, newer, memory, NOW) == ("lapsed", EVIDENCE_TOO_OLD)
+
+
+@pytest.mark.parametrize(
+    ("category", "evidence", "again", "elsewhere"),
+    [
+        (
+            "preferred_example",
+            [row(n, "sentence_read", item=str(n), level=None, days_ago=40 + n) for n in range(3)],
+            row(20, "sentence_read", item="9", level=None, days_ago=2),
+            row(21, "marked_known", item="k9", days_ago=2),
+        ),
+        (
+            "pace",
+            [row(n, "marked_known", item=f"k{n}", days_ago=40 + n) for n in range(3)],
+            row(20, "marked_known", item="k9", days_ago=2),
+            row(21, "sentence_read", item="9", level=None, days_ago=2),
+        ),
+        (
+            "avoided_level",
+            [row(n, "unmarked_known", item=f"u{n}", level=3, days_ago=40 + n) for n in range(3)],
+            row(20, "quiz_meaning", item="u9", level=3, is_correct=False, days_ago=2),
+            row(21, "unmarked_known", item="u8", level=2, days_ago=2),
+        ),
+    ],
+)
+def test_each_category_recurs_only_with_its_own_pattern(
+    memory: MemoryRules, category: str, evidence: list[EvidenceRow], again: EvidenceRow, elsewhere: EvidenceRow
+) -> None:
+    assert consolidation_decision(category, evidence, [again], memory, NOW) == ("kept", RECURRED)
+    assert consolidation_decision(category, evidence, [elsewhere], memory, NOW) == ("lapsed", EVIDENCE_TOO_OLD)
+
+
+def test_an_unknown_category_never_recurs(memory: MemoryRules) -> None:
+    old = misses(days_ago=memory.evidence_max_age_days + 5)
+    anything = [row(20, "quiz_reading", is_correct=False, days_ago=2)]
+    assert consolidation_decision("favourite_food", old, anything, memory, NOW) == ("lapsed", EVIDENCE_TOO_OLD)

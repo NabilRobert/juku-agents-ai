@@ -11,10 +11,9 @@ JUKU_COMPOSE=docker compose --project-directory /srv/juku -f /srv/juku/ops/compo
 *      *  *   *   *    $JUKU_COMPOSE exec -T app juku-ops heartbeat
 */5    *  *   *   *    $JUKU_COMPOSE exec -T app juku-ops import-audit
 17     3  *   *   *    $JUKU_COMPOSE exec -T app juku-ops ensure-partitions
+10     3  *   *   *    $JUKU_COMPOSE exec -T app juku-ops consolidate-memory
 40     2  *   *   *    $JUKU_COMPOSE exec -T app juku-ops verify-state
 
 # Land with later slices; uncomment when the command exists:
-# Slice 4: nightly memory consolidation.
-# 10   3  *   *   *    $JUKU_COMPOSE exec -T app juku consolidate
 # Slice 6: hourly; runs the weekly pipeline for learners whose local time is Sunday 18:00.
 # 0    *  *   *   *    $JUKU_COMPOSE exec -T app juku run-weekly --due

@@ -139,3 +139,40 @@ What went wrong while building, and what changed because of it
 - **Waiting on Arthur:** the moderation checker (until it's chosen, the
   checker flags nothing, and the distress path is tested with a stand-in),
   and a verified crisis line number for `JUKU_CRISIS_LINE`.
+
+## Slice 4: memory (2026-10-29)
+
+- **The MEM1 tasks came first,** in agent-eval-harness's own format (its
+  validator accepts them), with four fixture learners. Each task's gold
+  answer is reference SQL over the fixtures; a $0 test replays each
+  fixture through production code and checks that the tools Shiori must
+  call show what the answer needs. All 15 pass. Shiori answering them is
+  the paid run, slice 7.
+- **A fixture hit the partitions.** Hana's stale note was first dated in
+  September, but the event table's partitions start in October 2026. Her
+  note now dates from early October, and it lapses because newer right
+  answers contradict it, not because of its age.
+- **A commit went in after a red check, again.** Under heavy load from
+  another project's containers, the check timed out in the synthetic
+  database's fixture; the commit command sat on a new line, not after the
+  check's `&&`, so it ran anyway. It was undone locally (nothing had been
+  pushed) and redone after a green check, and commits now run from a
+  script with `set -e`, behind the check.
+- **The synthetic database rebuilt on every change to juku-data,** about
+  eight minutes, because its cache key hashed the whole package. It now
+  hashes what it depends on: the migrations, the engine, the dictionary
+  loader, normalization and the generator.
+- **Mutation checks.** mutmut on the evidence rules: 120 of 148 mutants
+  killed at first. The 28 survivors showed untested recurrence for three
+  of the four categories, right answers on another word or kind
+  counting as a contradiction, and the 30-day edge. With those tests, 146
+  of 148; the two left are equivalent (a single quiz kind is always a
+  proper subset of the two, and an answer at the very instant of the last
+  miss). By hand, fourteen breaks in the database-backed code, the
+  migration, the page, the job and the tool: each fails a test.
+- **What's checked where.** Code refuses a forbidden category, a note
+  whose text is about someone's life, evidence that isn't this learner's
+  or doesn't show the pattern, a kind of note the learner removed in the
+  last 30 days, a 13th note and a duplicate. The table refuses a category
+  the rule file doesn't allow. Refusals are counted by reason, never with
+  their text (MEM2).

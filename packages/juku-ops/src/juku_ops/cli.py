@@ -4,6 +4,7 @@
     juku-ops import-audit        every 5 minutes: verify and import the audit logs
     juku-ops ensure-partitions   daily: keep the next months' partitions ready
     juku-ops verify-state        nightly: learner summaries against a recompute (FF3 in production)
+    juku-ops consolidate-memory  nightly: keep or lapse each learner's notes, with the reason (MEM-R4)
 
 Each job but the heartbeat records its run in monitoring.job_runs. A job
 that finds a problem exits with status 1, so cron's own mail or log shows
@@ -18,11 +19,13 @@ from pathlib import Path
 
 import httpx
 import typer
+from juku_common.rules import load_rules
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from juku_ops.audit_import import AUDIT_SOURCES, ImportResult, import_audit_log
 from juku_ops.heartbeat import beat, is_healthy
 from juku_ops.jobs import recorded_run
+from juku_ops.memory_job import consolidate_all
 from juku_ops.partitions import ensure_month_partitions
 from juku_ops.settings import OpsSettings
 from juku_ops.state_check import StateDriftError, verify_production_state
@@ -132,3 +135,24 @@ def verify_state() -> None:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1) from exc
     typer.echo("learner summaries match a recompute from the events")
+
+
+async def _consolidate_memory(settings: OpsSettings, app_url: str) -> int:
+    ops_engine, app_engine = _engine(settings.ops_database_url), _engine(app_url)
+    try:
+        decisions = await consolidate_all(app_engine, ops_engine, load_rules(), datetime.now(UTC))
+    finally:
+        await ops_engine.dispose()
+        await app_engine.dispose()
+    return sum(1 for decision in decisions if decision.decision == "lapsed")
+
+
+@app.command("consolidate-memory")
+def consolidate_memory() -> None:
+    """Keep or lapse every learner's notes, recording why (MEM-R4)."""
+    settings = OpsSettings()  # pyright: ignore[reportCallIssue]
+    if settings.app_database_url is None:
+        typer.echo("JUKU_APP_DATABASE_URL is not set: consolidation updates learner data as the app's role", err=True)
+        raise typer.Exit(1)
+    lapsed = asyncio.run(_consolidate_memory(settings, settings.app_database_url))
+    typer.echo(f"memory consolidated: {lapsed} notes lapsed")

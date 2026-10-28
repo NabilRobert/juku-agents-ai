@@ -214,3 +214,86 @@ msgstr "kata"
 msgid "words a week until the exam"
 msgstr "kata per minggu sampai ujian"
 
+msgid "Shiori remembers"
+msgstr "Shiori ingat"
+
+msgid "Shiori remembers…"
+msgstr "Shiori ingat…"
+
+msgid "These are Shiori's notes about how you learn, each with the activity behind it. You can remove a note, or tell Shiori it's wrong, at any time."
+msgstr "Ini catatan Shiori tentang cara kamu belajar, masing-masing dengan aktivitas yang mendasarinya. Kamu bisa menghapus catatan, atau memberi tahu Shiori bahwa catatan itu salah, kapan saja."
+
+msgid "Words you know:"
+msgstr "Kata yang kamu kuasai:"
+
+msgid "This page needs JavaScript to change your notes."
+msgstr "Halaman ini butuh JavaScript untuk mengubah catatanmu."
+
+msgid "Notes about how you learn"
+msgstr "Catatan tentang cara kamu belajar"
+
+msgid "Shiori has no notes about you yet."
+msgstr "Shiori belum punya catatan tentang kamu."
+
+msgid "Words you know, latest first"
+msgstr "Kata yang kamu kuasai, terbaru dulu"
+
+msgid "You haven't marked any words known yet."
+msgstr "Kamu belum menandai kata apa pun sebagai dikuasai."
+
+msgid "noted"
+msgstr "dicatat"
+
+msgid "days ago"
+msgstr "hari lalu"
+
+msgid "right"
+msgstr "benar"
+
+msgid "wrong"
+msgstr "salah"
+
+msgid "Remove"
+msgstr "Hapus"
+
+msgid "This is wrong"
+msgstr "Ini salah"
+
+msgid "Not known yet"
+msgstr "Belum dikuasai"
+
+msgid "Note removed. Shiori won't note this kind of thing again for 30 days."
+msgstr "Catatan dihapus. Shiori tidak akan mencatat hal seperti ini lagi selama 30 hari."
+
+msgid "Thank you. Shiori won't use this note again."
+msgstr "Terima kasih. Shiori tidak akan memakai catatan ini lagi."
+
+msgid "The word is marked as not known yet."
+msgstr "Kata ini ditandai belum dikuasai."
+
+msgid "That didn't work. Please try again."
+msgstr "Gagal. Coba lagi."
+
+msgid "Often confused"
+msgstr "Sering tertukar"
+
+msgid "Examples you like"
+msgstr "Contoh yang kamu sukai"
+
+msgid "A level you avoid"
+msgstr "Level yang kamu hindari"
+
+msgid "marked known"
+msgstr "ditandai dikuasai"
+
+msgid "unmarked"
+msgstr "batal dikuasai"
+
+msgid "meaning quiz"
+msgstr "kuis arti"
+
+msgid "reading quiz"
+msgstr "kuis bacaan"
+
+msgid "sentence read"
+msgstr "kalimat dibaca"

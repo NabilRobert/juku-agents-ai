@@ -32,3 +32,11 @@ def test_heartbeat_does_not_beat_when_the_app_does_not_answer(monkeypatch: pytes
     result = runner.invoke(app, ["heartbeat"])
     assert result.exit_code == 1
     assert "didn't answer 200" in result.output
+
+
+def test_consolidate_memory_without_the_app_url_says_why(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("JUKU_OPS_DATABASE_URL", "postgresql+asyncpg://unused/app")
+    monkeypatch.delenv("JUKU_APP_DATABASE_URL", raising=False)
+    result = runner.invoke(app, ["consolidate-memory"])
+    assert result.exit_code == 1
+    assert "JUKU_APP_DATABASE_URL" in result.output

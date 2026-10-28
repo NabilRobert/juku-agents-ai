@@ -18,9 +18,6 @@ from juku_data.memory import (
 )
 from sqlalchemy import text
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: memory lands in the next commit")
-
-
 NOW = datetime(2026, 11, 8, 12, 0, tzinfo=UTC)
 
 

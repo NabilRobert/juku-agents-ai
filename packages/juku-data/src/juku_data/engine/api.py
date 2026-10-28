@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from juku_data.engine import quiz, reads, writes
 from juku_data.engine.models import (
     GradedAnswer,
+    KnownWords,
     Learner,
     Mistakes,
     Plan,
@@ -29,6 +30,8 @@ from juku_data.engine.recompute import MARKED_KNOWN, UNMARKED_KNOWN, rebuild_lea
 from juku_data.engine.writes import LearnerNotFoundError, UnknownWordError
 
 RECENT_ACTIVITY_DAYS = 7
+# The memory page lists this many known words, latest first; the rest are counted.
+KNOWN_WORDS_SHOWN = 50
 
 __all__ = ["LearnerNotFoundError", "UnknownWordError"]
 
@@ -139,6 +142,10 @@ async def get_plan(db: Databases, learner_id: int, today: date) -> Plan:
     async with db.app.connect() as connection:
         learner = await writes.load_learner(connection, learner_id)
     return await reads.get_plan(db.app, learner, today)
+
+
+async def get_known_words(db: Databases, learner_id: int, limit: int = KNOWN_WORDS_SHOWN) -> KnownWords:
+    return await reads.get_known_words(db.app, db.dictionary, learner_id, limit)
 
 
 async def get_recent_activity(

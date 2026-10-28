@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from juku_data.engine.models import (
+    KnownWord,
     Learner,
     LevelCoverage,
     Plan,
@@ -25,6 +26,7 @@ from juku_data.engine.models import (
     ReadingSentence,
     RecommendedWord,
 )
+from juku_data.memory import EvidenceEvent, MemoryNote
 
 from juku_app import assets
 from juku_app.web import LEVELS, TIMEZONES, templates
@@ -39,6 +41,34 @@ class SamplePage:
     learner: Learner
     nickname: str
     today: date
+
+
+def sample_memory() -> dict[str, Any]:
+    """One note with its evidence and a few known words, shaped as the memory page renders them."""
+    evidence = [
+        EvidenceEvent(
+            event_id=number,
+            event_type="quiz_reading",
+            word_id="w1",
+            word="読む",
+            reading="よむ",
+            level=5,
+            is_correct=False,
+            occurred_on=date(2026, 10, 28 + number),
+        )
+        for number in range(3)
+    ]
+    note = MemoryNote(
+        note_id="note-1",
+        category="recurring_confusion",
+        text="Sering salah membaca 読む.",
+        evidence=evidence,
+        noted_on=date(2026, 10, 31),
+        last_evidence_on=date(2026, 10, 30),
+        age_days=1,
+    )
+    words = [KnownWord(word_id=f"k{number}", word="水", reading="みず") for number in range(10)]
+    return {"notes": [note.model_dump(mode="json")], "words": [word.model_dump(mode="json") for word in words]}
 
 
 def sample_context() -> dict[str, Any]:
@@ -108,12 +138,14 @@ def sample_context() -> dict[str, Any]:
         "sentences": sentences,
         "plan": plan,
         "messages": [],
+        "memory_data": sample_memory(),
+        "known_total": 130,
         "timezones": TIMEZONES,
         "levels": LEVELS,
     }
 
 
-PAGES = ("beranda", "kuis", "bacaan", "rencana", "chat", "pengaturan", "tentang_data")
+PAGES = ("beranda", "kuis", "bacaan", "rencana", "chat", "ingat", "pengaturan", "tentang_data")
 
 
 def render_previews(out: Path) -> list[Path]:

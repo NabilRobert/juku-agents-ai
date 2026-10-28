@@ -20,7 +20,7 @@ from juku_common.rules import Rules
 from juku_data.engine import Databases
 from juku_mcp.server import build_server
 from juku_mcp.tools import SPECS_BY_NAME
-from juku_testkit.memory_fixtures import MEMORY_EVALS, fixture_now, load_memory_fixture, load_suite
+from juku_testkit.memory_fixtures import fixture_now, load_memory_fixture, load_suite
 from mcp_helpers import call, connected, make_deps, token_for
 from sqlalchemy import text
 
@@ -56,19 +56,7 @@ def test_each_task_is_in_the_harness_format(task_id: str) -> None:
     assert set(required_tools(task)) <= set(SPECS_BY_NAME)
 
 
-def needs_memory(task: dict[str, Any]) -> bool:
-    """EDD: a task that touches notes fails until the memory code lands."""
-    fixture = (MEMORY_EVALS / "learners" / f"{task['learner']}.yaml").read_text(encoding="utf-8")
-    return "proposals:" in fixture or "get_memory" in required_tools(task) or "memory_" in task["reference_sql"]
-
-
-EDD = pytest.mark.xfail(strict=True, reason="EDD: memory lands in the next commits")
-ANSWERABLE = [
-    pytest.param(task_id, marks=EDD) if needs_memory(TASKS[task_id]) else task_id for task_id in sorted(TASKS)
-]
-
-
-@pytest.mark.parametrize("task_id", ANSWERABLE)
+@pytest.mark.parametrize("task_id", sorted(TASKS))
 async def test_each_task_is_answerable_from_the_tools_and_its_gold_comes_from_sql(
     task_id: str,
     engine_databases: Databases,

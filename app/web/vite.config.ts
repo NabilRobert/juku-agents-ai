@@ -18,6 +18,7 @@ export default defineConfig({
         styles: "src/styles.css",
         chat: "src/islands/chat.ts",
         quiz: "src/islands/quiz.ts",
+        memory: "src/islands/memory.ts",
         vitals: "src/islands/vitals.ts",
       },
     },

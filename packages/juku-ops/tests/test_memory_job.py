@@ -2,16 +2,12 @@
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from juku_common.rules import Rules
 from juku_data.engine import Databases, create_learner
 from juku_data.engine.api import record_quiz_answer
 from juku_data.memory import NoteProposal, propose_note
 from juku_ops.memory_job import JOB_NAME, consolidate_all
 from sqlalchemy import text
-
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: memory lands in the next commit")
-
 
 NOW = datetime(2026, 11, 8, 3, 10, tzinfo=UTC)
 

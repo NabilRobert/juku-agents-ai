@@ -54,10 +54,10 @@ It runs on the same stack as the others:
 
 **Status: building.** Track D (the skeleton, CI and monitoring), track A
 (the data and the learning engine), track B (Juku's MCP server, identity
-and guardrails) and track C (the thin app, with chat on a scripted model)
-are in; memory and the weekly pipeline follow ([slice
-plan](docs/planning/slice-plan.md)). Nothing is deployed and no model has
-been called.
+and guardrails), track C (the thin app, with chat on a scripted model)
+and slice 4 (memory: evidence-checked notes the learner can correct) are
+in; the weekly pipeline follows ([slice plan](docs/planning/slice-plan.md)).
+Nothing is deployed and no model has been called.
 
 ## Run it
 
@@ -100,6 +100,7 @@ uv run juku render-previews --out build/previews
 | `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion |
 | `app/web/` | The two Vue islands, chat and quiz (Vite, Vitest), with FE7's size budget and FF12's Lighthouse config |
 | `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
+| `evals/` | Agent eval tasks in agent-eval-harness's format, with their fixture learners: `memory/` holds MEM1's 15 tasks |
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
 | `ops/` | Deployment: `compose.yaml`, the database roles and init, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |

@@ -40,8 +40,7 @@ function island() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("MemoryIsland", () => {
-  // EDD: it.fails until the island lands in the next commit.
-  it.fails("shows each note with its evidence and age", () => {
+  it("shows each note with its evidence and age", () => {
     const text = island().text();
     expect(text).toContain("Sering salah membaca 読む.");
     expect(text).toContain("Sering tertukar");
@@ -49,7 +48,7 @@ describe("MemoryIsland", () => {
     expect(text).toContain("2 hari lalu");
   });
 
-  it.fails("removes a note with the CSRF token and drops it from the page", async () => {
+  it("removes a note with the CSRF token and drops it from the page", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
     const wrapper = island();
@@ -62,7 +61,7 @@ describe("MemoryIsland", () => {
     expect(wrapper.text()).toContain("Catatan dihapus.");
   });
 
-  it.fails("marks a note wrong", async () => {
+  it("marks a note wrong", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
     const wrapper = island();
@@ -72,7 +71,7 @@ describe("MemoryIsland", () => {
     expect(wrapper.findAll("article.note")).toHaveLength(0);
   });
 
-  it.fails("unmarks a known word", async () => {
+  it("unmarks a known word", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
     const wrapper = island();
@@ -82,7 +81,7 @@ describe("MemoryIsland", () => {
     expect(wrapper.findAll("li.known-word")).toHaveLength(0);
   });
 
-  it.fails("keeps the note and says so when the server refuses", async () => {
+  it("keeps the note and says so when the server refuses", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 404 })));
     const wrapper = island();
     await wrapper.find("button.remove").trigger("click");
@@ -91,7 +90,7 @@ describe("MemoryIsland", () => {
     expect(wrapper.text()).toContain("Gagal. Coba lagi.");
   });
 
-  it.fails("says when there is nothing remembered yet", () => {
+  it("says when there is nothing remembered yet", () => {
     const text = mount(MemoryIsland, { props: { notes: [], words: [], copy, csrf: "t" } }).text();
     expect(text).toContain("Belum ada catatan.");
     expect(text).toContain("Belum ada kata.");

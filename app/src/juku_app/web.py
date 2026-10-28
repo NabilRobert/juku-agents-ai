@@ -34,6 +34,7 @@ from juku_common.rules import Rules
 from juku_data import engine
 from juku_data.engine import Databases, LearnerNotFoundError, UnknownWordError
 from juku_data.engine.models import Learner
+from juku_data.memory import NoteNotFoundError, get_memory, mark_note_wrong, remove_note
 from pydantic import BaseModel, Field
 from pydantic_ai.models import Model
 from sqlalchemy import text
@@ -57,6 +58,10 @@ TIMEZONES = ("Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura", "Asia/Tokyo")
 LEVELS = (5, 4, 3, 2)
 # Enough batches for a long session; a client can't ask for an unbounded slice.
 MAX_QUIZ_BATCH = 20
+# get_memory names notes `note-<id>`, so Shiori can cite them; the page's URLs use the same.
+NOTE_PREFIX = "note-"
+# remove_note or mark_note_wrong: the learner's two corrections to a note.
+NoteCorrection = Callable[[Databases, int, int, datetime], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -422,6 +427,45 @@ def create_web_app(deps: WebDeps) -> FastAPI:
                     "quote": rating.may_quote,
                 },
             )
+        return Response(status_code=204)
+
+    @app.get("/ingat")
+    async def memory_page(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008
+        """ "Shiori ingat..." (MEM-R5): every note with its evidence and age, and the words the learner knows."""
+        remembered = await get_memory(db, current.learner.id, datetime.now(UTC))
+        known = await engine.get_known_words(db, current.learner.id)
+        memory_data = {
+            "notes": [note.model_dump(mode="json") for note in remembered.notes],
+            "words": [word.model_dump(mode="json") for word in known.items],
+        }
+        return render(request, "ingat.html", page=current, memory_data=memory_data, known_total=known.total)
+
+    async def correct_note(note_ref: str, learner: Learner, correction: NoteCorrection) -> Response:
+        """Apply the learner's correction to their own note; any other note is simply not found."""
+        number = note_ref.removeprefix(NOTE_PREFIX)
+        if not number.isdigit():
+            return Response(status_code=404)
+        try:
+            await correction(db, learner.id, int(number), datetime.now(UTC))
+        except NoteNotFoundError:
+            return Response(status_code=404)
+        return Response(status_code=204)
+
+    @app.post("/ingat/catatan/{note_ref}/hapus", dependencies=[Depends(header_csrf)])
+    async def remove(note_ref: str, current: Page = Depends(page)) -> Response:  # noqa: B008
+        return await correct_note(note_ref, current.learner, remove_note)
+
+    @app.post("/ingat/catatan/{note_ref}/salah", dependencies=[Depends(header_csrf)])
+    async def mark_wrong(note_ref: str, current: Page = Depends(page)) -> Response:  # noqa: B008
+        return await correct_note(note_ref, current.learner, mark_note_wrong)
+
+    @app.post("/ingat/kata/{word_id}/belum", dependencies=[Depends(header_csrf)])
+    async def unmark(word_id: str, current: Page = Depends(page)) -> Response:  # noqa: B008
+        """Unmark a known word (MEM-R5): known again only by marking it or answering right on two days."""
+        try:
+            await engine.unmark_known(db, current.learner.id, word_id, datetime.now(UTC))
+        except UnknownWordError:
+            return Response(status_code=404)
         return Response(status_code=204)
 
     @app.get("/pengaturan")

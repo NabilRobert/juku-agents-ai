@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from juku_data.engine.models import (
     DayActivity,
+    KnownWord,
+    KnownWords,
     Learner,
     LevelCoverage,
     MistakeItem,
@@ -104,6 +106,10 @@ KNOWN_IDS = "SELECT item_id FROM learning.learner_state WHERE learner_id = :lear
 MISTAKES = """
 SELECT item_id, box, due_at FROM learning.learner_state
 WHERE learner_id = :learner_id AND box IS NOT NULL ORDER BY due_at, item_id
+"""
+KNOWN_WORDS = """
+SELECT item_id FROM learning.learner_state
+WHERE learner_id = :learner_id AND is_known ORDER BY last_seen_at DESC, item_id LIMIT :limit
 """
 ACTIVITY = """
 SELECT day, quiz_answers, quiz_correct, words_marked, sentences_read FROM learning.learner_daily_activity
@@ -273,6 +279,18 @@ async def get_plan(app: AsyncEngine, learner: Learner, today: date) -> Plan:
         words_per_week=words_per_week,
         formula=formula,
     )
+
+
+async def get_known_words(app: AsyncEngine, dictionary: AsyncEngine, learner_id: int, limit: int) -> KnownWords:
+    async with app.connect() as connection:
+        rows = (await connection.execute(text(KNOWN_WORDS), {"learner_id": learner_id, "limit": limit})).all()
+        total = await connection.scalar(text(KNOWN_COUNT), {"learner_id": learner_id})
+    details = await word_details(dictionary, [str(row[0]) for row in rows])
+    items = [
+        KnownWord(word_id=str(word_id), word=details[str(word_id)][0], reading=details[str(word_id)][1])
+        for (word_id,) in rows
+    ]
+    return KnownWords(items=items, total=int(total or 0))
 
 
 async def get_recent_activity(app: AsyncEngine, learner_id: int, today: date, days: int) -> RecentActivity:
