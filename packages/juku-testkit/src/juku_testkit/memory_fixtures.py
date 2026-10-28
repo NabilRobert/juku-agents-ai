@@ -118,7 +118,7 @@ async def _replay_action(
     elif "mark_wrong" in item:
         await mark_note_wrong(db, learner_id, _note(loaded, int(item["mark_wrong"])), at)
     elif item.get("consolidate"):
-        await consolidate(db, learner_id, rules, at)
+        await consolidate(db.app, learner_id, rules, at)
     else:
         raise ValueError(f"unknown fixture action {item!r}")
 

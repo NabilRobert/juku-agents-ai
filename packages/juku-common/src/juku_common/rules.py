@@ -119,6 +119,29 @@ class BudgetRules(Section):
         return self
 
 
+class MemoryRules(Section):
+    """`memory`: what a proposed agent note must pass, and how long notes last (ADR-008; MEM-R2 to MEM-R5)."""
+
+    allowed_categories: list[str] = Field(min_length=1)
+    forbidden_categories: list[str] = Field(min_length=1)
+    forbidden_text_markers: list[str]
+    min_evidence_events: int = Field(ge=2)
+    evidence_max_age_days: int = Field(gt=0)
+    contradicting_answers: int = Field(ge=1)
+    suppress_after_removal_days: int = Field(ge=0)
+    max_active_notes: int = Field(ge=1)
+    max_text_chars: int = Field(gt=0, le=500)
+
+    @model_validator(mode="after")
+    def _categories_dont_overlap(self) -> Self:
+        both = set(self.allowed_categories) & set(self.forbidden_categories)
+        if both:
+            raise ValueError(f"categories both allowed and forbidden: {sorted(both)}")
+        if any(marker != marker.lower() for marker in self.forbidden_text_markers):
+            raise ValueError("forbidden_text_markers are matched in lower case: write them in lower case")
+        return self
+
+
 class Rules(Section):
     """The whole rule file."""
 
@@ -129,6 +152,7 @@ class Rules(Section):
     agents: dict[str, list[str]]
     replan: ReplanRules
     budget: BudgetRules
+    memory: MemoryRules
     fitness: dict[str, FitnessFunction]
 
     @model_validator(mode="after")

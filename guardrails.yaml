@@ -85,6 +85,30 @@ budget:
   # Budget alerts fire at these shares of each pool (M5).
   alert_fractions: [0.5, 0.8, 1.0]
 
+# Agent notes (ADR-008; Phase 2 MEM-R2 to MEM-R5). Agents only propose
+# notes; code stores one only if all of these hold
+# (packages/juku-data/src/juku_data/memory/evidence.py). The categories are
+# also a database check (migration 0004_data), kept equal by a test.
+memory:
+  # Learning only (MEM-R3).
+  allowed_categories: [recurring_confusion, preferred_example, pace, avoided_level]
+  # Refused in code, counted (MEM2), and high severity for Tadashi.
+  forbidden_categories: [health, emotions, personal_life, work, other_people]
+  # Words that put a note's text outside learning, whatever its category
+  # (lower case; a note containing any of them is refused).
+  forbidden_text_markers: [sakit, lelah, capek, sedih, stres, depresi, cemas, kerja, kantor, gaji, pacar,
+                           suami, istri, keluarga, orang tua, anak saya, hamil, dokter, obat, agama]
+  # The evidence: at least this many activity rows, the newest no older than this.
+  min_evidence_events: 3
+  evidence_max_age_days: 30
+  # A confusion lapses once the learner has answered it right this many times since its last miss (MEM4).
+  contradicting_answers: 2
+  # After the learner removes a note, the same kind isn't proposed again for this long (MEM-R5).
+  suppress_after_removal_days: 30
+  # Small by design (scale path): a learner has at most this many active notes.
+  max_active_notes: 12
+  max_text_chars: 160
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as

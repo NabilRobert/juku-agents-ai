@@ -38,6 +38,16 @@ budget:
   report_run_request_limit: 8
   report_run_total_tokens_limit: 40000
   alert_fractions: [0.5, 0.8, 1.0]
+memory:
+  allowed_categories: [recurring_confusion, pace]
+  forbidden_categories: [health]
+  forbidden_text_markers: [sakit]
+  min_evidence_events: 3
+  evidence_max_age_days: 30
+  contradicting_answers: 2
+  suppress_after_removal_days: 30
+  max_active_notes: 12
+  max_text_chars: 160
 fitness:
   FF3:
     title: Incremental state equals a full recompute

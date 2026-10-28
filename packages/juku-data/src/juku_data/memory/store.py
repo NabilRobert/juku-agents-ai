@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from juku_common.rules import Rules
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from juku_data.engine import Databases
 from juku_data.memory.models import ConsolidationDecision, Memory, NoteProposal, ProposalOutcome
@@ -32,5 +33,5 @@ async def get_memory(db: Databases, learner_id: int, now: datetime) -> Memory:
     raise NotImplementedError
 
 
-async def consolidate(db: Databases, learner_id: int, rules: Rules, now: datetime) -> list[ConsolidationDecision]:
+async def consolidate(app: AsyncEngine, learner_id: int, rules: Rules, now: datetime) -> list[ConsolidationDecision]:
     raise NotImplementedError
