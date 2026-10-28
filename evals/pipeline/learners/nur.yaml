@@ -1,0 +1,11 @@
+# Pipeline fixture: a mistakes queue. Four words missed this week, all due for review by Sunday.
+public_id: pipe-nur
+nickname: Nur
+target_level: 5
+timezone: Asia/Jayapura
+events:
+  - {label: m1, at: "2026-11-02T19:00:00+09:00", type: quiz_meaning, word: 猫/ねこ, correct: false}
+  - {label: m2, at: "2026-11-03T19:00:00+09:00", type: quiz_meaning, word: 犬/いぬ, correct: false}
+  - {label: m3, at: "2026-11-04T19:00:00+09:00", type: quiz_reading, word: 魚/さかな, correct: false}
+  - {label: m4, at: "2026-11-05T19:00:00+09:00", type: quiz_reading, word: 雨/あめ, correct: false}
+  - {label: g1, at: "2026-11-06T19:00:00+09:00", type: quiz_meaning, word: 花/はな, correct: true}

@@ -109,6 +109,22 @@ memory:
   max_active_notes: 12
   max_text_chars: 160
 
+# The weekly pipeline (ADR-007, ADR-014; Phase 2 AG1, AG2, AG4).
+pipeline:
+  # Revisions of one output before the learner gets the facts-only report.
+  max_revisions: 2
+  # Nikki's report, at most (AG1).
+  report_max_words: 300
+  # A learner's weekly run is due on this weekday (Monday is 0) at this hour, in their own timezone (AG2).
+  due_weekday: 6
+  due_hour: 18
+  # A run still marked running this long after it started was killed; a rerun takes it over (FF7).
+  run_lease_minutes: 30
+  # The dead-man's switch: a due run not finished this long after its hour alerts Arthur.
+  overdue_after_minutes: 60
+  # The feedback job treats an issue as a pattern from this many in a week (AG4).
+  feedback_min_occurrences: 3
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as

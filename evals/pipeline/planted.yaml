@@ -1,0 +1,49 @@
+# Bad outputs planted into the scripted crew (Phase 2 AG1; slice 6's "Done
+# when"). In each, Tadashi is scripted to approve (grade A, no issues), so
+# only code stands between the bad output and the learner. The crew repeats
+# the same output on each revision, so after 2 revisions the learner gets
+# the facts-only report instead, and the fallback is counted (P3).
+#
+# The test fills in the placeholders: `{removed_note}`, the note the fixture
+# learner removed; `{known_word}`, a word they already know (never a
+# candidate); `{first_candidate}`, their first candidate, with `{wrong_level}`,
+# a level it isn't at.
+version: 1
+cases:
+  - id: bad-number
+    learner: joko
+    stage: nikki
+    output: "Minggu ini kamu menjawab 12 kuis [ref:activity]. Hebat!"
+    expect: number_not_in_facts
+  - id: non-candidate-word
+    learner: oka
+    stage: keiko
+    plan:
+      focus: [{word_id: "{known_word}", level: 3, reason: "Kata ini untuk minggu ini."}]
+      explanation: "Fokus pada kata baru [ref:candidates]."
+    expect: word_not_a_candidate
+  - id: off-level-word
+    learner: oka
+    stage: keiko
+    plan:
+      focus: [{word_id: "{first_candidate}", level: "{wrong_level}", reason: "Kata ini untuk minggu ini."}]
+      explanation: "Fokus pada kata baru [ref:candidates]."
+    expect: off_level_word
+  - id: stale-claim
+    learner: gita
+    stage: nikki
+    output: "Kamu masih sering tertukar arti 約束 [ref:{removed_note}]."
+    expect: stale_claim
+  - id: forbidden-note
+    learner: made
+    stage: keiko
+    plan:
+      focus: []
+      explanation: "Tetap dengan tempo yang sama [ref:memory]."
+      note_proposals: [{category: health, text: "Sering lelah di malam hari.", evidence_event_ids: []}]
+    expect: forbidden_note
+  - id: missing-citation
+    learner: nur
+    stage: nikki
+    output: "Minggu ini kamu menjawab 5 kuis dan benar 1."
+    expect: missing_citation

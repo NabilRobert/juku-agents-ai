@@ -47,6 +47,14 @@ memory:
   suppress_after_removal_days: 30
   max_active_notes: 12
   max_text_chars: 160
+pipeline:
+  max_revisions: 2
+  report_max_words: 300
+  due_weekday: 6
+  due_hour: 18
+  run_lease_minutes: 30
+  overdue_after_minutes: 60
+  feedback_min_occurrences: 3
 fitness:
   FF4:
     title: Migrations are safe

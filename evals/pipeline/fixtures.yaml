@@ -1,0 +1,60 @@
+# The weekly pipeline's fixtures for 10 learners (ADR-015; Phase 2 AG1),
+# written before the pipeline. Each runs as of Sunday 18:00 in the learner's
+# own timezone (AG2), for the week Monday 2 to Sunday 8 November 2026.
+#
+# The six learners here are in learners/; the four from MEM1 are in
+# ../memory/learners/. For each, `expected` is the gold: what reference_sql
+# returns over the fixture data. Juku's $0 tests check that the facts the
+# pipeline gathers say the same, and that a faithful scripted crew gets each
+# learner's report approved without a fallback. planted.yaml holds the bad
+# outputs code must block.
+version: 1
+fixture:
+  local_time: "18:00"
+  run_date: "2026-11-08"
+  week_start: "2026-11-02"
+  week_end: "2026-11-08"
+reference_sql: >-
+  SELECT
+    (SELECT count(*) FROM learning.learner_state WHERE learner_id = :learner_id AND is_known) AS known_words,
+    (SELECT coalesce(sum(quiz_answers), 0) FROM learning.learner_daily_activity
+       WHERE learner_id = :learner_id AND day BETWEEN :week_start AND :week_end) AS quiz_answers,
+    (SELECT coalesce(sum(quiz_correct), 0) FROM learning.learner_daily_activity
+       WHERE learner_id = :learner_id AND day BETWEEN :week_start AND :week_end) AS quiz_correct,
+    (SELECT coalesce(sum(words_marked), 0) FROM learning.learner_daily_activity
+       WHERE learner_id = :learner_id AND day BETWEEN :week_start AND :week_end) AS words_marked,
+    (SELECT coalesce(sum(sentences_read), 0) FROM learning.learner_daily_activity
+       WHERE learner_id = :learner_id AND day BETWEEN :week_start AND :week_end) AS sentences_read,
+    (SELECT count(*) FROM learning.learner_state WHERE learner_id = :learner_id AND box IS NOT NULL) AS mistakes,
+    (SELECT count(*) FROM learning.memory_notes WHERE learner_id = :learner_id AND status = 'active') AS notes
+learners:
+  - name: fajar
+    source: memory
+    expected: {known_words: 4, quiz_answers: 6, quiz_correct: 1, words_marked: 0, sentences_read: 0, mistakes: 2, notes: 1}
+  - name: gita
+    source: memory
+    expected: {known_words: 3, quiz_answers: 3, quiz_correct: 0, words_marked: 2, sentences_read: 3, mistakes: 1, notes: 1}
+  - name: hana
+    source: memory
+    expected: {known_words: 1, quiz_answers: 4, quiz_correct: 4, words_marked: 0, sentences_read: 0, mistakes: 1, notes: 0}
+  - name: indra
+    source: memory
+    expected: {known_words: 0, quiz_answers: 0, quiz_correct: 0, words_marked: 0, sentences_read: 0, mistakes: 0, notes: 0}
+  - name: joko
+    source: pipeline
+    expected: {known_words: 3, quiz_answers: 3, quiz_correct: 2, words_marked: 3, sentences_read: 1, mistakes: 1, notes: 0}
+  - name: kartika
+    source: pipeline
+    expected: {known_words: 3, quiz_answers: 1, quiz_correct: 1, words_marked: 2, sentences_read: 0, mistakes: 0, notes: 0}
+  - name: lestari
+    source: pipeline
+    expected: {known_words: 2, quiz_answers: 0, quiz_correct: 0, words_marked: 0, sentences_read: 0, mistakes: 0, notes: 0}
+  - name: made
+    source: pipeline
+    expected: {known_words: 3, quiz_answers: 1, quiz_correct: 1, words_marked: 3, sentences_read: 0, mistakes: 0, notes: 1}
+  - name: nur
+    source: pipeline
+    expected: {known_words: 0, quiz_answers: 5, quiz_correct: 1, words_marked: 0, sentences_read: 0, mistakes: 4, notes: 0}
+  - name: oka
+    source: pipeline
+    expected: {known_words: 2, quiz_answers: 2, quiz_correct: 1, words_marked: 2, sentences_read: 0, mistakes: 1, notes: 0}

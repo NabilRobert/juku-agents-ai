@@ -142,6 +142,18 @@ class MemoryRules(Section):
         return self
 
 
+class PipelineRules(Section):
+    """`pipeline`: the weekly run's revisions, report length, schedule and dead-man's switch (ADR-007, ADR-014)."""
+
+    max_revisions: int = Field(ge=0, le=5)
+    report_max_words: int = Field(gt=0)
+    due_weekday: int = Field(ge=0, le=6)
+    due_hour: int = Field(ge=0, le=23)
+    run_lease_minutes: int = Field(gt=0)
+    overdue_after_minutes: int = Field(gt=0)
+    feedback_min_occurrences: int = Field(ge=2)
+
+
 class Rules(Section):
     """The whole rule file."""
 
@@ -153,6 +165,7 @@ class Rules(Section):
     replan: ReplanRules
     budget: BudgetRules
     memory: MemoryRules
+    pipeline: PipelineRules
     fitness: dict[str, FitnessFunction]
 
     @model_validator(mode="after")

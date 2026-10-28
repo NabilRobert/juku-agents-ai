@@ -1,0 +1,10 @@
+# Pipeline fixture: an N3 learner, so an N5 or N4 word in the plan is off-level.
+public_id: pipe-oka
+nickname: Oka
+target_level: 3
+timezone: Asia/Jakarta
+events:
+  - {label: k1, at: "2026-11-03T21:00:00+07:00", type: marked_known, word: 経営/けいえい}
+  - {label: k2, at: "2026-11-04T21:00:00+07:00", type: marked_known, word: 環境/かんきょう}
+  - {label: q1, at: "2026-11-05T21:00:00+07:00", type: quiz_meaning, word: 影響/えいきょう, correct: false}
+  - {label: q2, at: "2026-11-06T21:00:00+07:00", type: quiz_reading, word: 状況/じょうきょう, correct: true}

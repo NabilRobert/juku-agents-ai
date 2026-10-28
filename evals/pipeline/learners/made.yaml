@@ -1,0 +1,13 @@
+# Pipeline fixture: a learner with a pace note, so Keiko's plan can use memory (MEM5).
+public_id: pipe-made
+nickname: Made
+target_level: 5
+timezone: Asia/Makassar
+events:
+  - {label: p1, at: "2026-11-02T20:00:00+08:00", type: marked_known, word: 朝/あさ}
+  - {label: p2, at: "2026-11-03T20:00:00+08:00", type: marked_known, word: 夜/よる}
+  - {label: p3, at: "2026-11-05T20:00:00+08:00", type: marked_known, word: 駅/えき}
+  - {label: q1, at: "2026-11-06T20:00:00+08:00", type: quiz_reading, word: 駅/えき, correct: true}
+proposals:
+  - {at: "2026-11-05T21:00:00+08:00", by: keiko, category: pace,
+     text: "Menandai satu kata baru hampir setiap hari.", evidence: [p1, p2, p3], expect: accepted}

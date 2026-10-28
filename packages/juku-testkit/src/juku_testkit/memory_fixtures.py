@@ -1,4 +1,4 @@
-"""MEM1's fixture learners (evals/memory/learners/*.yaml), replayed into a test database.
+"""Fixture learners (evals/memory/learners/ and evals/pipeline/learners/), replayed into a test database.
 
 A fixture lists a learner's activity, the notes agents proposed, and what
 the learner and the weekly consolidation did afterwards. `load_memory_fixture`
@@ -14,7 +14,7 @@ words are `spelling/reading`, resolved against the loaded dictionary.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -29,6 +29,9 @@ from sqlalchemy import text
 from juku_testkit.databases import repo_root
 
 MEMORY_EVALS = repo_root() / "evals" / "memory"
+PIPELINE_EVALS = repo_root() / "evals" / "pipeline"
+# Where each source keeps its learners: MEM1's, and the six the pipeline adds.
+SOURCES = {"memory": MEMORY_EVALS / "learners", "pipeline": PIPELINE_EVALS / "learners"}
 QUIZ_KINDS: dict[str, QuizKind] = {"quiz_meaning": "meaning", "quiz_reading": "reading"}
 ACCEPTED = "accepted"
 
@@ -49,8 +52,8 @@ def fixture_now() -> datetime:
     return datetime.fromisoformat(str(load_suite()["fixture"]["now"]))
 
 
-def _read(name: str) -> dict[str, Any]:
-    path: Path = MEMORY_EVALS / "learners" / f"{name}.yaml"
+def _read(name: str, source: str) -> dict[str, Any]:
+    path: Path = SOURCES[source] / f"{name}.yaml"
     return cast(dict[str, Any], yaml.safe_load(path.read_text(encoding="utf-8")))
 
 
@@ -130,14 +133,18 @@ def _note(loaded: LoadedFixture, index: int) -> int:
     return note_id
 
 
-async def load_memory_fixture(db: Databases, rules: Rules, name: str, *, suffix: str = "") -> LoadedFixture:
+async def load_memory_fixture(
+    db: Databases, rules: Rules, name: str, *, suffix: str = "", source: str = "memory"
+) -> LoadedFixture:
     """Create the learner and replay its events, proposals and actions in time order."""
-    raw = _read(name)
+    raw = _read(name, source)
+    exam = raw.get("exam_date")
     learner = await create_learner(
         db,
         nickname=str(raw["nickname"]),
         target_level=int(raw["target_level"]),
         timezone=str(raw["timezone"]),
+        exam_date=exam if isinstance(exam, date) else None,
         public_id=str(raw["public_id"]) + suffix,
     )
     loaded = LoadedFixture(name=name, learner=learner)
