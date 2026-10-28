@@ -1,0 +1,48 @@
+# The gateway's side of Juku (ADR-018, ID-R1): an example of the entries
+# mcp-security-gateway's own config needs for Juku. The gateway runs from
+# its own repository and deployment (a server step for Arthur, slice 8);
+# this file is the reference for it, not a config this repo loads.
+#
+# One key per agent, each with its own allow-list, deny by default. Nikki
+# and Tadashi have no Juku tools. Keiko's list is a subset of Shiori's, as
+# delegation only narrows. A test (packages/juku-mcp/tests/test_gateway_routes.py)
+# keeps the lists equal to guardrails.yaml's `agents`.
+#
+# Juku's server listens only on the gateway's upstream network (ops/compose.yaml),
+# and it needs the gateway's _meta passthrough and caller stamp (prerequisite P6).
+upstreams:
+  juku: {transport: http, url: "http://juku-mcp:8000/mcp"}
+callers:
+  shiori: {key_sha256: "<sha256 of Shiori's key>", policy: juku-shiori}
+  keiko: {key_sha256: "<sha256 of Keiko's key>", policy: juku-keiko}
+  nikki: {key_sha256: "<sha256 of Nikki's key>", policy: juku-none}
+  tadashi: {key_sha256: "<sha256 of Tadashi's key>", policy: juku-none}
+policies:
+  juku-shiori:
+    routes:
+      juku:
+        tools:
+          get_progress: {}
+          get_mistakes: {}
+          recommend_words: {}
+          find_reading_sentences: {}
+          get_plan: {}
+          get_recent_activity: {}
+          get_memory: {}
+          search_words: {}
+          request_replan: {}
+  juku-keiko:
+    routes:
+      juku:
+        tools:
+          get_progress: {}
+          get_mistakes: {}
+          recommend_words: {}
+          find_reading_sentences: {}
+          get_plan: {}
+          get_recent_activity: {}
+          get_memory: {}
+  juku-none:
+    routes:
+      juku:
+        tools: {}
