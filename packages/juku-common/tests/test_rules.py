@@ -10,6 +10,8 @@ version: 1
 alerts:
   heartbeat_stale_seconds: 300
   tool_error_rate_per_hour: 0.05
+privacy:
+  min_learners_per_cell: 5
 fitness:
   FF4:
     title: Migrations are safe

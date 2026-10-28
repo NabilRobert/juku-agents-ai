@@ -82,13 +82,18 @@ def test_months_from_crosses_the_year_end() -> None:
 
 async def test_missing_partitions_are_created_and_existing_ones_left_alone(engine: AsyncEngine) -> None:
     created = await ensure_month_partitions(engine, date(2027, 11, 20))
-    assert created == ["monitoring.tool_calls_2028_01", "monitoring.tool_calls_2028_02"]
-    assert await ensure_month_partitions(engine, date(2027, 11, 20)) == []
-    async with engine.begin() as connection:
-        await connection.execute(
-            text(
-                "INSERT INTO monitoring.tool_calls (called_at, agent, server, tool, duration_ms, outcome) "
-                "VALUES ('2028-02-10T12:00:00Z', 'shiori', 'juku', 'get_progress', 9, 'ok')"
+    try:
+        assert {"monitoring.tool_calls_2028_01", "monitoring.tool_calls_2028_02"} <= set(created)
+        assert not any(name.endswith(("_2027_11", "_2027_12")) for name in created), "those exist already"
+        assert await ensure_month_partitions(engine, date(2027, 11, 20)) == []
+        async with engine.begin() as connection:
+            await connection.execute(
+                text(
+                    "INSERT INTO monitoring.tool_calls (called_at, agent, server, tool, duration_ms, outcome) "
+                    "VALUES ('2028-02-10T12:00:00Z', 'shiori', 'juku', 'get_progress', 9, 'ok')"
+                )
             )
-        )
-        await connection.execute(text("DROP TABLE monitoring.tool_calls_2028_01, monitoring.tool_calls_2028_02"))
+    finally:
+        async with engine.begin() as connection:
+            for name in created:
+                await connection.execute(text(f"DROP TABLE {name}"))

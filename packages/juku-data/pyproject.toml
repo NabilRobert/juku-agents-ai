@@ -1,0 +1,36 @@
+[project]
+name = "juku-data"
+version = "0.0.0"
+description = "Juku's data and learning engine: the OpenJLPT load, learner state, and the deterministic engine (LE1-LE6)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "juku-common",
+    "asyncpg==0.32.0",
+    "httpx==0.28.1",
+    "jaconv==0.5.0",
+    "pydantic==2.14.1",
+    "pydantic-settings==2.16.1",
+    "sqlalchemy[asyncio]==2.1.4",
+    "sudachidict-core==20260723.1",
+    "sudachipy==0.7.0",
+    "typer==0.27.3",
+]
+
+[project.scripts]
+juku-data = "juku_data.cli:app"
+
+[tool.uv.sources]
+juku-common = { workspace = true }
+
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/juku_data"]
+
+[tool.mutmut]
+# Run from this folder: `uv run --frozen mutmut run`. The tests need `make db-up`.
+source_paths = ["src/juku_data/"]
+do_not_mutate = ["src/juku_data/cli.py", "src/juku_data/settings.py"]
+pytest_add_cli_args_test_selection = ["tests/"]

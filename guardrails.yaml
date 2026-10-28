@@ -13,6 +13,11 @@ alerts:
   heartbeat_stale_seconds: 300
   tool_error_rate_per_hour: 0.05
 
+# Privacy floors (Phase 2 EV2, M4): no aggregate, on a dashboard or in
+# published evidence, covers fewer learners than this.
+privacy:
+  min_learners_per_cell: 5
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as
@@ -24,8 +29,7 @@ fitness:
     until: track A (slice 2)
   FF2:
     title: Hot paths read summaries only, never learning_events
-    status: pending
-    until: track A (slice 2)
+    status: active
   FF3:
     title: Incremental state equals a full recompute
     status: pending

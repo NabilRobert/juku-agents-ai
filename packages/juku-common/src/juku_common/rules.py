@@ -64,11 +64,18 @@ class AlertThresholds(Section):
     tool_error_rate_per_hour: float = Field(gt=0, lt=1)
 
 
+class PrivacyRules(Section):
+    """Privacy floors (Phase 2 EV2, M4)."""
+
+    min_learners_per_cell: int = Field(ge=2)
+
+
 class Rules(Section):
     """The whole rule file."""
 
     version: int
     alerts: AlertThresholds
+    privacy: PrivacyRules
     fitness: dict[str, FitnessFunction]
 
     @model_validator(mode="after")

@@ -7,7 +7,7 @@ name = "juku-agents"
 version = "0.0.0"
 description = "Juku: an agentic JLPT learning platform for Indonesian learners"
 requires-python = ">=3.12,<3.13"
-dependencies = ["juku-common", "juku-ops"]
+dependencies = ["juku-common", "juku-data", "juku-ops"]
 
 [tool.uv]
 package = false
@@ -17,6 +17,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 juku-common = { workspace = true }
+juku-data = { workspace = true }
 juku-ops = { workspace = true }
 juku-testkit = { workspace = true }
 
