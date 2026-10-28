@@ -19,7 +19,7 @@ from typing import Any
 
 import uvicorn
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from mcp.server import Server, ServerRequestContext
 from mcp.types import CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, TextContent, Tool
 
@@ -92,7 +92,7 @@ def build(verifier: Verifier, log_path: str, require_caller: bool) -> Server:
 def main() -> None:
     port, pem, log_path = int(sys.argv[1]), sys.argv[2], sys.argv[3]
     public = serialization.load_pem_public_key(open(pem, "rb").read())
-    assert isinstance(public, ec.EllipticCurvePublicKey)
+    assert isinstance(public, ed25519.Ed25519PublicKey)
     server = build(Verifier(public), log_path, require_caller="--require-caller" in sys.argv)
     app = server.streamable_http_app(streamable_http_path="/mcp")
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")

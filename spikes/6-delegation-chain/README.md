@@ -17,7 +17,7 @@ change for the gateway repo, Arthur's; nothing there was modified.
 ```
 pytest -q                 # 22 tests of the token rules
 python mutate.py          # disables each of 20 checks in turn: 20/20 killed
-./run.sh <venv python>    # the attack suite: direct, unmodified gateway, patched gateway
+./run.sh <venv python> [<PydanticAI venv python>]   # the attack suite, plus the PydanticAI check
 ```
 
 ## 1. The MCP authorization spec, read first
@@ -60,7 +60,7 @@ implements it. What matters for Juku:
 ## 2. What was built
 
 - `delegation.py`: the app's signer and the server's verifier.
-  - ES256 JWTs shaped on RFC 8693: `sub` is the pseudonymous learner;
+  - Ed25519-signed JWTs (PyJWT, `EdDSA`) shaped on RFC 8693: `sub` is the pseudonymous learner;
     `act` is nested, outermost = the agent acting now; plus `purpose`,
     `run`, `tools`, `aud = juku-mcp`, a 60 s `exp` and a single-use `jti`.
   - A delegated token (Keiko, for Shiori's `request_replan`) carries its
@@ -141,6 +141,38 @@ not by the check named.
   20 checks in turn, and every mutant is killed
   ([results-mutation.txt](results-mutation.txt)).
 
+## 3a. Through PydanticAI (ADR-025)
+
+**Pass with the patched gateway: PydanticAI can set `_meta` per call, with
+no hand-written loop.**
+- `pai_check.py` runs an `Agent` with PydanticAI's `MCPToolset`: Streamable
+  HTTP to the gateway, with the agent's own key in the `Authorization`
+  header.
+- Its `process_tool_call` hook mints a fresh single-use token for each call
+  and passes it as `call_tool(name, args, metadata={...})`. PydanticAI
+  sends that as the request's `_meta`.
+- The models are `TestModel` (Shiori, one `get_progress` call) and a
+  `FunctionModel` (Keiko, delegated by Shiori, two calls), so it costs $0.
+
+| | Gateway `main` | Gateway + patch |
+|---|---|---|
+| Shiori (`TestModel`), 1 call | refused: no delegation token | allowed; token and `traceparent` unchanged |
+| Keiko (`FunctionModel`, delegated), 2 calls | refused: no delegation token | both allowed, each with its own token; unchanged |
+
+The output is in `results-pydantic-ai-*.json`.
+
+- **For slice 3,** `process_tool_call` is the hook where the app mints each
+  call's token. The run's `deps` carry the learner, the chain and the
+  allowed tools. With `tool_error_behavior="error"`, a refusal ends the
+  run as a `ToolError`, rather than letting the model retry it.
+- **Packages,** all installed from the local uv cache into the spike's own
+  venv, nothing downloaded:
+  - pydantic-ai-slim[mcp] 2.56.0 (MIT; the version Arthur's MCP-backbone
+    checkouts pin), with fastmcp-slim 4.1.4 and mcp 2.3.0;
+  - PyJWT 2.15.1 and cryptography 50.0.2.
+
+  PyPI's latest is 2.63.0, released today; slice 3 picks the pin.
+
 ## 4. What it changes in the plan (proposed, not yet edited)
 
 1. **Gateway repo, before slice 3 can run through it:** the `_meta`
@@ -157,7 +189,8 @@ not by the check named.
    request carries it in `_meta`". MCP 2026-07-28 has no sessions.
 3. **ADR-018:** fix the details this spike settled:
    - the `_meta` key name;
-   - per-call, single-use tokens;
+   - per-call, single-use tokens, Ed25519-signed and minted in PydanticAI's
+     `process_tool_call`;
    - the parent token embedded in a delegated one;
    - the caller stamp as the actor binding;
    - the reading of "no token passthrough" above;

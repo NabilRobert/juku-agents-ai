@@ -1,7 +1,7 @@
 """Spike 6: delegation tokens (ADR-018), minted by the app, checked by Juku's
 MCP server.
 
-A token is an ES256 JWT with claims shaped on OAuth 2.0 Token Exchange
+A token is an Ed25519-signed JWT (EdDSA) with claims shaped on OAuth 2.0 Token Exchange
 (RFC 8693): the learner as `sub`, the agents as a nested `act` (outermost =
 the agent acting now), the purpose and run, the allowed `tools`, the
 audience and a short expiry. It is single-use (`jti`): the app mints one per
@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import jwt
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ed25519
 
 ISSUER = "juku-app"
 AUDIENCE = "juku-mcp"
@@ -60,9 +60,9 @@ def nest(chain: list[str]) -> dict[str, Any]:
 class Signer:
     """The app's signer. In the spike its key is made fresh at start-up."""
 
-    key: ec.EllipticCurvePrivateKey = field(default_factory=lambda: ec.generate_private_key(ec.SECP256R1()))
+    key: ed25519.Ed25519PrivateKey = field(default_factory=ed25519.Ed25519PrivateKey.generate)
 
-    def public(self) -> ec.EllipticCurvePublicKey:
+    def public(self) -> ed25519.Ed25519PublicKey:
         return self.key.public_key()
 
     def mint(
@@ -94,14 +94,14 @@ class Signer:
         }
         if parent is not None:
             claims["parent"] = parent
-        return jwt.encode(claims, self.key, algorithm="ES256")
+        return jwt.encode(claims, self.key, algorithm="EdDSA")
 
 
 @dataclass
 class Verifier:
     """Juku's MCP server side. Every check fails closed."""
 
-    public_key: ec.EllipticCurvePublicKey
+    public_key: ed25519.Ed25519PublicKey
     seen: dict[str, float] = field(default_factory=dict)  # jti -> exp, for replay
 
     def _decode(self, token: str) -> dict[str, Any]:
@@ -109,7 +109,7 @@ class Verifier:
             return jwt.decode(
                 token,
                 self.public_key,
-                algorithms=["ES256"],
+                algorithms=["EdDSA"],
                 audience=AUDIENCE,
                 issuer=ISSUER,
                 options={"require": REQUIRED},

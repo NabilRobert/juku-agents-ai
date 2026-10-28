@@ -7,26 +7,27 @@
 # The gateway runs from copies exported with `git archive`; its checkout is
 # never changed. Every key here is a test value made for this run.
 #
-# Usage: ./run.sh <spike venv python>   (writes results-*.json here)
+# Usage: ./run.sh <spike venv python> [<PydanticAI venv python>]   (writes results-*.json here)
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 PY=${1:?python of a venv with mcp 2.3.0, pyjwt and cryptography}
+PAI_PY=${2:-}  # optional: a venv with pydantic-ai-slim[mcp] 2.56.0, for the PydanticAI check
 GW_REPO=${GW_REPO:-$HOME/Desktop/my-kerjaan-aku/mcp-gateway}
 GW_PY=$GW_REPO/.venv/bin/python
 RUN=$(mktemp -d)
 PIDS=()
 cleanup() { for p in ${PIDS[@]+"${PIDS[@]}"}; do kill "$p" 2>/dev/null || true; done; rm -rf "$RUN"; }
 trap cleanup EXIT
-export PYTHONDONTWRITEBYTECODE=1
+export PYTHONDONTWRITEBYTECODE=1 PYDANTIC_AI_NO_BANNER=1
 
 # Test keys: the app's signing key pair, and one gateway key per agent.
 "$PY" - "$RUN" <<'EOF'
 import hashlib, json, secrets, sys
 from pathlib import Path
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ed25519
 run = Path(sys.argv[1])
-key = ec.generate_private_key(ec.SECP256R1())
+key = ed25519.Ed25519PrivateKey.generate()
 (run / "app_key.pem").write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
                                                      serialization.NoEncryption()))
 (run / "app_pub.pem").write_bytes(key.public_key().public_bytes(serialization.Encoding.PEM,
@@ -64,6 +65,12 @@ attack() { # mode, url, juku log, [gateway log]
   (cd "$HERE" && "$PY" attack.py "$1" "$2" "$RUN/app_key.pem" "$3" ${4:+"$4"} ${4:+"$RUN/keys.json"}) >"$HERE/results-$1.json"
 }
 
+pai() { # mode: a PydanticAI agent through the running gateway
+  [ -n "$PAI_PY" ] || return 0
+  (cd "$HERE" && "$PAI_PY" pai_check.py "$1" http://127.0.0.1:18762/mcp/juku/ "$RUN/app_key.pem" "$RUN/keys.json") \
+    >"$HERE/results-pydantic-ai-$1.json"
+}
+
 # Exported copies of the gateway's main: as it is, and patched.
 mkdir -p "$RUN/gw-main" "$RUN/gw-patched"
 git -C "$GW_REPO" archive main src | tar -x -C "$RUN/gw-main"
@@ -78,6 +85,7 @@ stop_all
 start_juku "$RUN/juku-gateway.jsonl"
 start_gateway "$RUN/gw-main/src"
 attack gateway http://127.0.0.1:18762/mcp/juku/ "$RUN/juku-gateway.jsonl" "$RUN/gateway-audit.jsonl"
+pai gateway
 stop_all
 "$GW_PY" -c "import sys; sys.path.insert(0, '$RUN/gw-main/src'); from pathlib import Path; from mcp_gateway.audit import verify_chain; print('gateway audit chain (unmodified):', verify_chain(Path('$RUN/gateway-audit.jsonl')) or 'verifies')"
 mv "$RUN/gateway-audit.jsonl" "$RUN/gateway-audit-unmodified.jsonl"
@@ -85,6 +93,7 @@ mv "$RUN/gateway-audit.jsonl" "$RUN/gateway-audit-unmodified.jsonl"
 start_juku "$RUN/juku-patched.jsonl" --require-caller
 start_gateway "$RUN/gw-patched/src"
 attack patched http://127.0.0.1:18762/mcp/juku/ "$RUN/juku-patched.jsonl" "$RUN/gateway-audit.jsonl"
+pai patched
 stop_all
 "$GW_PY" -c "import sys; sys.path.insert(0, '$RUN/gw-patched/src'); from pathlib import Path; from mcp_gateway.audit import verify_chain; print('gateway audit chain (patched):', verify_chain(Path('$RUN/gateway-audit.jsonl')) or 'verifies')"
 

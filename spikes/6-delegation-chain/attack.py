@@ -23,7 +23,7 @@ from typing import Any
 import httpx2
 import jwt
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ed25519
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
@@ -58,7 +58,7 @@ def main() -> None:
     gw_log = sys.argv[5] if len(sys.argv) > 5 else None
     keys: dict[str, str] = json.loads(Path(sys.argv[6]).read_text()) if len(sys.argv) > 6 else {}
     private = serialization.load_pem_private_key(Path(pem).read_bytes(), password=None)
-    assert isinstance(private, ec.EllipticCurvePrivateKey)
+    assert isinstance(private, ed25519.Ed25519PrivateKey)
     app = Signer(private)
     shiori, keiko = keys.get("shiori"), keys.get("keiko")
 
