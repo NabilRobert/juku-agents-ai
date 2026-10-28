@@ -15,6 +15,24 @@ browser ─► Juku app ─┤                                                  
    └── Arthur only: Grafana (tool and pipeline health, alerts), Run Inspector; traces to Project 6's Jaeger
 ```
 
+### Reuse map (the folder's "reuse before building" rule)
+
+| Part | Reused | Built (and why) |
+|---|---|---|
+| Data | **OpenJLPT** (ADR-003); its PyPI package for search | The load script only |
+| Dictionary access | **MCP-backbone** (Arthur's) | — |
+| Auth, allow-lists, audit, injection detection | **mcp-security-gateway** (Arthur's) | The per-agent policy file |
+| Offline evals and the regression gate | **agent-eval-harness** (Arthur's) | The Juku task sets |
+| Traces | **agent-observability** (Arthur's, Project 6), OpenTelemetry | — |
+| The critic pattern | **Pitstop** (Arthur's), ported from TypeScript (ADR-007) | The Python port |
+| Dashboards and alerts | **Grafana OSS** (ADR-009) | Provisioned dashboards and alert rules |
+| Hosting, TLS, scheduling | Docker Compose, Caddy, cron | Compose and crontab files |
+| Japanese input | **SudachiPy**, **jaconv** | — |
+| The learner's MCP server | The MCP Python SDK | The scoped tools: no existing server holds Juku's learner data |
+| Delegation tokens | RFC 8693 claim shapes; Keycloak at scale | A small signer and verifier (ADR-018) |
+| Learning engine and Susumu | — | Built: deterministic, testable logic over Juku's data is what's demonstrated (ADR-010) |
+| The agents and the tool loop | The MCP and OpenAI-compatible SDKs | The loop itself, so every call is visible (ADR-005) |
+
 ### ADR-001: The users are Indonesian JLPT learners in a study group (settled)
 
 **Decision:** adults preparing for N5–N2, recruited from a study group
@@ -58,22 +76,66 @@ recorded separately.
 - *A free-form autonomous agent that decides its own steps:* it can't be
   checked, and its cost is unbounded.
 
-### ADR-003: Open dictionaries in Postgres, served by MCP-backbone (settled)
+### ADR-003: OpenJLPT as the data, in Postgres, served by MCP-backbone (settled; revised 2026-10-28)
 
 **Decision:**
-- JMdict, KANJIDIC2, KRADFILE/RADKFILE, Tatoeba and a community JLPT list,
-  loaded by committed scripts into their own database.
-- MCP-backbone serves it, on its own workspace and key, through a
-  read-only login.
+- **The data is [OpenJLPT](https://github.com/evanclan/OpenJLPT):**
+  - 7,811 words, 2,383 kanji and **526 grammar points**, N5–N1;
+  - 99.7% of its words are linked to their JMdict entry;
+  - Tatoeba example sentences with furigana for 93% of words;
+  - kanji readings, radicals, stroke counts and frequency (from
+    KANJIDIC2);
+  - stable IDs that survive data updates.
 
-**Why:** it reuses Project 1 exactly as a stranger would, so every
-dictionary query is validated, cost-checked, capped and audited.
+  It is CC BY-SA 4.0, with per-field attribution.
+- **A pinned release is loaded** (version and checksum recorded) from its
+  SQLite file into Juku's own Postgres database by a committed script.
+- **MCP-backbone serves it,** on its own workspace and key, through a
+  read-only login. Fuzzy word search ("taberu", "食べる", a typo) uses
+  OpenJLPT's own Python package (`pip install openjlpt`, ranked search
+  over kanji, kana, romaji and English), behind Juku's MCP server's
+  `search_words` tool, instead of a search index we build ourselves.
+- **Arthur's textbook PDFs are a private coverage checklist,** never a
+  source of text. They're used only to spot topics or words OpenJLPT
+  lacks. They're never committed, never sent to a model, and no text is
+  copied from them.
+- **Licence duties:**
+  - the "about the data" page carries OpenJLPT's attribution (OpenJLPT,
+    built on JMdict and KANJIDIC2 from the EDRDG, Jonathan Waller's JLPT
+    lists and Tatoeba);
+  - any dataset Juku derives from it and redistributes is also CC BY-SA
+    4.0. Juku's code licence is separate.
 
-**Rejected:**
-- *Model memory:* the failure this project exists to measure.
-- *A vector store over textbooks:* copyrighted, and not checkable.
-- *Scraping an online dictionary:* terms of service, and no stable
-  snapshot.
+**Options considered** (the folder's "reuse before building" rule):
+
+| Option | Verdict |
+|---|---|
+| **OpenJLPT** | **Chosen.** It already does the hard, error-prone part of this project's data work: mapping community JLPT lists to JMdict (the job spike 4 was measuring), with hundreds of source errors fixed. It adds 526 reviewed grammar points we would otherwise have had to write. It ships SQLite, JSON, CSV, npm and PyPI packages |
+| Raw JMdict + KANJIDIC2 + KRADFILE + Tatoeba, with our own mapping | Rejected as the primary source: more loading code, and the level mapping redone by hand. A full JMdict import stays a **Could**, for words outside the JLPT lists |
+| Hand-written grammar explanations | Rejected: OpenJLPT's are written and reviewed already |
+| Textbook content as data | Rejected: copyrighted. The PDFs stay a private checklist only |
+| A vector store over textbooks | Rejected: copyrighted, and not checkable against rows |
+| Scraping an online dictionary | Rejected: terms of service, and no stable snapshot |
+| Model memory | Rejected: the failure this project exists to measure |
+
+**Why:** it reuses Project 1 exactly as a stranger would, so every query is
+validated, cost-checked, capped and audited, over data someone else has
+already cleaned and licensed correctly.
+
+**Risk, and its mitigation:** OpenJLPT is young and effectively has one
+maintainer (release v0.2.0, July 2026). It's rebuilt from public sources
+by published scripts, so a pinned release keeps working even if the
+project stops. If it does stop, its scripts can be rerun, or the raw
+sources loaded directly.
+
+**What it changes:**
+- **Grammar questions** can now be answered from OpenJLPT's grammar
+  points, with citations, which narrows the N2 grammar gap (Phase 1).
+- **Susumu** uses OpenJLPT's kanji frequency, levels and word lists
+  (ADR-010).
+- **Reading practice** uses OpenJLPT's example sentences, tokenized with
+  SudachiPy (Phase 2, LE4).
+- **Stable IDs** settle the dictionary-update concern in the scale path.
 
 ### ADR-004: A web page first, WhatsApp later (settled)
 
@@ -172,6 +234,12 @@ the consent, memory and deletion screens.
 **Why:** this is Pitstop's critic, with one lesson applied: "code decides
 approval" now also covers the checks a model can miss.
 
+**Reused:** Pitstop's critic design: severities, code-decided approval,
+at most 2 revisions, and the weekly feedback job. It lives in Arthur's own
+public repo (`gads-case-study`, `backend/src/pipeline/`). That code is
+TypeScript and Juku is Python, so the rules are ported, not depended on,
+and the commit that ports them names the source repo and commit.
+
 **Rejected:**
 - *No critic:* nothing would catch the claims code can't check, such as a
   misleading explanation.
@@ -258,26 +326,33 @@ tables as the evidence SQL.
   planner and the Leitner mistakes queue** are SQL and Python, pinned by
   fixture learners (Phase 1, E1).
 - **The recommender: i+1 with kanji leverage.**
-  - **Precomputed tables:** `word_kanji`; `word_level` (level, tier,
-    frequency band); `kanji_leverage` (how many common words at or below
-    each level contain the kanji).
+  - **Precomputed tables, built from OpenJLPT (ADR-003):**
+    - `word_kanji`: each word's kanji;
+    - `word_level`: OpenJLPT's level, plus a commonness rank taken from
+      the KANJIDIC2 frequency of the word's rarest kanji (OpenJLPT has no
+      word frequency; kana-only words count as common);
+    - `kanji_leverage`: how many words at or below each level contain the
+      kanji.
   - **Known kanji:** every kanji of the easier levels, plus those in words
     the learner knows.
   - **Candidates:** words at the learner's level or easier, not known, with
     at most one unknown kanji. Kana-only words qualify.
   - **Ordering, lexicographic with no tuned weights:**
-    1. common words first;
-    2. gaps from easier levels first;
-    3. the leverage of the unknown kanji, higher first;
-    4. the frequency band;
-    5. the entry ID, for determinism.
+    1. gaps from easier levels first;
+    2. the leverage of the unknown kanji, higher first;
+    3. commonness (the kanji-frequency rank), most common first;
+    4. OpenJLPT's stable ID, for determinism.
+
+    If a full JMdict import is added later (a Could), its priority tags
+    could become a "common words first" step.
   - **Variety:** at most 3 of 10 suggestions share a new kanji.
   - **Reason:** built from the row, for example "1 kanji baru: 日, muncul
     di 34 kata umum N5".
   - **Frozen during the window.** It may be tuned once beforehand. A later
     change is a "what changed", with before and after.
-- **Reading practice (Should):** Tatoeba sentences whose indexed words are
-  all known except one.
+- **Reading practice (Should):** OpenJLPT's example sentences (from
+  Tatoeba, with furigana), tokenized with SudachiPy and matched to word
+  IDs. A sentence qualifies when every word in it is known except one.
 
 **Why:** explainable, testable to the exact row, and free. Agents add
 judgement and explanation on top, and never invent the facts.
@@ -289,10 +364,16 @@ judgement and explanation on top, and never invent the facts.
   profiles of people.
 - *Full spaced repetition (SM-2):* a large feature. Leitner boxes cover
   the mistakes queue.
+- *An existing i+1 tool such as the AnkiMorphs (MorphMan) add-on, or
+  OpenJLPT's own flashcards:* they run in the learner's Anki or browser,
+  not behind an MCP server, so they can't be audited, traced or tested as
+  part of the stack. A deterministic ranking that *can* be is what this
+  project demonstrates, so building it is the point.
 
-**Known risk:** JLPT lists name words by spelling, which can match several
-JMdict entries. The mapping rules and the unresolved count are reported
-(spike 4).
+**Known risk:** JLPT levels are community approximations (Jonathan
+Waller's lists, via OpenJLPT), and about 0.3% of OpenJLPT's words aren't
+linked to JMdict. Spike 4 reports the unlinked count and how they're
+handled.
 
 ### ADR-011: gpt-5-mini through Sumopod
 
