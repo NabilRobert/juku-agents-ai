@@ -146,7 +146,18 @@ it. The first results stay as the fallback, for a full JMdict import.
 
 ## Proposed changes to the planning docs
 
-Not edited yet. Each needs Arthur's OK.
+**Status (2026-10-28):**
+- Applied on `docs/planning` in a630926, by the planning session, with
+  Arthur's decisions.
+- One difference from the proposals below: **monitoring stays on Grafana,
+  capped at 384 MB** (Arthur), not cron alerts, after a check of the
+  server's memory.
+- Spike 2's later finding (231 ms p95 at 4,000 known words) turned item 6's
+  "precompute if needed" into a decision. That's on
+  `docs/recommender-incremental` (0010ed2), cut from `docs/planning`, to
+  merge into it.
+
+The proposals as written:
 
 1. **Monitoring: cron alerts, not Grafana (spike 3)**, as ADR-009 and
    settled decision 3 already say. The same `monitoring` schema; a cron
