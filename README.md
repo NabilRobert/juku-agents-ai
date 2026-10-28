@@ -107,8 +107,7 @@ uv run juku render-previews --out build/previews
 | `spikes/` | The week-0 spikes' code and results, kept as evidence (not linted) |
 
 A request's path through the code, the glossary and "where to change
-things" are in the guide, `docs/guide.md`, written once the four tracks
-are in.
+things" are in [the guide](docs/guide.md).
 
 ## Planning docs
 
