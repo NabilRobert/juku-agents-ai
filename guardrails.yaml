@@ -18,6 +18,51 @@ alerts:
 privacy:
   min_learners_per_cell: 5
 
+# Agent identity and delegation (ADR-018; Phase 2 ID-R1 to ID-R4). Every
+# MCP call carries a single-use token, signed by the app, naming the
+# learner, the chain of agents acting for them, and the tools allowed.
+delegation:
+  issuer: juku-app
+  audience: juku-mcp
+  token_ttl_seconds: 60
+  # learner -> Shiori -> Keiko is the longest chain; anything deeper is refused.
+  max_agent_hops: 2
+  # Behind the gateway, the chain's current agent must be the one whose key made the call.
+  require_gateway_caller: true
+  # The one multi-hop path: Shiori asks Keiko for a new plan through request_replan.
+  allowed_delegations:
+    - {from_agent: shiori, to_agent: keiko, via_tool: request_replan}
+
+# Which of Juku's MCP tools each agent's tokens may name (ID-R1). The
+# gateway's policy file holds the same lists for its allow-lists; Nikki and
+# Tadashi work only from what they're given, so they have none.
+agents:
+  shiori:
+    - get_progress
+    - get_mistakes
+    - recommend_words
+    - find_reading_sentences
+    - get_plan
+    - get_recent_activity
+    - get_memory
+    - search_words
+    - request_replan
+  keiko:
+    - get_progress
+    - get_mistakes
+    - recommend_words
+    - find_reading_sentences
+    - get_plan
+    - get_recent_activity
+    - get_memory
+  nikki: []
+  tadashi: []
+
+# The one action tool (SM4): it only queues a Keiko run, and at most this
+# many a day per learner (their local day).
+replan:
+  max_requests_per_day: 1
+
 # Fitness functions (scale path, ADR-023): automated checks that fail the
 # build when a change degrades a quality the design depends on. `pending`
 # ones name the slice that activates them; the harness lists them as

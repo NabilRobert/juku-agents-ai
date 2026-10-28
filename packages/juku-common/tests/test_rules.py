@@ -12,6 +12,19 @@ alerts:
   tool_error_rate_per_hour: 0.05
 privacy:
   min_learners_per_cell: 5
+delegation:
+  issuer: juku-app
+  audience: juku-mcp
+  token_ttl_seconds: 60
+  max_agent_hops: 2
+  require_gateway_caller: true
+  allowed_delegations:
+    - {from_agent: shiori, to_agent: keiko, via_tool: request_replan}
+agents:
+  shiori: [get_progress, request_replan]
+  keiko: [get_progress]
+replan:
+  max_requests_per_day: 1
 fitness:
   FF4:
     title: Migrations are safe
@@ -88,3 +101,21 @@ def test_the_path_can_come_from_the_environment(tmp_path: Path, monkeypatch: pyt
 def test_an_alert_threshold_out_of_range_is_refused(tmp_path: Path) -> None:
     with pytest.raises(RulesError, match=r"alerts\.tool_error_rate_per_hour"):
         load_rules(write(tmp_path, VALID.replace("tool_error_rate_per_hour: 0.05", "tool_error_rate_per_hour: 5")))
+
+
+@pytest.mark.guardrail("delegation.allowed_delegations")
+def test_a_delegation_that_would_widen_the_tools_is_refused_at_load(tmp_path: Path) -> None:
+    widened = VALID.replace("keiko: [get_progress]", "keiko: [get_progress, get_memory]")
+    with pytest.raises(RulesError, match="keiko would get tools shiori lacks"):
+        load_rules(write(tmp_path, widened))
+
+
+@pytest.mark.guardrail("delegation.allowed_delegations")
+def test_a_delegation_through_a_tool_the_agent_lacks_is_refused_at_load(tmp_path: Path) -> None:
+    lacking = VALID.replace("shiori: [get_progress, request_replan]", "shiori: [get_progress]")
+    with pytest.raises(RulesError, match="can't delegate through request_replan"):
+        load_rules(write(tmp_path, lacking))
+
+
+def test_an_unknown_agent_has_no_tools(tmp_path: Path) -> None:
+    assert load_rules(write(tmp_path, VALID)).tools_of("mallory") == frozenset()

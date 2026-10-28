@@ -36,8 +36,9 @@ types:
 	$(UV) run --frozen pyright
 
 # --fitness-complete: an active fitness function in guardrails.yaml with no test fails the run.
+# --guardrails-complete: so does a rule in guardrails.yaml with no test (G1).
 test:
-	$(UV) run --frozen pytest -q --fitness-complete
+	$(UV) run --frozen pytest -q --fitness-complete --guardrails-complete
 
 # FF4: render every migration as SQL, offline, and lint it for locking or rewriting statements.
 # Alembic's own bookkeeping table (alembic_version, a varchar column) isn't ours, so it's cut first.

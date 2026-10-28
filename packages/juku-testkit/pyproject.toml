@@ -8,6 +8,7 @@ dependencies = ["juku-common", "juku-data", "alembic==1.20.0", "asyncpg==0.32.0"
 [project.entry-points.pytest11]
 juku_fitness = "juku_testkit.fitness"
 juku_databases = "juku_testkit.databases"
+juku_guardrails = "juku_testkit.guardrails"
 
 [tool.uv.sources]
 juku-common = { workspace = true }

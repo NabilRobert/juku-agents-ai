@@ -13,6 +13,19 @@ alerts:
   tool_error_rate_per_hour: 0.05
 privacy:
   min_learners_per_cell: 5
+delegation:
+  issuer: juku-app
+  audience: juku-mcp
+  token_ttl_seconds: 60
+  max_agent_hops: 2
+  require_gateway_caller: true
+  allowed_delegations:
+    - {from_agent: shiori, to_agent: keiko, via_tool: request_replan}
+agents:
+  shiori: [get_progress, request_replan]
+  keiko: [get_progress]
+replan:
+  max_requests_per_day: 1
 fitness:
   FF3:
     title: Incremental state equals a full recompute

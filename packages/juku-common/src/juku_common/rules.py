@@ -70,13 +70,58 @@ class PrivacyRules(Section):
     min_learners_per_cell: int = Field(ge=2)
 
 
+class Delegation(Section):
+    """One allowed hop: `from_agent` may hand `to_agent` a narrower token through `via_tool`."""
+
+    from_agent: str
+    to_agent: str
+    via_tool: str
+
+
+class DelegationRules(Section):
+    """ADR-018's token rules."""
+
+    issuer: str
+    audience: str
+    token_ttl_seconds: int = Field(gt=0, le=300)
+    max_agent_hops: int = Field(ge=1)
+    require_gateway_caller: bool
+    allowed_delegations: list[Delegation]
+
+
+class ReplanRules(Section):
+    """SM4: the one action tool's daily cap."""
+
+    max_requests_per_day: int = Field(ge=1)
+
+
 class Rules(Section):
     """The whole rule file."""
 
     version: int
     alerts: AlertThresholds
     privacy: PrivacyRules
+    delegation: DelegationRules
+    agents: dict[str, list[str]]
+    replan: ReplanRules
     fitness: dict[str, FitnessFunction]
+
+    @model_validator(mode="after")
+    def _delegations_only_narrow(self) -> Self:
+        for hop in self.delegation.allowed_delegations:
+            for agent in (hop.from_agent, hop.to_agent):
+                if agent not in self.agents:
+                    raise ValueError(f"delegation names agent {agent!r}, which isn't under `agents`")
+            if hop.via_tool not in self.agents[hop.from_agent]:
+                raise ValueError(f"{hop.from_agent} can't delegate through {hop.via_tool}: it isn't one of its tools")
+            widened = set(self.agents[hop.to_agent]) - set(self.agents[hop.from_agent])
+            if widened:
+                raise ValueError(f"{hop.to_agent} would get tools {hop.from_agent} lacks: {sorted(widened)}")
+        return self
+
+    def tools_of(self, agent: str) -> frozenset[str]:
+        """The Juku tools this agent's tokens may name; none for an unknown agent."""
+        return frozenset(self.agents.get(agent, []))
 
     @model_validator(mode="after")
     def _known_version(self) -> Self:

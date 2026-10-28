@@ -81,6 +81,7 @@ async def test_deleting_a_learner_deletes_their_events_and_summaries(connection:
         assert remaining == 0, table
 
 
+@pytest.mark.guardrail("privacy.min_learners_per_cell")
 async def test_the_activity_view_hides_days_with_fewer_learners_than_the_floor(
     connection: AsyncConnection, rules: Rules
 ) -> None:

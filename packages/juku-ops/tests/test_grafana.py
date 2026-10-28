@@ -90,6 +90,8 @@ def threshold_of(uid: str) -> float:
     return float(condition["model"]["conditions"][0]["evaluator"]["params"][0])
 
 
+@pytest.mark.guardrail("alerts.heartbeat_stale_seconds")
+@pytest.mark.guardrail("alerts.tool_error_rate_per_hour")
 def test_alert_thresholds_match_the_rule_file(rules: Rules) -> None:
     assert threshold_of("juku-heartbeat-stale") == rules.alerts.heartbeat_stale_seconds
     assert threshold_of("juku-tool-error-rate") == rules.alerts.tool_error_rate_per_hour

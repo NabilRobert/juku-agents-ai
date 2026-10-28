@@ -1,9 +1,9 @@
 [project]
 name = "juku-common"
 version = "0.0.0"
-description = "What every Juku service shares: the rule file and the hash-chained audit log"
+description = "What every Juku service shares: the rule file, the audit log and the delegation tokens"
 requires-python = ">=3.12,<3.13"
-dependencies = ["pydantic==2.14.1", "pyyaml==6.0.3"]
+dependencies = ["cryptography==50.0.2", "pydantic==2.14.1", "pyjwt==2.15.1", "pyyaml==6.0.3"]
 
 [build-system]
 requires = ["hatchling==1.27.0"]

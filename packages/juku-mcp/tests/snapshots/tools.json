@@ -1,0 +1,99 @@
+[
+  {
+    "name": "get_progress",
+    "description": "The learner's progress: how many words they know, and their coverage of each JLPT level's words and kanji (N5 to N1).",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_mistakes",
+    "description": "The learner's mistakes queue (Leitner boxes 1-5): words they answered wrongly, with when each is due for review.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "recommend_words",
+    "description": "Ten words for the learner to learn next, from Juku's recommender (Susumu), each with the reason it was chosen. Facts only; don't invent other suggestions.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "find_reading_sentences",
+    "description": "Up to ten example sentences (from Tatoeba, with furigana) in which the learner knows every word but one, and that one new word.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_plan",
+    "description": "The learner's pace plan: the words a week needed to reach 80% of their target level and everything easier by their exam date, with the formula.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_recent_activity",
+    "description": "The learner's activity over the last 7 days, by their local date: quiz answers, correct answers, words marked known, sentences read.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "get_memory",
+    "description": "What Shiori remembers about how this learner learns: notes with their evidence. Read-only.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "search_words",
+    "description": "Search the JLPT dictionary (OpenJLPT) by kanji, kana, romaji or English. Returns up to ten words with their ID, reading, level and meanings. Contains no learner data.",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "What to look up, e.g. 食べる, たべる, taberu or to eat."
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "name": "request_replan",
+    "description": "Ask Keiko, the planner, for a new weekly plan for this learner. It only queues a run (at most one a day); the plan still passes the critic and code, and the learner decides whether to use it.",
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  }
+]
