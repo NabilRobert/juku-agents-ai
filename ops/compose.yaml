@@ -1,0 +1,176 @@
+# Juku on one small shared server (ADR-016). Four containers, each with a
+# hard memory limit; only the app and Grafana are published, and only on
+# loopback, behind the server's existing proxy.
+#
+# The networks keep each path explicit:
+#   app-data            db <-> app, Grafana
+#   mcp-data            db <-> juku-mcp (the app can't reach juku-mcp here)
+#   egress              outbound for the app (the model provider) and Grafana (Telegram)
+#   gateway-clients     app -> the gateway (made by the gateway's own deployment)
+#   gateway-upstreams   the gateway -> juku-mcp (likewise)
+# So Juku's MCP server has no published port and shares no network with
+# the app: every call reaches it through the gateway, which spike 6 showed
+# is what makes the caller check hold.
+#
+# Secrets are files under ops/secrets/ (git-ignored, made by
+# ops/make-secrets.sh), mounted at /run/secrets. Each file is named after
+# the setting it fills (JUKU_APP_DATABASE_URL -> juku_app_database_url),
+# which is how Pydantic Settings reads a secrets directory. Non-secret
+# settings come from ops/.env (copy ops/.env.example).
+name: juku
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+  restart: unless-stopped
+
+networks:
+  app-data:
+    internal: true
+  mcp-data:
+    internal: true
+  egress: {}
+  gateway-clients:
+    external: true
+    name: ${JUKU_GATEWAY_CLIENTS_NETWORK:-mcp-gateway-clients}
+  gateway-upstreams:
+    external: true
+    name: ${JUKU_GATEWAY_UPSTREAMS_NETWORK:-mcp-gateway-upstreams}
+
+volumes:
+  pgdata: {}
+  grafana-data: {}
+  juku-mcp-audit: {}
+
+secrets:
+  postgres_password: {file: ./secrets/postgres_password}
+  juku_migrator_password: {file: ./secrets/juku_migrator_password}
+  juku_app_password: {file: ./secrets/juku_app_password}
+  juku_mcp_password: {file: ./secrets/juku_mcp_password}
+  juku_ops_password: {file: ./secrets/juku_ops_password}
+  grafana_reader_password: {file: ./secrets/grafana_reader_password}
+  dict_owner_password: {file: ./secrets/dict_owner_password}
+  juku_app_database_url: {file: ./secrets/juku_app_database_url}
+  juku_ops_database_url: {file: ./secrets/juku_ops_database_url}
+  juku_migrator_database_url: {file: ./secrets/juku_migrator_database_url}
+  juku_mcp_app_database_url: {file: ./secrets/juku_mcp_app_database_url}
+  juku_mcp_dict_database_url: {file: ./secrets/juku_mcp_dict_database_url}
+  juku_delegation_signing_key: {file: ./secrets/juku_delegation_signing_key}
+  juku_mcp_delegation_public_key: {file: ./secrets/juku_mcp_delegation_public_key}
+  juku_session_secret: {file: ./secrets/juku_session_secret}
+  grafana_admin_password: {file: ./secrets/grafana_admin_password}
+  telegram_bot_token: {file: ./secrets/telegram_bot_token}
+
+services:
+  db:
+    image: postgres:16
+    networks: [app-data, mcp-data]
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+      - juku_migrator_password
+      - juku_app_password
+      - juku_mcp_password
+      - juku_ops_password
+      - grafana_reader_password
+      - dict_owner_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sh:/docker-entrypoint-initdb.d/10-juku.sh:ro
+      - ./db/roles.sql:/juku/roles.sql:ro
+    mem_limit: 384m
+    memswap_limit: 384m
+    shm_size: 64m
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  juku-mcp:
+    <<: *hardened
+    build:
+      context: ..
+      dockerfile: packages/juku-mcp/Dockerfile
+    image: juku-mcp:local
+    networks: [mcp-data, gateway-upstreams]
+    # No `ports:` on purpose: reachable only through the gateway.
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      JUKU_MCP_AUDIT_LOG: /var/log/juku-mcp/audit.jsonl
+      JUKU_MCP_REQUIRE_GATEWAY_CALLER: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${JUKU_OTLP_ENDPOINT:-}
+    secrets:
+      - juku_mcp_app_database_url
+      - juku_mcp_dict_database_url
+      - juku_mcp_delegation_public_key
+    volumes:
+      - juku-mcp-audit:/var/log/juku-mcp
+    mem_limit: 128m
+    memswap_limit: 128m
+
+  app:
+    <<: *hardened
+    build:
+      context: ..
+      dockerfile: app/Dockerfile
+    image: juku-app:local
+    networks: [app-data, egress, gateway-clients]
+    ports:
+      - "127.0.0.1:${JUKU_APP_PORT:-8080}:8000"
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      JUKU_GATEWAY_URL: ${JUKU_GATEWAY_URL:-http://mcp-gateway:8000}
+      JUKU_GATEWAY_AUDIT_LOG: /audit/gateway/audit.jsonl
+      JUKU_JUKU_MCP_AUDIT_LOG: /audit/juku-mcp/audit.jsonl
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${JUKU_OTLP_ENDPOINT:-}
+    secrets:
+      - juku_app_database_url
+      - juku_ops_database_url
+      - juku_migrator_database_url
+      - juku_delegation_signing_key
+      - juku_session_secret
+    volumes:
+      # The audit logs, read-only: the cron import verifies and loads them.
+      - juku-mcp-audit:/audit/juku-mcp:ro
+      - ${JUKU_GATEWAY_AUDIT_DIR:-./gateway-audit}:/audit/gateway:ro
+    mem_limit: 256m
+    memswap_limit: 256m
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    networks: [app-data, egress]
+    ports:
+      - "127.0.0.1:${JUKU_GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
+      GF_SERVER_ROOT_URL: ${JUKU_GRAFANA_ROOT_URL:-http://localhost:3000}
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_ANALYTICS_FEEDBACK_LINKS_ENABLED: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_LOG_LEVEL: warn
+      JUKU_TELEGRAM_CHAT_ID: ${JUKU_TELEGRAM_CHAT_ID:?set JUKU_TELEGRAM_CHAT_ID in ops/.env}
+    secrets:
+      - grafana_admin_password
+      - grafana_reader_password
+      - telegram_bot_token
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    # Spike 3: 217 MiB idle (median), 249 MiB at peak; 384 MB leaves headroom (ADR-009).
+    mem_limit: 384m
+    memswap_limit: 384m
+    restart: unless-stopped

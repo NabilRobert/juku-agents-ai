@@ -30,3 +30,8 @@ build/
 # Frontend
 node_modules/
 .lighthouseci/
+
+# Server secrets, made by ops/make-secrets.sh
+ops/secrets/
+ops/.env
+ops/gateway-audit/
