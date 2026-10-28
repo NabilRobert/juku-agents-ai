@@ -1,0 +1,37 @@
+{
+ "mode": "patched",
+ "shiori (TestModel)": {
+  "output": "{\"get_progress\":{\"learner\":\"lrn_a\",\"data\":{\"n5_words_known\":312},\"received_token_sha256\":\"d98a7646389e750a33c8763eaa030adb93c4ccfdead7c75b6ebe29f2980929c2\",\"received_meta_keys\":[\"io.github.nabilrobert.juku/delegation\",\"io.github.nabilrobert.mcp-gateway/caller\",\"io.modelcontextprotocol/clientCapabilities\",\"io.modelcontextprotocol/clientInfo\",\"io.modelcontextprotocol/protocolVersion\",\"progress_token\",\"traceparent\"],\"received_traceparent\":\"00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01\"}}",
+  "calls": [
+   {
+    "tool": "get_progress",
+    "allowed": true,
+    "learner_returned": "lrn_a",
+    "refused": null,
+    "token_arrived_unchanged": true,
+    "traceparent_arrived_unchanged": true
+   }
+  ]
+ },
+ "keiko (FunctionModel)": {
+  "output": "Rencana minggu ini siap.",
+  "calls": [
+   {
+    "tool": "get_progress",
+    "allowed": true,
+    "learner_returned": "lrn_a",
+    "refused": null,
+    "token_arrived_unchanged": true,
+    "traceparent_arrived_unchanged": true
+   },
+   {
+    "tool": "get_memory",
+    "allowed": true,
+    "learner_returned": "lrn_a",
+    "refused": null,
+    "token_arrived_unchanged": true,
+    "traceparent_arrived_unchanged": true
+   }
+  ]
+ }
+}

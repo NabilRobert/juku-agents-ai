@@ -1,0 +1,11 @@
+{
+ "mode": "gateway",
+ "shiori (TestModel)": {
+  "output": "ToolError: Refused: no delegation token",
+  "calls": []
+ },
+ "keiko (FunctionModel)": {
+  "output": "ToolError: Refused: no delegation token",
+  "calls": []
+ }
+}
