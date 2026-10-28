@@ -1,0 +1,41 @@
+== Waller rows whose reference JMdict ID no OpenJLPT word carries, by level
+ level | rows | entries 
+-------+------+---------
+     5 |   15 |      15
+     4 |    4 |       4
+     3 |   31 |      30
+     2 |    9 |       9
+     1 |   37 |      37
+       |   96 |      94
+(6 rows)
+
+== Those rows at N5-N3
+ level |                                                        string_agg                                                        
+-------+--------------------------------------------------------------------------------------------------------------------------
+     5 | あの あれ キログラム キロメートル コート コップ これ それ だんだん 一日 何 ボタン マッチ ラジオカセット 私
+     4 | 君 こと もし 止める
+     3 | 撃つ 得る おや 上 柄 金 下 軒 後 しばしば 下 上 数 生 然う ダイヤ 注ぐ 度 ド どうか 直 額 品 不 無 分 方々 元 訳 やや 綿
+(3 rows)
+
+== OpenJLPT words whose JMdict ID is in no Waller row, by level
+ level | count 
+-------+-------
+ N1    |    18
+ N2    |     4
+ N3    |     6
+ N5    |     6
+(4 rows)
+
+== The same entry at OpenJLPT's level vs its easiest Waller level
+ same_level | different 
+------------+-----------
+       7646 |       120
+(1 row)
+
+== Are 父, 母, 顔 in either list?
+   list   | count 
+----------+-------
+ waller   |     0
+ openjlpt |     0
+(2 rows)
+
