@@ -1,0 +1,53 @@
+limit=2g grafana=grafana version 13.2.4
+datasource health: {"message":"Database Connection OK","status":"OK"}
+dashboard: Juku tool health (spike 3) panels: 2
+idle 08:46:07 stats=245.6MiB anon_mib=237 file_mib=1
+idle 08:46:18 stats=245.8MiB anon_mib=237 file_mib=1
+idle 08:46:29 stats=246.3MiB anon_mib=237 file_mib=1
+idle 08:46:41 stats=246.1MiB anon_mib=237 file_mib=1
+idle 08:46:52 stats=245.8MiB anon_mib=237 file_mib=1
+idle 08:47:03 stats=248.5MiB anon_mib=239 file_mib=1
+idle 08:47:15 stats=217.8MiB anon_mib=208 file_mib=1
+idle 08:47:26 stats=218.1MiB anon_mib=208 file_mib=1
+idle 08:47:37 stats=218.3MiB anon_mib=208 file_mib=1
+idle 08:47:48 stats=217.8MiB anon_mib=208 file_mib=1
+idle 08:47:59 stats=218.1MiB anon_mib=208 file_mib=1
+idle 08:48:10 stats=217MiB anon_mib=207 file_mib=1
+idle 08:48:22 stats=217MiB anon_mib=207 file_mib=1
+idle 08:48:33 stats=217MiB anon_mib=207 file_mib=1
+idle 08:48:44 stats=217MiB anon_mib=207 file_mib=1
+idle 08:48:55 stats=217MiB anon_mib=207 file_mib=1
+idle 08:49:07 stats=211.8MiB anon_mib=201 file_mib=1
+idle 08:49:18 stats=211.4MiB anon_mib=201 file_mib=1
+idle 08:49:29 stats=211.7MiB anon_mib=201 file_mib=1
+idle 08:49:40 stats=211.2MiB anon_mib=201 file_mib=1
+idle 08:49:51 stats=211.2MiB anon_mib=201 file_mib=1
+idle 08:50:03 stats=210.6MiB anon_mib=201 file_mib=1
+idle 08:50:14 stats=210.3MiB anon_mib=200 file_mib=1
+idle 08:50:25 stats=210.5MiB anon_mib=200 file_mib=1
+idle 08:50:36 stats=210MiB anon_mib=200 file_mib=1
+idle 08:50:48 stats=210.3MiB anon_mib=200 file_mib=1
+idle 08:50:59 stats=210.3MiB anon_mib=200 file_mib=1
+idle 08:51:10 stats=209.6MiB anon_mib=199 file_mib=1
+idle 08:51:21 stats=209.1MiB anon_mib=199 file_mib=1
+idle 08:51:33 stats=209.4MiB anon_mib=199 file_mib=1
+query check: {'A': (200, 169), 'B': (200, 4)}
+after-dashboard 08:51:45 stats=214.9MiB anon_mib=205 file_mib=1
+after-dashboard 08:51:57 stats=215MiB anon_mib=205 file_mib=1
+after-dashboard 08:52:08 stats=215.3MiB anon_mib=205 file_mib=1
+after-dashboard 08:52:19 stats=216MiB anon_mib=206 file_mib=1
+after-dashboard 08:52:30 stats=215.7MiB anon_mib=206 file_mib=1
+after-dashboard 08:52:42 stats=215.8MiB anon_mib=206 file_mib=1
+idle-again 08:52:53 stats=216MiB anon_mib=206 file_mib=1
+idle-again 08:53:04 stats=216.9MiB anon_mib=206 file_mib=1
+idle-again 08:53:15 stats=222MiB anon_mib=212 file_mib=1
+idle-again 08:53:27 stats=230.6MiB anon_mib=221 file_mib=1
+idle-again 08:53:38 stats=233MiB anon_mib=223 file_mib=1
+idle-again 08:53:49 stats=233MiB anon_mib=223 file_mib=1
+idle-again 08:54:01 stats=237.9MiB anon_mib=228 file_mib=1
+idle-again 08:54:12 stats=239.8MiB anon_mib=231 file_mib=1
+idle-again 08:54:23 stats=239.8MiB anon_mib=231 file_mib=1
+idle-again 08:54:34 stats=241.4MiB anon_mib=232 file_mib=1
+idle-again 08:54:45 stats=243.5MiB anon_mib=234 file_mib=1
+idle-again 08:54:57 stats=243.7MiB anon_mib=234 file_mib=1
+restarts=0 oom_killed=false status=running

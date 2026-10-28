@@ -1,0 +1,59 @@
+{
+  "uid": "juku-tool-health",
+  "title": "Juku tool health (spike 3)",
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Calls per hour, by agent",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT date_trunc('hour', at) AS time, agent AS metric, count(*) AS calls FROM monitoring.tool_calls WHERE $__timeFilter(at) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Error rate and p95 latency, by tool",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "B",
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT server, tool, count(*) AS calls, round(avg(is_error::int) * 100, 1) AS error_pct, percentile_cont(0.95) WITHIN GROUP (ORDER BY ms) AS p95_ms FROM monitoring.tool_calls WHERE $__timeFilter(at) GROUP BY 1, 2 ORDER BY 1, 2"
+        }
+      ]
+    }
+  ]
+}
