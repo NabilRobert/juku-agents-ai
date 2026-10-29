@@ -30,11 +30,26 @@ def dependency_names(dependant: Dependant) -> list[Any]:
     return names
 
 
+def api_routes(routes: list[Any]) -> list[APIRoute]:
+    """Every APIRoute, including those of included routers.
+
+    Since FastAPI 0.16x, an included router stays one object holding its
+    own routes (`original_router`), instead of copying them into the app.
+    Juku includes its routers with no prefix and no router-level
+    dependencies, so their routes are exactly what the app serves.
+    """
+    found: list[APIRoute] = []
+    for route in routes:
+        if isinstance(route, APIRoute):
+            found.append(route)
+        elif hasattr(route, "original_router"):
+            found += api_routes(list(route.original_router.routes))
+    return found
+
+
 def route_table(app: FastAPI) -> list[dict[str, Any]]:
     table: list[dict[str, Any]] = []
-    for route in app.routes:
-        if not isinstance(route, APIRoute):
-            continue
+    for route in api_routes(list(app.routes)):
         response_class: Any = route.response_class
         table.append(
             {
