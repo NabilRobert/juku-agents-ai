@@ -38,7 +38,7 @@ LEARNER_FIELDS = "public_id, cohort_id, nickname, target_level, exam_date, timez
 
 
 def _count_rows(table: str) -> str:
-    return f"SELECT count(*) FROM {table} WHERE learner_id = :id"  # noqa: S608 (a table name from the catalog)
+    return f"SELECT count(*) FROM {table} WHERE learner_id = :id"  # noqa: S608 (a quoted name from the catalog)
 
 
 def _remove_learner(table: str) -> str:
@@ -46,16 +46,21 @@ def _remove_learner(table: str) -> str:
 
 
 def _select_rows(table: str) -> str:
-    return f"SELECT * FROM {table} WHERE learner_id = :id"  # noqa: S608 (a table name from the catalog)
+    return f"SELECT * FROM {table} WHERE learner_id = :id"  # noqa: S608 (a quoted name from the catalog)
 
 
 LEARNER_ROW = f"SELECT {LEARNER_FIELDS} FROM learning.learners WHERE id = :id"  # noqa: S608 (a constant)
 
 
 async def _learner_tables(connection: AsyncConnection) -> list[str]:
-    """Every table with a learner_id column: partitioned parents, not their partitions."""
+    """Every table with a learner_id column, as quoted identifiers: partitioned parents, not their partitions.
+
+    The names come from the catalog, so they're quoted (and escaped) as SQL identifiers before they reach a
+    statement; an ordinary name such as learning.learner_state needs no quotes and is left as it is.
+    """
+    quote = connection.dialect.identifier_preparer.quote
     rows = (await connection.execute(text(TABLES_WITH_LEARNERS))).all()
-    return [f"{schema}.{table}" for schema, table in rows]
+    return [f"{quote(schema)}.{quote(table)}" for schema, table in rows]
 
 
 async def delete_learner(engine: AsyncEngine, learner_id: int) -> dict[str, int]:

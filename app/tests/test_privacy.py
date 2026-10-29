@@ -66,9 +66,11 @@ async def fill(db: Databases, learner: Learner) -> None:
 async def rows_left(engine: AsyncEngine, learner_id: int) -> dict[str, int]:
     found: dict[str, int] = {}
     async with engine.connect() as connection:
+        quote = connection.dialect.identifier_preparer.quote
         for schema, table in (await connection.execute(text(LEARNER_COLUMNS))).all():
             count = await connection.scalar(
-                text(f'SELECT count(*) FROM "{schema}"."{table}" WHERE learner_id = :id'), {"id": learner_id}
+                text(f"SELECT count(*) FROM {quote(schema)}.{quote(table)} WHERE learner_id = :id"),
+                {"id": learner_id},
             )
             if count:
                 found[f"{schema}.{table}"] = int(count)
@@ -114,3 +116,35 @@ async def test_an_export_holds_every_row_of_the_learners_and_no_one_elses(engine
     exported = str(export)
     assert other.public_id not in exported
     assert "kenapa?" in exported
+
+
+# Uppercase, a space and a double quote: a table name that only works quoted, and escaped.
+AWKWARD_TABLE = 'Catatan "Lama" v2'
+
+
+async def test_a_learner_table_whose_name_needs_quoting_is_still_exported_and_deleted(
+    engine_databases: Databases,
+) -> None:
+    """privacy.py builds its SQL from the catalog's names; they're quoted as identifiers, and values stay bound."""
+    learner = await create_learner(engine_databases, nickname="awkward", target_level=5)
+    async with engine_databases.app.begin() as connection:
+        table = f"app.{connection.dialect.identifier_preparer.quote(AWKWARD_TABLE)}"
+        await connection.execute(
+            text(
+                f"CREATE TABLE {table} (learner_id bigint NOT NULL "
+                "REFERENCES learning.learners (id) ON DELETE CASCADE, note text NOT NULL)"
+            )
+        )
+        await connection.execute(
+            text(f"INSERT INTO {table} (learner_id, note) VALUES (:id, 'catatan lama')"),
+            {"id": learner.id},
+        )
+    try:
+        exported = await export_learner(engine_databases.app, learner.id)
+        assert exported["tables"][table] == [{"note": "catatan lama"}]
+        removed = await delete_learner(engine_databases.app, learner.id)
+        assert removed[table] == 1
+        assert await rows_left(engine_databases.app, learner.id) == {}
+    finally:
+        async with engine_databases.app.begin() as connection:
+            await connection.execute(text(f"DROP TABLE IF EXISTS {table}"))
