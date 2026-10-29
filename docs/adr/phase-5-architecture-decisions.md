@@ -219,8 +219,11 @@ otherwise have written and tested ourselves.
 **Rejected:**
 - *Learner data through MCP-backbone:* one login per workspace, so there's
   no per-learner isolation.
-- *Postgres row-level security behind MCP-backbone:* it would need a
-  per-learner session variable that a generic SQL tool can't safely set.
+- *Postgres row-level security behind MCP-backbone:* workable, since the
+  server would set the learner from the verified token in each
+  transaction. But it's fragile: every learner table needs its policy, and
+  one missed policy leaks every learner's data. Fixed queries that take the
+  learner from the token can't leak that way.
 - *Tools that take a learner ID:* isolation would then depend on the
   model passing the right one.
 - *Giving agents write tools:* every write comes from a learner's click or
