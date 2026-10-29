@@ -7,6 +7,11 @@
 # OpenJLPT files. Writes results-direct.json and results-gateway.json here.
 #
 # Usage: GATEWAY_REF=66227a2 packages/juku-mcp/attacks/run_through_gateway.sh
+#
+# With SAF1_CAPTURE=<file.jsonl>, the export also gets capture-scanned-text.patch,
+# a test-only hook writing each tool result's text exactly as the gateway
+# scanned it ({call_id, tool, text}), so the run can be re-scored by another
+# detector. Its sha256 matches the gateway audit log's output_sha256.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../../.." && pwd)
@@ -24,6 +29,12 @@ if ! git -C "$GATEWAY_REPO" merge-base --is-ancestor "$P6_MERGE" "$GATEWAY_REF" 
 fi
 mkdir -p "$WORK/gateway"
 git -C "$GATEWAY_REPO" archive "$GATEWAY_REF" src | tar -x -C "$WORK/gateway"
+if [[ -n "${SAF1_CAPTURE:-}" ]]; then
+  (cd "$WORK/gateway" && patch -s -p1 <"$HERE/capture-scanned-text.patch")
+  rm -f "$SAF1_CAPTURE"
+  export JUKU_SAF1_CAPTURE="$SAF1_CAPTURE"
+  echo "capturing the scanned text of each result to $SAF1_CAPTURE"
+fi
 echo "gateway: $GATEWAY_REF at $(git -C "$GATEWAY_REPO" rev-parse --short "$GATEWAY_REF^{commit}")"
 
 cd "$ROOT"

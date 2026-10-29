@@ -1,0 +1,14 @@
+--- a/src/mcp_gateway/proxy.py
++++ b/src/mcp_gateway/proxy.py
+@@ -326,6 +326,11 @@
+ 
+         policy = self.config.policy_for(caller)
+         text = scan_text(result)
++        # Juku's SAF1 runner only (attacks/capture-scanned-text.patch): each scanned text, for re-scoring.
++        if capture := __import__("os").environ.get("JUKU_SAF1_CAPTURE"):
++            with open(capture, "a", encoding="utf-8") as file:
++                line = {"call_id": record["call_id"], "tool": record["tool"], "text": text}
++                file.write(__import__("json").dumps(line, ensure_ascii=False) + "\n")
+         output = {"output_chars": len(text), "output_sha256": hashlib.sha256(text.encode()).hexdigest()}
+         unscanned = _unscanned_reason(result, text, self.config.detector.scan_cap_chars)
+         fields: dict[str, Any] = {"is_error": bool(result.is_error), "upstream_ms": round(upstream_ms, 3), **output}
