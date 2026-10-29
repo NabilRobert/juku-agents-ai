@@ -9,4 +9,3 @@ build
 app/src/juku_app/static/dist
 ops/secrets
 ops/.env
-spikes

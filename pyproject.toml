@@ -43,8 +43,6 @@ dev = [
 [tool.ruff]
 line-length = 120
 target-version = "py312"
-# The week-0 spikes are throwaway code, kept as evidence; they aren't linted.
-extend-exclude = ["spikes"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "S", "ARG", "RUF"]
@@ -61,7 +59,7 @@ ignore = ["S101"]
 
 [tool.pyright]
 include = ["packages", "app", "migrations"]
-exclude = ["spikes", "**/node_modules", "**/.venv"]
+exclude = ["**/node_modules", "**/.venv"]
 strict = ["packages/*/src", "app/src"]
 pythonVersion = "3.12"
 # Hand-written stubs for libraries that ship no types (SudachiPy).
