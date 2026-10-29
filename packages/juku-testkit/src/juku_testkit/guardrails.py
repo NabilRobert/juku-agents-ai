@@ -21,7 +21,7 @@ from juku_common.rules import Rules, Section, load_rules
 
 MARKER = "guardrail"
 # The rule file's sections that are guardrails. `fitness` has its own harness (fitness.py).
-GUARDRAIL_SECTIONS = ("alerts", "privacy", "delegation", "agents", "replan", "budget", "memory", "pipeline")
+GUARDRAIL_SECTIONS = ("alerts", "privacy", "delegation", "agents", "replan", "budget", "memory", "pipeline", "database")
 
 
 def rule_paths(rules: Rules) -> list[str]:

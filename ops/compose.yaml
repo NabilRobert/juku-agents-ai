@@ -1,16 +1,19 @@
-# Juku on one small shared server (ADR-016). Four containers, each with a
+# Juku on one small shared server (ADR-016). Three containers, each with a
 # hard memory limit; only the app and Grafana are published, and only on
-# loopback, behind the server's existing proxy.
+# loopback, behind the server's existing proxy. The database is a managed
+# Postgres 16 outside the server (set up with ops/db/setup.sh), reached
+# over TLS at JUKU_DB_HOST.
 #
 # The networks keep each path explicit:
-#   app-data            db <-> app, Grafana
-#   mcp-data            db <-> juku-mcp (the app can't reach juku-mcp here)
-#   egress              outbound for the app (the model provider) and Grafana (Telegram)
+#   egress              outbound for the app (the database, the model provider)
+#                       and Grafana (the database, Telegram)
+#   mcp-db              outbound for juku-mcp alone, to the database
 #   gateway-clients     app -> the gateway (made by the gateway's own deployment)
 #   gateway-upstreams   the gateway -> juku-mcp (likewise)
 # So Juku's MCP server has no published port and shares no network with
 # the app: every call reaches it through the gateway, which spike 6 showed
-# is what makes the caller check hold.
+# is what makes the caller check hold. mcp-db can reach any address; the
+# server's firewall narrows it to the database's (a server step, ADR-016).
 #
 # Secrets are files under ops/secrets/ (git-ignored, made by
 # ops/make-secrets.sh), mounted at /run/secrets. Each file is named after
@@ -27,11 +30,8 @@ x-hardened: &hardened
   restart: unless-stopped
 
 networks:
-  app-data:
-    internal: true
-  mcp-data:
-    internal: true
   egress: {}
+  mcp-db: {}
   gateway-clients:
     external: true
     name: ${JUKU_GATEWAY_CLIENTS_NETWORK:-mcp-gateway-clients}
@@ -40,18 +40,11 @@ networks:
     name: ${JUKU_GATEWAY_UPSTREAMS_NETWORK:-mcp-gateway-upstreams}
 
 volumes:
-  pgdata: {}
   grafana-data: {}
   juku-mcp-audit: {}
 
 secrets:
-  postgres_password: {file: ./secrets/postgres_password}
-  juku_migrator_password: {file: ./secrets/juku_migrator_password}
-  juku_app_password: {file: ./secrets/juku_app_password}
-  juku_mcp_password: {file: ./secrets/juku_mcp_password}
-  juku_ops_password: {file: ./secrets/juku_ops_password}
   grafana_reader_password: {file: ./secrets/grafana_reader_password}
-  dict_owner_password: {file: ./secrets/dict_owner_password}
   juku_app_database_url: {file: ./secrets/juku_app_database_url}
   juku_ops_database_url: {file: ./secrets/juku_ops_database_url}
   juku_migrator_database_url: {file: ./secrets/juku_migrator_database_url}
@@ -69,42 +62,14 @@ secrets:
   telegram_bot_token: {file: ./secrets/telegram_bot_token}
 
 services:
-  db:
-    image: postgres:16
-    networks: [app-data, mcp-data]
-    environment:
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
-    secrets:
-      - postgres_password
-      - juku_migrator_password
-      - juku_app_password
-      - juku_mcp_password
-      - juku_ops_password
-      - grafana_reader_password
-      - dict_owner_password
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./db/init.sh:/docker-entrypoint-initdb.d/10-juku.sh:ro
-      - ./db/roles.sql:/juku/roles.sql:ro
-    mem_limit: 384m
-    memswap_limit: 384m
-    shm_size: 64m
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "postgres"]
-      interval: 5s
-      retries: 20
-    restart: unless-stopped
-
   juku-mcp:
     <<: *hardened
     build:
       context: ..
       dockerfile: packages/juku-mcp/Dockerfile
     image: juku-mcp:local
-    networks: [mcp-data, gateway-upstreams]
+    networks: [mcp-db, gateway-upstreams]
     # No `ports:` on purpose: reachable only through the gateway.
-    depends_on:
-      db: {condition: service_healthy}
     environment:
       JUKU_MCP_AUDIT_LOG: /var/log/juku-mcp/audit.jsonl
       OTEL_EXPORTER_OTLP_ENDPOINT: ${JUKU_OTLP_ENDPOINT:-}
@@ -123,11 +88,9 @@ services:
       context: ..
       dockerfile: app/Dockerfile
     image: juku-app:local
-    networks: [app-data, egress, gateway-clients]
+    networks: [egress, gateway-clients]
     ports:
       - "127.0.0.1:${JUKU_APP_PORT:-8080}:8000"
-    depends_on:
-      db: {condition: service_healthy}
     environment:
       JUKU_GATEWAY_URL: ${JUKU_GATEWAY_URL:-http://mcp-gateway:8000}
       JUKU_GATEWAY_AUDIT_LOG: /audit/gateway/audit.jsonl
@@ -161,11 +124,9 @@ services:
 
   grafana:
     image: grafana/grafana:13.2.4
-    networks: [app-data, egress]
+    networks: [egress]
     ports:
       - "127.0.0.1:${JUKU_GRAFANA_PORT:-3000}:3000"
-    depends_on:
-      db: {condition: service_healthy}
     environment:
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_password
       GF_SERVER_ROOT_URL: ${JUKU_GRAFANA_ROOT_URL:-http://localhost:3000}
@@ -178,6 +139,9 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_LOG_LEVEL: warn
+      # The data source's address (provisioning/datasources/monitoring.yaml).
+      JUKU_DB_HOST: ${JUKU_DB_HOST:?set JUKU_DB_HOST in ops/.env}
+      JUKU_DB_PORT: ${JUKU_DB_PORT:-5432}
       JUKU_TELEGRAM_CHAT_ID: ${JUKU_TELEGRAM_CHAT_ID:?set JUKU_TELEGRAM_CHAT_ID in ops/.env}
     secrets:
       - grafana_admin_password
