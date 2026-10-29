@@ -862,6 +862,7 @@ new to his stack were proposed and **approved by Arthur on 2026-10-28**
 | **The WhatsApp channel** (Could, X2) | **The WhatsApp Cloud API through `pywa`**: a Python framework for Meta's official API, with FastAPI webhook support | Official API, so no ban risk; it fits the FastAPI app | Twilio for WhatsApp (an extra account and per-message fee on top of Meta's); unofficial WhatsApp Web libraries (against WhatsApp's terms; numbers get banned) | **approved 2026-10-28**, for after the window |
 | **CLI** (load, export, delete, runs) | Typer | Stack | argparse | stack |
 | **Tests** | pytest (+ mutmut), Vitest, Lighthouse CI, Locust | Stack, plus the tools the fitness functions name | — | stack |
+| **Token counts** (FF6) | **tiktoken**, with `o200k_base` (gpt-5-mini's encoding) | Counts each fixture prompt's input tokens offline and at $0, the way the provider counts them, so a prompt that grows past its ceiling fails the build | Characters divided by 4: drifts from what is billed; the provider's token-counting endpoint: a paid round trip per prompt | **approved 2026-10-29** |
 | **Evals** | Inspect AI, via agent-eval-harness | Stack | — | stack |
 | **Tracing** | The OpenTelemetry SDK (PydanticAI's instrumentation emits spans into it) | Stack | — | stack |
 

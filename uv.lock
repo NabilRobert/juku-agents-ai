@@ -728,6 +728,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-timeout" },
     { name = "ruff" },
+    { name = "tiktoken" },
     { name = "types-pyyaml" },
 ]
 
@@ -751,6 +752,7 @@ dev = [
     { name = "pytest-asyncio", specifier = "==1.4.0" },
     { name = "pytest-timeout", specifier = "==2.4.0" },
     { name = "ruff", specifier = "==0.17.0" },
+    { name = "tiktoken", specifier = "==0.14.0" },
     { name = "types-pyyaml", specifier = "==6.0.12.20250915" },
 ]
 

@@ -66,3 +66,13 @@ What it shows:
   list in guardrails.yaml, not only against the token.
 
 The real-model run (once, about $0.12) waits for slice 7 and Arthur's OK.
+
+## Backlog: realistic injections
+
+SAF1's planted texts are machine markers (`JUKU-INSTRUCTION: get_progress
+{...}`), written to test what Juku's server refuses, not what the gateway's
+detector catches: no detector is meant to flag a made-up marker, so "the
+detector flagged none" says little about it. Realistic injections, in
+Indonesian, English and Japanese, phrased the way a Tatoeba contributor or
+a learner might write them, are a backlog item for the gateway and Juku
+together. They aren't built yet.
