@@ -45,9 +45,9 @@ ALTER ROLE mcp_backbone SET default_transaction_read_only = on;
 
 -- Each login's share of the provider's connections: guardrails.yaml's
 -- `database` section, which a test keeps equal to these (juku_app's is its
--- two pools plus one for a hand-run command or the nightly check).
-ALTER ROLE juku_app CONNECTION LIMIT 6;
-ALTER ROLE juku_mcp CONNECTION LIMIT 5;
+-- two pools plus two for a hand-run command or the nightly check, one per database).
+ALTER ROLE juku_app CONNECTION LIMIT 7;
+ALTER ROLE juku_mcp CONNECTION LIMIT 4;
 ALTER ROLE juku_ops CONNECTION LIMIT 3;
 ALTER ROLE juku_migrator CONNECTION LIMIT 1;
 ALTER ROLE dict_owner CONNECTION LIMIT 1;

@@ -103,7 +103,6 @@ def test_the_apps_pools_have_their_sizes_and_no_overflow(rules: Rules) -> None:
 
 
 @enforces("database.app_commands")
-@pytest.mark.xfail(strict=True, reason="EDD: one connection per database lands in the next commit")
 def test_a_hand_run_command_takes_one_connection_per_database_and_its_whole_share(rules: Rules) -> None:
     """A command reads the app database and the dictionary: one connection each, together its share."""
     from juku_app.cli import command_databases
@@ -197,11 +196,6 @@ def test_make_secrets_without_the_providers_host_says_what_to_set(tmp_path: Path
     assert not (tmp_path / "ops" / "secrets" / "juku_app_database_url").exists()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Known bug, waiting on Arthur's choice of fix: a command opens two engines (app and dict), "
-    "each sized app_commands, so one command can hold 2 connections against a share of 1. JOURNEY, FF6.",
-)
 def test_the_running_app_and_one_hand_run_command_fit_juku_apps_connection_limit(rules: Rules) -> None:
     """The weekly run, `juku invite` and the nightly check are hand-run commands beside the app, all as juku_app."""
     from juku_app.cli import command_databases, databases

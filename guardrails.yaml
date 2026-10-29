@@ -137,12 +137,13 @@ database:
   # juku_app: the web app's pools on the app and dict databases.
   app_pool: 3
   app_dict_pool: 2
-  # juku_app too: a hand-run command (juku invite, delete-learner) or the
-  # nightly state check, beside the app.
-  app_commands: 1
+  # juku_app too: a hand-run command (the weekly run, juku invite,
+  # delete-learner) or the nightly state check, beside the app: one
+  # connection for each database it reads.
+  app_commands: 2
   # juku_mcp: Juku's MCP server's pools.
   mcp_pool: 3
-  mcp_dict_pool: 2
+  mcp_dict_pool: 1
   # juku_ops: one connection per job; the heartbeat, the audit import and
   # the nightly state check can start in the same minute (ops/crontab).
   ops_connections: 3

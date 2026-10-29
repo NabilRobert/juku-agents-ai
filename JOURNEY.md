@@ -272,7 +272,7 @@ What went wrong while building, and what changed because of it
   would have crashed the count. It's counted as plain text now, with a test.
 - **Mutation checks:** a ceiling below what's measured, a prompt grown past
   its ceiling, and the counter without the fix each fail the tests.
-- **A bug in Juku's connection budget, found in the break-it pass (open).**
+- **A bug in Juku's connection budget, found in the break-it pass (fixed on fix/command-connections, below).**
   A hand-run command opens two engines, the app database and the
   dictionary, each sized `database.app_commands` (1), so one command can
   hold 2 `juku_app` connections against a share of 1. With the app's own
@@ -288,3 +288,18 @@ What went wrong while building, and what changed because of it
     connection, for two commands in the same minute;
   - or commands on a NullPool, connecting per query, so they hold nothing
     between queries; this narrows the window but can still collide.
+
+## Fixed: a command's connections (2026-10-29)
+
+- **Arthur chose the fix:** `database.app_commands` 1 to 2, one connection
+  per database a command reads, taken from `mcp_dict_pool` (2 to 1); the
+  total stays 20. `juku_app`'s CONNECTION LIMIT is 7 and `juku_mcp`'s 4.
+  The overrun test now passes.
+- **And a short retry.** A command's connection that Postgres refuses
+  because the role is at its limit waits and tries again (tenacity: five
+  tries over about 15 s), then fails with the refusal so cron's alert sees
+  it. Other connection errors, such as a wrong password, aren't retried.
+  Tested against a real login capped at one connection.
+- **Mutation checks:** six breaks (no retry, every error retried, the
+  engine without the retrying connect, a command's whole share per
+  database, either limit left as it was), each failing a test.

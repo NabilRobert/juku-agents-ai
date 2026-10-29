@@ -558,8 +558,8 @@ rule file refuses to load if the shares add up to more than the limit.
 | Login | Share | For |
 |---|---|---|
 | The provider's admin | 1 | set-up, a psql session |
-| `juku_app` | 6 | the app's pools (3 on `app`, 2 on `dict`), plus one for a hand-run command or the nightly check |
-| `juku_mcp` | 5 | its pools (3 on `app`, 2 on `dict`) |
+| `juku_app` | 7 | the app's pools (3 on `app`, 2 on `dict`), plus two for a hand-run command or the nightly check, one per database (revised 2026-10-29, when one proved too few) |
+| `juku_mcp` | 4 | its pools (3 on `app`, 1 on `dict`: its dictionary reads are short) |
 | `juku_ops` | 3 | cron jobs; three can start in the same minute |
 | `juku_migrator` | 1 | migrations and partition upkeep |
 | `dict_owner` | 1 | the dictionary reload |

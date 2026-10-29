@@ -37,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from juku_app import invites, privacy
 from juku_app.budget import BudgetGuard
+from juku_app.connections import command_engine
 from juku_app.logs import configure_logging
 from juku_app.moderation import PendingModerator
 from juku_app.pipeline.crew import CrewModels, build_crew, keiko_toolset
@@ -64,12 +65,20 @@ def databases(config: AppSettings, rules: Rules) -> Databases:
     )
 
 
+# The databases a command reads: the app's and the dictionary.
+COMMAND_DATABASES = ("app", "dict")
+
+
 def command_databases(config: AppSettings, rules: Rules) -> Databases:
-    """A hand-run command's pools, beside the running app: its own share of juku_app's connections."""
-    size = rules.database.app_commands
+    """A hand-run command's pools, beside the running app: its share of juku_app's connections, one per database.
+
+    A command reads both databases, so it needs a connection for each; the share (app_commands) covers both.
+    Each connection waits out a role at its limit briefly instead of failing (juku_app.connections).
+    """
+    per_database = max(1, rules.database.app_commands // len(COMMAND_DATABASES))
     return Databases(
-        app=create_async_engine(config.app_database_url, pool_size=size, max_overflow=0),
-        dictionary=create_async_engine(config.dict_database_url, pool_size=size, max_overflow=0),
+        app=command_engine(config.app_database_url, per_database),
+        dictionary=command_engine(config.dict_database_url, per_database),
     )
 
 

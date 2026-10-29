@@ -17,8 +17,6 @@ from juku_testkit.databases import admin_url, as_sqlalchemy_url
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 
-pytestmark = pytest.mark.xfail(strict=True, reason="EDD: the retry lands in the next commit")
-
 URL = "postgresql+asyncpg://juku_app@db.example.invalid:6543/app?ssl=require"
 
 
@@ -35,7 +33,7 @@ async def test_a_refused_connection_is_retried_until_it_succeeds(monkeypatch: py
             raise refused()
         return "connected"
 
-    monkeypatch.setattr(connections.asyncpg, "connect", connect)
+    monkeypatch.setattr(asyncpg, "connect", connect)
     monkeypatch.setattr(connections, "RETRY_WAIT_SECONDS", 0)
     assert await connections.connect_with_retry(URL) == "connected"
     assert len(calls) == 3
@@ -49,7 +47,7 @@ async def test_a_role_still_full_after_the_last_attempt_fails_with_the_refusal(m
         calls.append(1)
         raise refused()
 
-    monkeypatch.setattr(connections.asyncpg, "connect", connect)
+    monkeypatch.setattr(asyncpg, "connect", connect)
     monkeypatch.setattr(connections, "RETRY_WAIT_SECONDS", 0)
     with pytest.raises(asyncpg.exceptions.TooManyConnectionsError):
         await connections.connect_with_retry(URL)
@@ -63,7 +61,7 @@ async def test_other_connection_errors_fail_at_once(monkeypatch: pytest.MonkeyPa
         calls.append(1)
         raise asyncpg.exceptions.InvalidPasswordError("password authentication failed")
 
-    monkeypatch.setattr(connections.asyncpg, "connect", connect)
+    monkeypatch.setattr(asyncpg, "connect", connect)
     with pytest.raises(asyncpg.exceptions.InvalidPasswordError):
         await connections.connect_with_retry(URL)
     assert len(calls) == 1, "a wrong password won't fix itself: no retry"
