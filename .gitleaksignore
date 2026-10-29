@@ -1,0 +1,18 @@
+# gitleaks false positives, one fingerprint each; checked by hand on 2026-10-29. None is a secret.
+# History scans (gitleaks git) name them commit:file:rule:line; working-tree scans (gitleaks dir) file:rule:line.
+# A new literal gets an inline `gitleaks:allow` with its reason instead of a line here.
+#
+# A parameter annotated with the Ed25519 private-key type, read as a generic API key:
+a61ff9462ea63a3280675a2851d56e4a278b02df:packages/juku-common/src/juku_common/delegation.py:generic-api-key:37
+3bcd513b0f37a1d20114f167a75ebbc834194d61:app/tests/pipeline_helpers.py:generic-api-key:112
+3bcd513b0f37a1d20114f167a75ebbc834194d61:app/tests/test_pipeline_run.py:generic-api-key:252
+6fbfbac1f58276f960aa4580759fb44cb20611be:spikes/6-delegation-chain/delegation.py:generic-api-key:63
+spikes/6-delegation-chain/delegation.py:generic-api-key:63
+# Prose about process_tool_call and tokens in spike 6's write-up:
+6fbfbac1f58276f960aa4580759fb44cb20611be:spikes/6-delegation-chain/README.md:generic-api-key:192
+spikes/6-delegation-chain/README.md:generic-api-key:192
+# Spike 3's curl, whose password is read from a file at run time, not written in:
+95c4fd3045fbce2572542442a9dcefae05c81e6e:spikes/3-grafana-memory/measure.sh:curl-auth-user:62
+spikes/3-grafana-memory/measure.sh:curl-auth-user:62
+# A deliberately invalid PEM in the key-loading tests (its base64 decodes to "not a key"):
+8622dc1a026797190ad09c9b6bd19e0786dae828:app/tests/test_key_loading.py:private-key:19
