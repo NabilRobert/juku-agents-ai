@@ -733,7 +733,7 @@ overstate the work to the audience this portfolio is for.
 
 **Decision:**
 - **Now:** only what is cheap today and expensive to change later. That
-  means the data design in the [scale path](scale-path.md):
+  means the data design in the [scale path](../planning/scale-path.md):
   - a narrow event table, partitioned by month;
   - incremental summaries;
   - text apart from metrics, with expiry;

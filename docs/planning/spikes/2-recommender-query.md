@@ -54,7 +54,7 @@ python openjlpt/grow.py > openjlpt/results-growth.md
   spike 4, with ない counted as grammar.
 
 **The latest run, under load** (round trip in ms, p50 / p95 / max, jit
-off; [openjlpt/results-jit-off.md](openjlpt/results-jit-off.md), and
+off; [openjlpt/results-jit-off.md](2-recommender-query/results/openjlpt/results-jit-off.md), and
 `results-*-loaded.md` for the other loaded run):
 
 | Level | 0 known | 100 known | 500 known |
@@ -66,7 +66,7 @@ off; [openjlpt/results-jit-off.md](openjlpt/results-jit-off.md), and
 | `find_reading_sentences` | 15.3 / 41.1 / 166.3 | 11.4 / 24.3 / 63.6 | 17.1 / 36.1 / 67.4 |
 
 **Beyond the pass rule** (direct SQL,
-[openjlpt/results-growth.md](openjlpt/results-growth.md)):
+[openjlpt/results-growth.md](2-recommender-query/results/openjlpt/results-growth.md)):
 - **The reading query stays flat:** 13–24 ms p50 from 500 to 4,000 known
   words under load (10–18 ms on the quiet run). The sentence pool is small
   (8,339).
@@ -135,7 +135,7 @@ of 10 sharing a new kanji, and a reason built from the row, for example
 
 ### Numbers (round trip at the MCP client, ms: p50 / p95 / max)
 
-**v2, the rewritten recommender, jit on** ([results-v2-jit-on.md](results-v2-jit-on.md)):
+**v2, the rewritten recommender, jit on** ([results-v2-jit-on.md](2-recommender-query/results/results-v2-jit-on.md)):
 
 | Level | 0 known | 100 known | 500 known |
 |---|---|---|---|
@@ -165,7 +165,7 @@ run):
   call took 1,608 ms while Grafana was being measured alongside. In the
   quiet run it stayed at 191 ms or less.
 
-**Beyond the pass rule** (direct SQL, jit off, [results-growth.md](results-growth.md)):
+**Beyond the pass rule** (direct SQL, jit off, [results-growth.md](2-recommender-query/results/results-growth.md)):
 
 | Known words | `recommend_words` N3, p95 | Reading query, p50 / p95 |
 |---|---|---|

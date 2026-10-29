@@ -22,9 +22,9 @@ python openjlpt/completeness.py data/raw/openjlpt-main/openjlpt.sqlite > openjlp
 ```
 
 It needs spike 1's `dict` database and spike 4's `jlpt_map`, for the
-cross-checks. [openjlpt/results.md](openjlpt/results.md) is the full
+cross-checks. [openjlpt/results.md](4-jlpt-mapping/results/openjlpt/results.md) is the full
 output; `openjlpt/compare.sh` reproduces the cross-checks against Waller's
-lists ([openjlpt/results-compare.txt](openjlpt/results-compare.txt)). It takes about 2 s.
+lists ([openjlpt/results-compare.txt](4-jlpt-mapping/results/openjlpt/results-compare.txt)). It takes about 2 s.
 
 - **OpenJLPT is Waller's lists, with better JMdict links.**
   - Where both have the same (spelling, reading), 7,553 of 7,561 IDs
@@ -98,7 +98,7 @@ override list, 97.1% of indexed sentences map completely.
 ```
 
 `mapping.sql` holds the rules; `report.sql` the counts; `jlpt_tsv.py` turns
-the CSVs into a COPY file. [results.txt](results.txt) is the full output.
+the CSVs into a COPY file. [results.txt](4-jlpt-mapping/results/results.txt) is the full output.
 The mapping runs in about 5 s.
 
 ### Data

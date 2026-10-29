@@ -107,17 +107,19 @@ uv run juku render-previews --out build/previews
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
 | `ops/` | Deployment: `compose.yaml`, the managed database's roles and set-up script, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
-| `docs/planning/` | The plan: problem, requirements, decisions, slices, scale path, checks |
-| `spikes/` | The week-0 spikes' code and results, kept as evidence (not linted) |
+| `docs/planning/` | Specs and plans: phase 1–2, slice plan, scale path, standard checks, spike write-ups |
+| `docs/adr/` | Architecture decisions (ADR-001 to ADR-027) and their index |
 
 A request's path through the code, the glossary and "where to change
 things" are in [the guide](docs/guide.md).
 
-## Planning docs
+## Docs
 
-- [Phase 1: problem, users and success metrics](docs/planning/phase-1-problem-brief.md)
-- [Phase 2: requirements, constraints and privacy](docs/planning/phase-2-requirements-constraints.md)
-- [Phase 5: architecture decisions](docs/planning/phase-5-architecture-decisions.md)
-- [Slice plan and cost model](docs/planning/slice-plan.md)
-- [Scale path: built for ten, designed for thousands](docs/planning/scale-path.md)
-- [Standard checks: verify at every step](docs/planning/standard-checks.md)
+- **[Planning](docs/planning/README.md):** every spec and plan (the phase
+  docs, the slice plan and cost model, the scale path, the standard checks)
+  and the six week-0 spike write-ups with their measured results.
+- **[Architecture decisions](docs/adr/README.md):** an index of ADR-001 to
+  ADR-027, each with its options considered, plus the reuse map.
+- **[The guide](docs/guide.md):** how one request flows through the code,
+  a glossary, and where to change things.
+- **[JOURNEY](JOURNEY.md):** what broke, what was wrong, and what changed.

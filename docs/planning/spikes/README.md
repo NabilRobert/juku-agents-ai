@@ -1,6 +1,6 @@
 # Week-0 spikes: results
 
-The six spikes from the [slice plan](../planning/slice-plan.md#spikes-local-0),
+The six spikes from the [slice plan](../slice-plan.md#spikes-local-0),
 run on 2026-10-28, locally and at $0:
 - no model calls and no API keys;
 - no server touched;
@@ -166,7 +166,7 @@ The proposals as written:
    the alternative, a server-budget call, and isn't recommended.
 2. **A new prerequisite in the slice plan (spike 6): the gateway forwards
    `_meta` and stamps the caller**, as in
-   `spikes/6-delegation-chain/gateway-meta-passthrough.patch`, with a test
+   `spikes/6-delegation-chain/gateway-meta-passthrough.patch` (on branch spike/delegation-chain; since merged upstream as NabilRobert/mcp-security-gateway#6), with a test
    that a client-sent caller is overwritten. It's gateway-repo work for
    Arthur, needed before slice 3 runs through the gateway, not only before
    launch (settled decision 4). Also minor: `mcp_gateway/cli.py` lacks a
@@ -227,7 +227,7 @@ The proposals as written:
    `docs/planning` (b34b8a4, before the OpenJLPT commits) and adds only its
    own `spikes/<n>-<topic>/` folder, so they don't conflict. Spike 2's and spike 4's scripts need spike 1's
    database at run time, not its code.
-3. `docs/spikes` (this file) last, since it points into the spike
+3. `docs/spikes` (this file, since moved to docs/planning/spikes/README.md) last, since it points into the spike
    folders.
 
 ## Licences recorded

@@ -18,7 +18,7 @@ Every limit comes from guardrails.yaml's `delegation` and `agents`
 sections. Every refusal names a category, which the audit log and the
 "refused call" alert use; the message is for people.
 
-Rewritten from spike 6 (spikes/6-delegation-chain/delegation.py).
+Rewritten from spike 6 (branch spike/delegation-chain, spikes/6-delegation-chain/delegation.py).
 """
 
 from __future__ import annotations

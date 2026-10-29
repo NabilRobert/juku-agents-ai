@@ -8,7 +8,7 @@ calls were made: this reads the existing logs only.
 python3 -I read_usage.py ~/Desktop/my-kerjaan-aku/agent-eval-harness > results.md
 ```
 
-[results.md](results.md) has the table, per run. Across all 20 Sumopod runs:
+[results.md](5-cached-tokens/results/results.md) has the table, per run. Across all 20 Sumopod runs:
 - 7,068 model calls. 6,792 kept their raw response, and **all 6,792 carry
   `cached_tokens`**. The other 276 have only Inspect's parsed usage, which
   splits out `input_tokens_cache_read` too;

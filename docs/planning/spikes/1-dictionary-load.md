@@ -42,7 +42,7 @@ openjlpt/load.sh openjlpt     # checksums, SQLite to COPY files, keys and indexe
 - **Load time:** 2.0–2.3 s (conversion 0.2 s, COPY 1.0–1.5 s, keys and
   indexes 0.6–0.8 s).
 - **Repeatable:** two loads into fresh databases give identical md5 hashes
-  for all 5 tables ([openjlpt/results-load.txt](openjlpt/results-load.txt)).
+  for all 5 tables ([openjlpt/results-load.txt](1-dictionary-load/results/openjlpt/results-load.txt)).
   Row counts equal the SQLite's.
 
 ## JMdict, KANJIDIC2, KRADFILE and Tatoeba (the fallback)
@@ -99,8 +99,8 @@ psql -At -f table_hashes.sql   # one count and md5 per table, to compare loads
   a count of the source file.
 - **Repeatable:** the container and its volume were deleted and the load
   run again; all 13 tables' md5 hashes are identical
-  ([results-table-hashes.txt](results-table-hashes.txt)). The full report
-  is [results-load.txt](results-load.txt).
+  ([results-table-hashes.txt](1-dictionary-load/results/results-table-hashes.txt)). The full report
+  is [results-load.txt](1-dictionary-load/results/results-load.txt).
 
 ### Found in the data (for slice 1)
 

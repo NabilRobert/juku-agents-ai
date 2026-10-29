@@ -5,7 +5,7 @@
   `call_tool(name, arguments)`, so the delegation token never reaches
   Juku's server, and every call is refused, the legitimate ones included.
   (The SDK still carries `traceparent` across.)
-- **With [gateway-meta-passthrough.patch](gateway-meta-passthrough.patch),
+- **With [gateway-meta-passthrough.patch](https://github.com/NabilRobert/juku-agents-ai/blob/spike/delegation-chain/spikes/6-delegation-chain/gateway-meta-passthrough.patch),
   applied to a local copy:** `_meta` arrives unchanged (the token's
   sha256 matches on every call that reached the server). All 15 attempts
   to break the chain fail, every one is logged, and the 3 legitimate
@@ -131,7 +131,7 @@ not by the check named.
   the caller. **Juku's MCP server must be reachable only through the
   gateway** (no published port), which slice 8 must check.
 - **Logged:** every attempt has a line in Juku's log
-  ([logs/](logs/)), or in the gateway's audit log for the one it
+  ([logs/](6-delegation-chain/results/logs/)), or in the gateway's audit log for the one it
   refuses itself.
   - The gateway's `result` line says `allowed` for calls Juku refused: its
     `decision` is the detector's verdict, with `is_error: true`.
@@ -139,7 +139,7 @@ not by the check named.
     "who accessed my data" page and the refusal alert should read.
 - **Unit level:** 22 tests, one per rule. `mutate.py` disables each of the
   20 checks in turn, and every mutant is killed
-  ([results-mutation.txt](results-mutation.txt)).
+  ([results-mutation.txt](6-delegation-chain/results/results-mutation.txt)).
 
 ## 3a. Through PydanticAI (ADR-025)
 

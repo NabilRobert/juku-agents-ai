@@ -19,7 +19,7 @@ FILE_URLS = {SQLITE_FILE: f"{RAW_BASE_URL}/data/{SQLITE_FILE}", NOTICE_FILE: f"{
 # Row counts of this build, as spike 1 recorded them. A load that doesn't
 # reproduce them is a partial or wrong load.
 EXPECTED_ROW_COUNTS = {"vocab": 7811, "vocab_example": 13718, "kanji": 2383, "grammar": 526, "pos": 47}
-# Spike 1's md5 of each table's rows (spikes/1-dictionary-load/openjlpt/results-load.txt).
+# Spike 1's md5 of each table's rows (docs/planning/spikes/1-dictionary-load/results/openjlpt/results-load.txt).
 # A fresh load must give the same, row for row.
 EXPECTED_TABLE_MD5 = {
     "grammar": "b9dce9d177cb9927730910444f486e1d",
