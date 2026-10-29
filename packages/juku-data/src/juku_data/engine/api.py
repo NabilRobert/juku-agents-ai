@@ -44,7 +44,7 @@ class Databases:
     dictionary: AsyncEngine
 
 
-async def create_learner(
+async def create_learner(  # noqa: PLR0913 (keyword-only: the learner's own fields)
     db: Databases,
     *,
     nickname: str,
@@ -95,7 +95,7 @@ async def unmark_known(db: Databases, learner_id: int, word_id: str, at: datetim
         await writes.apply_word_event(connection, learner_id, word_id, UNMARKED_KNOWN, at)
 
 
-async def record_quiz_answer(
+async def record_quiz_answer(  # noqa: PLR0913 (one quiz answer's fields; the engine's public API)
     db: Databases, learner_id: int, word_id: str, kind: QuizKind, is_correct: bool, at: datetime
 ) -> None:
     await writes.check_word(db.dictionary, word_id)
@@ -105,7 +105,7 @@ async def record_quiz_answer(
         )
 
 
-async def grade_answer(
+async def grade_answer(  # noqa: PLR0913 (one quiz answer's fields; the engine's public API)
     db: Databases, learner_id: int, word_id: str, kind: QuizKind, chosen: str, at: datetime
 ) -> GradedAnswer:
     """LE2: grade against the answer looked up again, then record it."""

@@ -102,7 +102,7 @@ async def find_learner(connection: AsyncConnection, public_id: str) -> Learner:
     return _learner(row)
 
 
-async def create_learner(
+async def create_learner(  # noqa: PLR0913 (keyword-only: the learner's own fields)
     connection: AsyncConnection,
     *,
     nickname: str,
@@ -169,7 +169,7 @@ async def check_word(dictionary: AsyncEngine, word_id: str) -> None:
         raise UnknownWordError(f"{word_id!r} isn't a word in the dictionary")
 
 
-async def _append_event(
+async def _append_event(  # noqa: PLR0913 (the event row's columns)
     connection: AsyncConnection, learner: Learner, event_type: int, item_id: str, result: int | None, at: datetime
 ) -> None:
     await connection.execute(
@@ -336,7 +336,7 @@ async def _count_activity(
     )
 
 
-async def apply_word_event(
+async def apply_word_event(  # noqa: PLR0913 (one word event's fields)
     connection: AsyncConnection,
     learner_id: int,
     word_id: str,

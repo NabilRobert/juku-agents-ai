@@ -18,22 +18,19 @@ it got. Spans hold no content (FF9).
 from __future__ import annotations
 
 import json
-import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from typing import Any
 
-from juku_common.delegation import META_KEY, Signer
+from juku_common.delegation import Signer
 from juku_data.engine.models import Learner
 from pydantic_ai import Agent, InstrumentationSettings, RunContext
 from pydantic_ai.mcp import CallToolFunc, MCPToolset
 from pydantic_ai.models import Model
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from juku_app.pipeline.facts import WeekFacts
 from juku_app.pipeline.outputs import KeikoPlan, Review
-from juku_app.shiori import RECORD_CALL, SERVER, current_trace_id, refusal_category, row_count
+from juku_app.tool_calls import ToolCaller, call_and_record
 
 KEIKO_INSTRUCTIONS = """\
 Kamu Keiko, perencana mingguan di Juku untuk pelajar JLPT dari Indonesia.
@@ -144,45 +141,14 @@ def _token(run: KeikoRun) -> tuple[str, list[str]]:
     return run.signer.delegate(parent, to_agent="keiko", tools=keiko_tools), ["shiori", "keiko"]
 
 
-async def _record_call(
-    run: KeikoRun, chain: list[str], tool: str, started: float, outcome: str, category: str | None, rows: int | None
-) -> None:
-    """The per-call record (Phase 2 M1), as Shiori's: never the arguments or the result."""
-    async with run.records.begin() as connection:
-        await connection.execute(
-            text(RECORD_CALL),
-            {
-                "called_at": datetime.now(UTC),
-                "agent": "keiko",
-                "server": SERVER,
-                "tool": tool,
-                "duration_ms": int((time.perf_counter() - started) * 1000),
-                "outcome": outcome,
-                "error_category": category,
-                "row_count": rows,
-                "trace_id": current_trace_id(),
-                "actor_chain": chain,
-                "learner_id": run.learner.id,
-            },
-        )
-
-
 async def keiko_call(ctx: RunContext[KeikoRun], call_tool: CallToolFunc, name: str, arguments: dict[str, Any]) -> Any:
     """Around each of Keiko's MCP calls: a fresh token in `_meta`, the result kept, a per-call record written."""
     run = ctx.deps
     token, chain = _token(run)
-    started = time.perf_counter()
-    try:
-        result = await call_tool(name, arguments, metadata={META_KEY: token})
-    except Exception as error:
-        category = refusal_category(str(error))
-        await _record_call(
-            run, chain, name, started, "refused" if category else "tool_error", category or type(error).__name__, None
-        )
-        raise
-    run.tool_results.append(result)
-    await _record_call(run, chain, name, started, "ok", None, row_count(result))
-    return result
+    caller = ToolCaller(
+        agent="keiko", chain=tuple(chain), learner_id=run.learner.id, records=run.records, results=run.tool_results
+    )
+    return await call_and_record(caller, call_tool, name, arguments, token)
 
 
 def keiko_toolset(url: str, gateway_key: str | None = None) -> MCPToolset:

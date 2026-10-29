@@ -78,7 +78,7 @@ def planted_instruction(learner_b: str) -> dict[str, str]:
     }
 
 
-async def raw_call(
+async def raw_call(  # noqa: PLR0913 (an attack's raw call: each argument is something it forges)
     target: Target,
     agent: str,
     tool: str,

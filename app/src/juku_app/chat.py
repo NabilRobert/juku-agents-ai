@@ -100,12 +100,10 @@ async def _store(services: ChatServices, learner: Learner, question: str, answer
     return int(stored)
 
 
-async def _finish(
-    services: ChatServices, learner: Learner, question: str, run: ShioriRun, output: str, now: datetime
-) -> ChatAnswer:
+async def _finish(services: ChatServices, question: str, run: ShioriRun, output: str, now: datetime) -> ChatAnswer:
     check = check_citations(output, run.tool_results)
     answer = ChatAnswer(output, is_verified=check.is_verified)
-    message_id = await _store(services, learner, question, answer, now)
+    message_id = await _store(services, run.learner, question, answer, now)
     return ChatAnswer(output, is_verified=check.is_verified, message_id=message_id)
 
 
@@ -123,7 +121,7 @@ async def ask(services: ChatServices, learner: Learner, question: str, now: date
         return ChatAnswer(RUN_LIMIT_REPLY, is_verified=True, stopped_because="run_limit")
     finally:
         await services.guard.record("chat", learner.id, usage)
-    return await _finish(services, learner, question, run, result.output, now)
+    return await _finish(services, question, run, result.output, now)
 
 
 async def ask_streaming(
@@ -150,4 +148,4 @@ async def ask_streaming(
         return
     finally:
         await services.guard.record("chat", learner.id, usage)
-    yield await _finish(services, learner, question, run, "".join(pieces), now)
+    yield await _finish(services, question, run, "".join(pieces), now)

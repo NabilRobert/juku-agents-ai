@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from juku_common.delegation import Signer
@@ -99,10 +99,15 @@ class RunScope:
     services: PipelineServices
     learner: Learner
     run_id: int
+    week: date
     now: datetime
     via_shiori: bool = False
     # The learner's retired notes, for the stale-claim check (checks.py).
     retired: frozenset[str] = frozenset()
+
+    @property
+    def ref(self) -> records.RunRef:
+        return records.RunRef(run_id=self.run_id, learner_id=self.learner.id, week=self.week)
 
 
 async def _call(context: RunScope, run_agent: Callable[[UsageLimits, RunUsage], Awaitable[AgentRunResult[Any]]]) -> Any:
@@ -151,18 +156,8 @@ async def _reviewed(
         code_issues = check(output, fresh)
         review = await _review(context, author, shown, given)
         decision = decide_approval(review, code_issues)
-        await records.record_review(
-            context.services.db.app,
-            context.run_id,
-            context.learner.id,
-            author,
-            attempt,
-            shown,
-            review,
-            code_issues,
-            decision,
-            context.now,
-        )
+        draft = records.ReviewedDraft(author, attempt, shown, review, code_issues, decision)
+        await records.record_review(context.services.db.app, context.ref, draft, context.now)
         if decision.is_approved:
             return output
         issues = [*(review.issues if review else []), *code_issues]
@@ -230,7 +225,9 @@ async def run_weekly(services: PipelineServices, learner: Learner, now: datetime
         return RunOutcome(run_id=claimed.run_id, status="busy")
     await records.clear_skip(services.db.app, learner.id, week_start)
     retired = await retired_note_ids(services.db, learner.id)
-    context = RunScope(services=services, learner=learner, run_id=claimed.run_id, now=now, retired=retired)
+    context = RunScope(
+        services=services, learner=learner, run_id=claimed.run_id, week=week_start, now=now, retired=retired
+    )
     facts = await gather_facts(services.db, learner, now)
     await records.save_facts(services.db.app, claimed.run_id, facts)
     report: str | None = None
@@ -240,7 +237,7 @@ async def run_weekly(services: PipelineServices, learner: Learner, now: datetime
     except BudgetSpentError:
         report = None
     body = report if report is not None else facts_only_report(facts)
-    await records.publish_report(services.db.app, claimed.run_id, learner.id, week_start, body, report is None, now)
+    await records.publish_report(services.db.app, context.ref, body, report is None, now)
     return RunOutcome(run_id=claimed.run_id, status="published" if report is not None else "fallback", report=body)
 
 
@@ -272,7 +269,15 @@ async def run_replans(services: PipelineServices, now: datetime) -> list[RunOutc
         week_start, _ = week_of(now, learner.timezone)
         run_id = await records.start_replan_run(services.db.app, learner.id, week_start, int(request_id), now)
         retired = await retired_note_ids(services.db, learner.id)
-        context = RunScope(services=services, learner=learner, run_id=run_id, now=now, via_shiori=True, retired=retired)
+        context = RunScope(
+            services=services,
+            learner=learner,
+            run_id=run_id,
+            week=week_start,
+            now=now,
+            via_shiori=True,
+            retired=retired,
+        )
         facts = await gather_facts(services.db, learner, now)
         await records.save_facts(services.db.app, run_id, facts)
         try:

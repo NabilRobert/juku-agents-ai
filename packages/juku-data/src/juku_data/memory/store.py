@@ -131,7 +131,7 @@ async def _snapshot(db: Databases, rows: list[EvidenceRow]) -> list[dict[str, An
     return snapshot
 
 
-async def _refuse(
+async def _refuse(  # noqa: PLR0913 (the refusal row's fields, inside the caller's transaction)
     connection: AsyncConnection, learner_id: int, proposal: NoteProposal, proposed_by: str, reason: str, now: datetime
 ) -> ProposalOutcome:
     await connection.execute(
@@ -165,7 +165,7 @@ async def _reason_before_evidence(
     return None
 
 
-async def propose_note(
+async def propose_note(  # noqa: PLR0913 (memory's public API; the rest are keyword-only)
     db: Databases, learner_id: int, proposal: NoteProposal, *, proposed_by: str, rules: Rules, now: datetime
 ) -> ProposalOutcome:
     """Store the note if it passes every check; otherwise record why not. One transaction, the learner locked."""
@@ -199,7 +199,7 @@ async def propose_note(
     return ProposalOutcome(is_accepted=True, note_id=int(note_id))
 
 
-async def _set_status(db: Databases, learner_id: int, note_id: int, status: str, reason: str, now: datetime) -> None:
+async def _set_status(db: Databases, learner_id: int, note_id: int, status: str, reason: str, now: datetime) -> None:  # noqa: PLR0913 (one status change's fields)
     async with db.app.begin() as connection:
         changed = await connection.execute(
             text(SET_STATUS), {"status": status, "reason": reason, "now": now, "id": note_id, "learner": learner_id}
