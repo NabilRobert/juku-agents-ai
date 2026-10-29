@@ -1,0 +1,27 @@
+--- a/src/mcp_gateway/proxy.py
++++ b/src/mcp_gateway/proxy.py
+@@ -36,6 +36,10 @@
+ UPSTREAM_ERROR = -32001  # the gateway's own code: the upstream failed, not the agent
+ SECRET_NAME = re.compile(r"key|token|password|passwd|secret|authorization|credential|cookie", re.IGNORECASE)
+ REDACTED = "<redacted>"
++# The authenticated caller, stamped into each forwarded request's _meta for
++# the upstream to bind delegation chains to (Juku spike 6).
++CALLER_META_KEY = "io.github.nabilrobert.mcp-gateway/caller"
++RESERVED_META_PREFIX = "io.modelcontextprotocol/"
+ 
+ 
+ def redact(value: Any) -> Any:
+@@ -186,7 +190,12 @@
+         start = time.perf_counter()
+         try:
+             upstream = await self.upstreams.for_session(session_id_of(ctx))
+-            result = await upstream.session.call_tool(params.name, arguments)
++            # Forward the request's _meta unchanged, except the protocol's own
++            # keys (the upstream session sets those), and stamp the caller,
++            # overwriting any value the client sent.
++            meta = {k: v for k, v in (params.meta or {}).items() if not k.startswith(RESERVED_META_PREFIX)}
++            meta[CALLER_META_KEY] = caller
++            result = await upstream.session.call_tool(params.name, arguments, meta=meta)  # pyright: ignore[reportArgumentType]
+         except MCPError as exc:  # e.g. a per-session route asked for without a session
+             self._try_append("result", decision="upstream_error", error=exc.error.message, **_ids(record))
+             raise

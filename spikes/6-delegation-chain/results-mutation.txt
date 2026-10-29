@@ -1,0 +1,21 @@
+killed    no token accepted
+killed    signature not checked
+killed    audience not checked
+killed    expiry not checked
+killed    a minute of leeway
+killed    unknown agents allowed
+killed    no depth limit
+killed    scope not checked
+killed    hops not checked
+killed    parent on a direct chain allowed
+killed    caller not required
+killed    caller not bound
+killed    replay allowed
+killed    any delegation path
+killed    parent not required
+killed    parent chain not compared
+killed    learner may change
+killed    replan not required of the parent
+killed    tools may widen
+killed    expiry may extend
+20/20 mutants killed

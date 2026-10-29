@@ -1,0 +1,77 @@
+
+
+mapping_s=4
+== JLPT rows by level and how they were mapped
+ n | rows | unique | by_r1 | by_r2 | by_r3 | ambiguous | unmatched 
+---+------+--------+-------+-------+-------+-----------+-----------
+ 5 |  684 |    660 |    18 |     0 |     2 |         4 |         0
+ 4 |  640 |    626 |     8 |     0 |     4 |         2 |         0
+ 3 | 1730 |   1691 |    27 |     5 |     2 |         5 |         0
+ 2 | 1812 |   1788 |    18 |     2 |     0 |         3 |         1
+ 1 | 3427 |   3361 |    36 |     1 |     5 |        10 |        14
+   | 8293 |   8126 |   107 |     8 |    13 |        24 |        15
+
+== Against the hand-added JMdict IDs (stephenmk): mapped rows that agree
+  how   | rows | agree | agree_pct 
+--------+------+-------+-----------
+ R1     |  107 |    98 |      91.6
+ R2     |    8 |     6 |      75.0
+ R3     |   13 |    10 |      76.9
+ unique | 8126 |  8116 |      99.9
+        | 8254 |  8230 |      99.7
+
+== Hand-added IDs missing from this JMdict release (removed or merged entries)
+ rows | ids 
+------+-----
+    0 |   0
+
+== Ambiguous or unmatched rows whose hand-added ID is still valid (recoverable from the reference)
+    how    | rows 
+-----------+------
+ ambiguous |   24
+ unmatched |    2
+
+== Distinct entries per level, each at its easiest level (from the hand-added IDs)
+ n | entries 
+---+---------
+ 5 |     667
+ 4 |     630
+ 3 |    1651
+ 2 |    1738
+ 1 |    3061
+   |    7747
+
+== Tatoeba: Japanese sentences indexed
+ jpn_sentences | indexed | indexed_pct 
+---------------+---------+-------------
+        248941 |  148396 |        59.6
+
+== Tatoeba index tokens (first index line per sentence) by how they were mapped
+    how    | tokens  |  pct  
+-----------+---------+-------
+ ambiguous |   50949 |   4.4
+ given_id  |   62168 |   5.3
+ R1        |   42635 |   3.7
+ R2        |     555 |   0.0
+ R3        |  193637 |  16.6
+ unique    |  813095 |  69.7
+ unmatched |    4203 |   0.4
+           | 1167242 | 100.0
+
+== Distinct token keys by how they were mapped
+    how    | keys  
+-----------+-------
+ ambiguous |    85
+ given_id  |   319
+ R1        |   440
+ R2        |    46
+ R3        |    68
+ unique    | 29656
+ unmatched |    81
+           | 30695
+
+== Sentences whose every token maps to one entry (usable for i+1 reading practice)
+ indexed_sentences | fully_mapped | fully_mapped_pct | of_all_jpn_pct 
+-------------------+--------------+------------------+----------------
+            148396 |       102568 |             69.1 |           41.2
+
