@@ -9,3 +9,15 @@ paths = [
     '''spikes/6-delegation-chain/results-.*\.json''',
     '''uv\.lock''',
 ]
+
+# Known false positives in code that moves between branches, matched on the
+# whole line (fingerprints carry line numbers, which differ across the stack):
+regexTarget = "line"
+regexes = [
+    # A parameter typed as an Ed25519 key, not a key: `key: ed25519.Ed25519PrivateKey`.
+    '''key: ed25519\.Ed25519\w+Key''',
+    # The deliberately invalid PEM in the key-loading tests: base64 for "not a key".
+    '''bm90IGEga2V5''',
+    # Spike 6's write-up, in prose: "minted in PydanticAI's `process_tool_call`".
+    '''minted in PydanticAI's''',
+]
