@@ -20,10 +20,9 @@ from typing import Annotated
 
 import typer
 import uvicorn
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from fastapi import FastAPI
-from juku_common.delegation import Signer
+from juku_common.delegation import NotEd25519KeyError, Signer, private_key_from_pem
 from juku_common.rules import Rules, load_rules
 from juku_data import engine
 from juku_data.engine import Databases
@@ -98,10 +97,10 @@ def chat_model(config: AppSettings) -> Model:
 
 
 def signing_key(config: AppSettings) -> ed25519.Ed25519PrivateKey:
-    key = serialization.load_pem_private_key(config.delegation_signing_key.encode(), password=None)
-    if not isinstance(key, ed25519.Ed25519PrivateKey):
-        raise SystemExit("JUKU_DELEGATION_SIGNING_KEY isn't an Ed25519 private key: make one with ops/make-secrets.sh")
-    return key
+    try:
+        return private_key_from_pem(config.delegation_signing_key, "JUKU_DELEGATION_SIGNING_KEY")
+    except NotEd25519KeyError as wrong:
+        raise SystemExit(str(wrong)) from None
 
 
 def admin_ids(config: AppSettings) -> frozenset[str]:

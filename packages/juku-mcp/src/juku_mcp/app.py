@@ -11,10 +11,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.audit_chain import JUKU_MCP_GENESIS, AuditLog
-from juku_common.delegation import Verifier
+from juku_common.delegation import Verifier, public_key_from_pem
 from juku_common.rules import Rules, load_rules
 from juku_data.engine import Databases
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -28,15 +26,6 @@ from juku_mcp.settings import McpSettings
 from juku_mcp.telemetry import install_tracing
 
 MCP_PATH = "/mcp"
-
-
-def public_key_from_pem(pem: str) -> ed25519.Ed25519PublicKey:
-    key = serialization.load_pem_public_key(pem.encode())
-    if not isinstance(key, ed25519.Ed25519PublicKey):
-        raise ValueError(
-            "JUKU_MCP_DELEGATION_PUBLIC_KEY isn't an Ed25519 public key: make one with ops/make-secrets.sh"
-        )
-    return key
 
 
 def databases(settings: McpSettings, rules: Rules) -> Databases:
@@ -54,7 +43,7 @@ def create_app(settings: McpSettings, rules: Rules | None = None) -> Starlette:
     db = databases(settings, rules)
     deps = ServerDeps(
         db=db,
-        verifier=Verifier(public_key_from_pem(settings.delegation_public_key), rules),
+        verifier=Verifier(public_key_from_pem(settings.delegation_public_key, "JUKU_MCP_DELEGATION_PUBLIC_KEY"), rules),
         audit=AuditLog(settings.audit_log, genesis=JUKU_MCP_GENESIS),
         rules=rules,
         words=DictionarySearch(db.dictionary),

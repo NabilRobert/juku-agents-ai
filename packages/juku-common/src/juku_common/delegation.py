@@ -28,7 +28,6 @@ import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any, cast
 
 import jwt
@@ -96,17 +95,26 @@ def _timestamp(now: datetime | None) -> float:
     return time.time() if now is None else now.timestamp()
 
 
-def load_private_key(path: Path) -> ed25519.Ed25519PrivateKey:
-    key = serialization.load_pem_private_key(path.read_bytes(), password=None)
+class NotEd25519KeyError(ValueError):
+    """A key that loads, but isn't Ed25519: the message names the setting, and how to make the right one."""
+
+
+KEY_ADVICE = "make one with ops/make-secrets.sh"
+
+
+def private_key_from_pem(pem: str, setting: str) -> ed25519.Ed25519PrivateKey:
+    """The Ed25519 private key in `setting`. Text that isn't a key fails with cryptography's own ValueError."""
+    key = serialization.load_pem_private_key(pem.encode(), password=None)
     if not isinstance(key, ed25519.Ed25519PrivateKey):
-        raise ValueError(f"{path} isn't an Ed25519 private key: make one with ops/make-secrets.sh")
+        raise NotEd25519KeyError(f"{setting} isn't an Ed25519 private key: {KEY_ADVICE}")
     return key
 
 
-def load_public_key(path: Path) -> ed25519.Ed25519PublicKey:
-    key = serialization.load_pem_public_key(path.read_bytes())
+def public_key_from_pem(pem: str, setting: str) -> ed25519.Ed25519PublicKey:
+    """The Ed25519 public key in `setting`. Text that isn't a key fails with cryptography's own ValueError."""
+    key = serialization.load_pem_public_key(pem.encode())
     if not isinstance(key, ed25519.Ed25519PublicKey):
-        raise ValueError(f"{path} isn't an Ed25519 public key: make one with ops/make-secrets.sh")
+        raise NotEd25519KeyError(f"{setting} isn't an Ed25519 public key: {KEY_ADVICE}")
     return key
 
 
