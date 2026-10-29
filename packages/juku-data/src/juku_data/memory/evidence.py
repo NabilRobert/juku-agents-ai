@@ -96,7 +96,7 @@ def _is_avoidance(row: EvidenceRow) -> bool:
     return row.event_type == "unmarked_known" or (row.event_type in QUIZ_TYPES and row.is_correct is False)
 
 
-def check_evidence(
+def check_evidence(  # noqa: PLR0913 (pure: each is one input the evidence is checked against)
     category: str,
     requested_ids: Sequence[int],
     rows: Sequence[EvidenceRow],

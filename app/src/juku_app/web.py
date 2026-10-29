@@ -171,7 +171,7 @@ async def header_csrf(request: Request) -> None:
     check_csrf(request, request.headers.get("X-CSRF-Token"))
 
 
-def create_web_app(deps: WebDeps) -> FastAPI:
+def create_web_app(deps: WebDeps) -> FastAPI:  # noqa: C901, PLR0915 (32 routes as closures; the split into APIRouters waits on Arthur's OK)
     db = deps.db
     guard = BudgetGuard(db.app, deps.rules)
     chat = ChatServices(

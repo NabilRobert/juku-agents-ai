@@ -45,14 +45,19 @@ line-length = 120
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "S", "ARG", "RUF"]
+# C901 and PLR09xx: the lean-code limits (complexity 10, few returns, branches, arguments and statements).
+select = ["E", "F", "W", "I", "B", "UP", "S", "ARG", "RUF", "C90", "PLR0911", "PLR0912", "PLR0913", "PLR0915"]
 # S101: pytest's asserts.
 ignore = ["S101"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.ruff.lint.per-file-ignores]
 # Migrations and tests build SQL from fixed strings, never from input.
 "migrations/**" = ["S608"]
-"**/tests/**" = ["S105", "S106", "S608"]
+# pytest hands a test its fixtures as arguments, so a test may take more than five.
+"**/tests/**" = ["S105", "S106", "S608", "PLR0913"]
 # Full-width and half-width characters are the point of the normalization tests.
 "**/tests/test_japanese.py" = ["RUF001"]
 "**/tests/test_search_words.py" = ["RUF001"]

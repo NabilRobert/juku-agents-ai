@@ -123,7 +123,7 @@ class Signer:
             if tool not in allowed:
                 raise ValueError(f"{agent} may not use {tool}: it isn't in guardrails.yaml's agents.{agent}")
 
-    def mint(
+    def mint(  # noqa: PLR0913 (keyword-only: each is one claim of the token)
         self, *, learner: str, agent: str, tools: list[str], purpose: str, run: str = "", now: datetime | None = None
     ) -> str:
         """A direct token: this agent, acting for this learner, for these tools."""

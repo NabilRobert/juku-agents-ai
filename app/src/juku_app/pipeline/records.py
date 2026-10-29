@@ -39,6 +39,27 @@ FINISH = "UPDATE app.pipeline_runs SET status = :status, finished_at = :now WHER
 
 
 @dataclass(frozen=True)
+class RunRef:
+    """Which run a record belongs to: the run, its learner, and the week it's for."""
+
+    run_id: int
+    learner_id: int
+    week: date
+
+
+@dataclass(frozen=True)
+class ReviewedDraft:
+    """One attempt at an output: the draft, Tadashi's review, code's issues, and code's decision."""
+
+    agent: str
+    attempt: int
+    content: Any
+    review: Review | None
+    code_issues: list[Issue]
+    decision: Decision
+
+
+@dataclass(frozen=True)
 class ClaimedRun:
     run_id: int
     claim: Claim
@@ -84,18 +105,7 @@ async def save_facts(app: AsyncEngine, run_id: int, facts: WeekFacts) -> None:
         )
 
 
-async def record_review(
-    app: AsyncEngine,
-    run_id: int,
-    learner_id: int,
-    agent: str,
-    attempt: int,
-    content: Any,
-    review: Review | None,
-    code_issues: list[Issue],
-    decision: Decision,
-    now: datetime,
-) -> None:
+async def record_review(app: AsyncEngine, run: RunRef, draft: ReviewedDraft, now: datetime) -> None:
     """One draft and its review, together: what the Run Inspector shows for each attempt."""
     expires = now + TEXT_RETENTION
     async with app.begin() as connection:
@@ -105,11 +115,11 @@ async def record_review(
                 "VALUES (:run, :learner, :agent, :attempt, CAST(:content AS jsonb), :now, :expires) RETURNING id"
             ),
             {
-                "run": run_id,
-                "learner": learner_id,
-                "agent": agent,
-                "attempt": attempt,
-                "content": json.dumps(content, ensure_ascii=False),
+                "run": run.run_id,
+                "learner": run.learner_id,
+                "agent": draft.agent,
+                "attempt": draft.attempt,
+                "content": json.dumps(draft.content, ensure_ascii=False),
                 "now": now,
                 "expires": expires,
             },
@@ -121,24 +131,22 @@ async def record_review(
                 "CAST(:issues AS jsonb), CAST(:code AS jsonb), :approved, :reason, :now, :expires)"
             ),
             {
-                "run": run_id,
-                "learner": learner_id,
+                "run": run.run_id,
+                "learner": run.learner_id,
                 "output": output_id,
-                "agent": agent,
-                "grade": review.grade if review else None,
-                "issues": json.dumps([issue.model_dump() for issue in review.issues] if review else []),
-                "code": json.dumps([issue.model_dump() for issue in code_issues]),
-                "approved": decision.is_approved,
-                "reason": decision.reason,
+                "agent": draft.agent,
+                "grade": draft.review.grade if draft.review else None,
+                "issues": json.dumps([issue.model_dump() for issue in draft.review.issues] if draft.review else []),
+                "code": json.dumps([issue.model_dump() for issue in draft.code_issues]),
+                "approved": draft.decision.is_approved,
+                "reason": draft.decision.reason,
                 "now": now,
                 "expires": expires,
             },
         )
 
 
-async def publish_report(
-    app: AsyncEngine, run_id: int, learner_id: int, week: date, body: str, is_fallback: bool, now: datetime
-) -> None:
+async def publish_report(app: AsyncEngine, run: RunRef, body: str, is_fallback: bool, now: datetime) -> None:
     """The learner's report, once per week (a rerun can't add a second), and the run marked finished."""
     async with app.begin() as connection:
         await connection.execute(
@@ -148,9 +156,9 @@ async def publish_report(
                 "ON CONFLICT (learner_id, week_start) DO NOTHING"
             ),
             {
-                "learner": learner_id,
-                "run": run_id,
-                "week": week,
+                "learner": run.learner_id,
+                "run": run.run_id,
+                "week": run.week,
                 "body": body,
                 "fallback": is_fallback,
                 "now": now,
@@ -158,7 +166,7 @@ async def publish_report(
             },
         )
         status = "fallback" if is_fallback else "published"
-        await connection.execute(text(FINISH), {"status": status, "now": now, "id": run_id})
+        await connection.execute(text(FINISH), {"status": status, "now": now, "id": run.run_id})
 
 
 async def finish_run(app: AsyncEngine, run_id: int, status: str, now: datetime) -> None:
