@@ -9,6 +9,8 @@ from juku_app.previews import PAGES, render_previews
 from juku_common.rules import Rules
 
 WEB = Path(__file__).resolve().parents[1] / "web"
+# One lab run is noise: CI's first measured 340 ms of blocking time on beranda, a page with 2 KB of JavaScript.
+LIGHTHOUSE_RUNS = 3
 
 
 @pytest.mark.fitness("FF12")
@@ -23,6 +25,15 @@ def test_lighthouse_asserts_the_rule_files_budget(rules: Rules) -> None:
     assert limit("largest-contentful-paint") == rules.threshold("FF12", "largest_contentful_paint_ms")
     assert limit("total-blocking-time") == rules.threshold("FF12", "total_blocking_time_ms")
     assert limit("cumulative-layout-shift") == rules.threshold("FF12", "cumulative_layout_shift")
+
+
+@pytest.mark.fitness("FF12")
+def test_lighthouse_judges_each_page_by_the_median_of_three_runs() -> None:
+    config = json.loads((WEB / "lighthouserc.json").read_text())["ci"]
+    assert config["collect"]["numberOfRuns"] == LIGHTHOUSE_RUNS
+    # lhci's default, "optimistic", would keep the best run and hide a slow page; the median hides one outlier only.
+    methods = {name: options[1].get("aggregationMethod") for name, options in config["assert"]["assertions"].items()}
+    assert methods == dict.fromkeys(methods, "median")
 
 
 @pytest.mark.fitness("FF12")
