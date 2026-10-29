@@ -8,6 +8,7 @@ dependencies = [
     "juku-data",
     "juku-ops",
     "argon2-cffi==25.1.0",
+    "asyncpg==0.32.0",
     "babel==2.18.0",
     "fastapi==0.162.0",
     "itsdangerous==2.2.0",

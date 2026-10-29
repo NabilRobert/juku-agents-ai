@@ -103,7 +103,9 @@ def test_the_apps_pools_have_their_sizes_and_no_overflow(rules: Rules) -> None:
 
 
 @enforces("database.app_commands")
-def test_a_hand_run_command_takes_one_connection_with_no_overflow(rules: Rules) -> None:
+@pytest.mark.xfail(strict=True, reason="EDD: one connection per database lands in the next commit")
+def test_a_hand_run_command_takes_one_connection_per_database_and_its_whole_share(rules: Rules) -> None:
+    """A command reads the app database and the dictionary: one connection each, together its share."""
     from juku_app.cli import command_databases
     from juku_app.settings import AppSettings
 
@@ -111,8 +113,9 @@ def test_a_hand_run_command_takes_one_connection_with_no_overflow(rules: Rules) 
         app_database_url="postgresql+asyncpg://u@h/app", dict_database_url="postgresql+asyncpg://u@h/dict"
     )
     engines = command_databases(config, rules)
-    assert pool_of(engines.app) == (rules.database.app_commands, 0)
-    assert pool_of(engines.dictionary) == (rules.database.app_commands, 0)
+    assert pool_of(engines.app) == (1, 0)
+    assert pool_of(engines.dictionary) == (1, 0)
+    assert sum(pool_of(engine)[0] for engine in (engines.app, engines.dictionary)) == rules.database.app_commands
 
 
 @enforces("database.mcp_pool", "database.mcp_dict_pool")

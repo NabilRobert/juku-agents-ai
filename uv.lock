@@ -762,6 +762,7 @@ version = "0.0.0"
 source = { editable = "app" }
 dependencies = [
     { name = "argon2-cffi" },
+    { name = "asyncpg" },
     { name = "babel" },
     { name = "fastapi" },
     { name = "itsdangerous" },
@@ -783,6 +784,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "argon2-cffi", specifier = "==25.1.0" },
+    { name = "asyncpg", specifier = "==0.32.0" },
     { name = "babel", specifier = "==2.18.0" },
     { name = "fastapi", specifier = "==0.162.0" },
     { name = "itsdangerous", specifier = "==2.2.0" },
