@@ -19,7 +19,8 @@ FROM ghcr.io/astral-sh/uv:0.13.1 AS uv
 FROM python:3.12-slim AS build
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
-WORKDIR /src
+# Built where it runs: uv writes this path into every script's first line (#!/app/.venv/bin/python).
+WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY packages/ packages/
 COPY app/pyproject.toml app/pyproject.toml
@@ -30,7 +31,7 @@ RUN uv sync --frozen --no-dev --no-editable
 # 3. What runs.
 FROM python:3.12-slim
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin juku
-COPY --from=build /src/.venv /app/.venv
+COPY --from=build /app/.venv /app/.venv
 COPY guardrails.yaml alembic.ini /app/
 COPY migrations/ /app/migrations/
 WORKDIR /app
