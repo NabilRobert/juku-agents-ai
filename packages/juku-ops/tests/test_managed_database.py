@@ -192,3 +192,21 @@ def test_make_secrets_without_the_providers_host_says_what_to_set(tmp_path: Path
     assert result.returncode != 0
     assert "JUKU_DB_HOST" in result.stderr
     assert not (tmp_path / "ops" / "secrets" / "juku_app_database_url").exists()
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known bug, waiting on Arthur's choice of fix: a command opens two engines (app and dict), "
+    "each sized app_commands, so one command can hold 2 connections against a share of 1. JOURNEY, FF6.",
+)
+def test_the_running_app_and_one_hand_run_command_fit_juku_apps_connection_limit(rules: Rules) -> None:
+    """The weekly run, `juku invite` and the nightly check are hand-run commands beside the app, all as juku_app."""
+    from juku_app.cli import command_databases, databases
+    from juku_app.settings import AppSettings
+
+    config = AppSettings.model_construct(
+        app_database_url="postgresql+asyncpg://u@h/app", dict_database_url="postgresql+asyncpg://u@h/dict"
+    )
+    engines = [*vars(databases(config, rules)).values(), *vars(command_databases(config, rules)).values()]
+    worst_case = sum(size + overflow for size, overflow in map(pool_of, engines))
+    assert worst_case <= role_limits()["juku_app"]

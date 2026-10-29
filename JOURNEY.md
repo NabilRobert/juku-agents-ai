@@ -272,3 +272,19 @@ What went wrong while building, and what changed because of it
   would have crashed the count. It's counted as plain text now, with a test.
 - **Mutation checks:** a ceiling below what's measured, a prompt grown past
   its ceiling, and the counter without the fix each fail the tests.
+- **A bug in Juku's connection budget, found in the break-it pass (open).**
+  A hand-run command opens two engines, the app database and the
+  dictionary, each sized `database.app_commands` (1), so one command can
+  hold 2 `juku_app` connections against a share of 1. With the app's own
+  pools in use (3 + 2), that's 7 against `juku_app`'s CONNECTION LIMIT of
+  6: the 7th is refused. The weekly run alone can do it, and a `juku
+  invite` in the same minute makes it 9. A strict-xfail test
+  (`test_the_running_app_and_one_hand_run_command_fit_juku_apps_connection_limit`)
+  holds it until it's fixed. The 20 shares are fully allocated, so the fix
+  is Arthur's choice:
+  - recommended: `app_commands: 2` (one per database), taking one from
+    `mcp_dict_pool` (2 to 1, the MCP server's dictionary reads are short),
+    plus a short retry with tenacity when a command is refused a
+    connection, for two commands in the same minute;
+  - or commands on a NullPool, connecting per query, so they hold nothing
+    between queries; this narrows the window but can still collide.
