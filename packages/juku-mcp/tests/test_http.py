@@ -17,6 +17,14 @@ from juku_testkit.databases import TestDatabase
 from mcp import Client
 from mcp_helpers import Learners, call, direct_rules, token_for
 
+INITIALIZE = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
+}
+MCP_HEADERS = {"Accept": "application/json, text/event-stream"}
+
 
 def free_port() -> int:
     with socket.socket() as probe:
@@ -67,3 +75,18 @@ async def test_a_tool_call_over_http_carries_its_token_in_meta(
     assert not answer.is_error, answer.text
     assert answer.body["target_level"] == 5
     assert refused.body["refused"] == "actor_mismatch"
+
+
+async def test_a_call_addressed_to_the_service_name_is_served(base_url: str) -> None:
+    # The gateway reaches the server as http://juku-mcp:8000/mcp (ops/gateway/juku-routes.example.yaml),
+    # so its Host header is the service name, not localhost.
+    async with httpx.AsyncClient(headers={"Host": "juku-mcp:8000"}) as client:
+        response = await client.post(f"{base_url}/mcp", json=INITIALIZE, headers=MCP_HEADERS)
+    assert response.status_code == 200, response.text
+
+
+async def test_a_call_addressed_to_an_unknown_host_is_refused(base_url: str) -> None:
+    # DNS-rebinding protection stays on: only the listed hosts are served.
+    async with httpx.AsyncClient(headers={"Host": "attacker.example:8000"}) as client:
+        response = await client.post(f"{base_url}/mcp", json=INITIALIZE, headers=MCP_HEADERS)
+    assert response.status_code == 421

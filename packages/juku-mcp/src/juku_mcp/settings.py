@@ -20,3 +20,6 @@ class McpSettings(BaseSettings):
     # The app's Ed25519 public key (PEM): the only key that can mint tokens this server accepts.
     delegation_public_key: str
     audit_log: Path = Path("/var/log/juku-mcp/audit.jsonl")
+    # Host headers the MCP endpoint serves (DNS-rebinding protection). The gateway calls
+    # http://juku-mcp:8000/mcp, so the service name must be listed; JSON list in the env.
+    allowed_hosts: list[str] = ["juku-mcp:*", "127.0.0.1:*", "localhost:*"]
