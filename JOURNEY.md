@@ -140,6 +140,34 @@ What went wrong while building, and what changed because of it
   checker flags nothing, and the distress path is tested with a stand-in),
   and a verified crisis line number for `JUKU_CRISIS_LINE`.
 
+## The managed database (2026-10-29)
+
+- **Arthur procured a managed Postgres 16 in Indonesia**, so ADR-016's
+  database container went. The deploy files, the set-up script, the
+  consent notice and the privacy section changed with it.
+- **The connections wouldn't have fitted.** The provider allows about 20.
+  SQLAlchemy's default pool is 5 plus 10 overflow, and the app and Juku's
+  MCP server had four engines between them: about 58 connections at
+  worst. The container had hidden this, because it allowed 100. Now
+  guardrails.yaml shares the 20 out, every pool is fixed with no
+  overflow, and each role's `CONNECTION LIMIT` is its share. Counting
+  the shares found two more uses: the hand-run commands share the app's
+  login, and three cron jobs can start in the same minute.
+- **The admin login isn't a superuser,** as with most managed providers.
+  In Postgres 16 such a login can create a database owned by another role
+  only if it can `SET ROLE` to it, so `setup.sh` grants itself the two
+  owner roles first. Checked on a throwaway `postgres:16` with an admin
+  that had only `CREATEROLE` and `CREATEDB`: set-up ran twice cleanly,
+  the migrations ran as `juku_migrator`, and a second `juku_migrator`
+  session was refused by its limit.
+- **Mutation checks:** eleven breaks (the budget check at load, a role's
+  limit, a pool's overflow or size, Grafana without TLS, MCP-backbone not
+  read-only, juku-mcp on the app's network, URLs without TLS, a missing
+  host, the old notice), each failing a test. Two mistakes in the new
+  tests showed up first: the network test counted the gateway's external
+  network as juku-mcp's own, and macOS's LibreSSL can't make the Ed25519
+  key the secrets test triggered.
+
 ## Slice 4: memory (2026-10-29)
 
 - **The MEM1 tasks came first,** in agent-eval-harness's own format (its

@@ -142,6 +142,33 @@ class MemoryRules(Section):
         return self
 
 
+class DatabaseRules(Section):
+    """`database`: the provider's connection limit and each login role's share of it (ADR-016)."""
+
+    connection_limit: int = Field(gt=0)
+    reserved_for_admin: int = Field(ge=1)
+    app_pool: int = Field(ge=1)
+    app_dict_pool: int = Field(ge=1)
+    app_commands: int = Field(ge=1)
+    mcp_pool: int = Field(ge=1)
+    mcp_dict_pool: int = Field(ge=1)
+    ops_connections: int = Field(ge=1)
+    migrator_connections: int = Field(ge=1)
+    dict_owner_connections: int = Field(ge=1)
+    grafana_connections: int = Field(ge=1)
+    mcp_backbone_connections: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _shares_fit_the_limit(self) -> Self:
+        shares = sum(value for name, value in self if name != "connection_limit")
+        if shares > self.connection_limit:
+            raise ValueError(
+                f"the shares add up to {shares} connections, more than connection_limit ({self.connection_limit}): "
+                "lower a pool, or raise the limit if the provider's plan did"
+            )
+        return self
+
+
 class Rules(Section):
     """The whole rule file."""
 
@@ -153,6 +180,7 @@ class Rules(Section):
     replan: ReplanRules
     budget: BudgetRules
     memory: MemoryRules
+    database: DatabaseRules
     fitness: dict[str, FitnessFunction]
 
     @model_validator(mode="after")

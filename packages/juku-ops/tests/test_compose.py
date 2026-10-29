@@ -7,8 +7,8 @@ import pytest
 import yaml
 from juku_testkit.databases import repo_root
 
-# ADR-016's caps, in MB; Grafana's from spike 3 (ADR-009).
-MEMORY_CAPS_MB = {"app": 256, "juku-mcp": 128, "db": 384, "grafana": 384}
+# ADR-016's caps, in MB; Grafana's from spike 3 (ADR-009). The database is managed, outside compose.
+MEMORY_CAPS_MB = {"app": 256, "juku-mcp": 128, "grafana": 384}
 
 
 def compose() -> dict[str, Any]:
@@ -20,7 +20,7 @@ def services() -> dict[str, dict[str, Any]]:
     return cast(dict[str, dict[str, Any]], compose()["services"])
 
 
-def test_the_services_are_the_four_planned() -> None:
+def test_the_services_are_the_three_planned() -> None:
     assert set(services()) == set(MEMORY_CAPS_MB)
 
 
@@ -41,14 +41,16 @@ def test_juku_mcp_shares_no_network_with_the_app() -> None:
 
 
 def test_juku_mcp_is_reachable_only_on_the_gateways_upstream_network() -> None:
+    """Its other network (to the database) is one no other service joins, so nothing else can reach it there."""
     networks = compose()["networks"]
-    for name in services()["juku-mcp"]["networks"]:
-        network = networks[name]
-        assert network.get("internal") or network.get("external"), f"{name} would expose juku-mcp"
-
-
-def test_the_database_is_never_published() -> None:
-    assert "ports" not in services()["db"]
+    all_services = services()
+    for name in all_services["juku-mcp"]["networks"]:
+        joined_by_others = [
+            other for other, service in all_services.items() if other != "juku-mcp" and name in service["networks"]
+        ]
+        assert networks[name].get("external") or not joined_by_others, (
+            f"{name} would expose juku-mcp to {joined_by_others}"
+        )
 
 
 def test_published_ports_are_on_loopback_only() -> None:

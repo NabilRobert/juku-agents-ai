@@ -26,7 +26,7 @@ sequenceDiagram
     participant M as Model
     participant J as Juku's MCP server (server.py)
     participant E as Engine (juku_data.engine)
-    participant DB as Postgres (app + dict)
+    participant DB as Managed Postgres (app + dict)
 
     B->>W: POST /chat/kirim {question}, X-CSRF-Token
     W->>W: header_csrf, signed_in, page (consent)
@@ -172,7 +172,9 @@ summaries in the `app` database:
   dictionary mirror, for each level's totals.
 
 The summaries are kept up to date as events arrive (see "the write path"
-below), so a read is a handful of indexed rows, not a recount. The
+below), so a read is a handful of indexed rows, not a recount. Both
+databases live on a managed Postgres 16 in Indonesia, outside the server,
+reached over TLS (ADR-016). The
 result goes back as JSON to the server, then to Shiori.
 
 `search_words` is the one tool that reads the `dict` database itself
@@ -249,6 +251,11 @@ fact is caught.
 **Consent version.** The consent notice's version
 (`app/src/juku_app/consent.py: CONSENT_VERSION`). Changing it asks every
 learner again before anything else.
+
+**Connection budget.** How the managed database's 20 connections are
+shared out between the logins (guardrails.yaml's `database` section).
+Each pool has a fixed size with no overflow, and each login role's
+`CONNECTION LIMIT` in `ops/db/roles.sql` is its share.
 
 **Coverage.** The share of a JLPT level's words (or kanji) a learner
 knows (`learning.learner_coverage`).
@@ -391,6 +398,18 @@ does; change it in the same commit if the behaviour changes.
 **Choose the moderation checker.** Write a class with an async
 `check(message) -> Verdict` (`moderation.py: Moderator`) and pass it in
 `cli.py: build_app` instead of `PendingModerator`.
+
+**Set up the database** (once per cluster, by Arthur). Put the host in
+`ops/.env`, run `ops/make-secrets.sh`, then `ops/db/setup.sh` with the
+provider's admin login (`PGHOST=... PGUSER=... ops/db/setup.sh`). Then
+the migrations, as `juku_migrator`, and the dictionary load.
+
+**Give a service more connections.** Change its share in
+guardrails.yaml's `database` section and the matching `CONNECTION
+LIMIT` in `ops/db/roles.sql` (a test keeps them equal), taking the
+connections from another share: the rule file refuses to load if the
+shares add up to more than `connection_limit`. Rerun `ops/db/setup.sh`
+to apply the new limits.
 
 **Change the database.** Add a migration on the owner's branch:
 `uv run alembic revision --head data@head -m "..."` (or `app@head`,
