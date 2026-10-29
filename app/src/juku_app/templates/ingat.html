@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Shiori remembers") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Shiori remembers…") }}</h1>
+<p class="text-sm">{{ _("These are Shiori's notes about how you learn, each with the activity behind it. You can remove a note, or tell Shiori it's wrong, at any time.") }}</p>
+<p class="text-xs">{{ _("Words you know:") }} {{ known_total }}</p>
+<div id="memory-island"><noscript>{{ _("This page needs JavaScript to change your notes.") }}</noscript></div>
+<script type="application/json" id="memory-data">{{ memory_data | tojson }}</script>
+<script type="application/json" id="memory-copy">{{ {
+  "notesHeading": _("Notes about how you learn"),
+  "noNotes": _("Shiori has no notes about you yet."),
+  "wordsHeading": _("Words you know, latest first"),
+  "noWords": _("You haven't marked any words known yet."),
+  "notedOn": _("noted"),
+  "daysAgo": _("days ago"),
+  "right": _("right"),
+  "wrong": _("wrong"),
+  "remove": _("Remove"),
+  "markWrong": _("This is wrong"),
+  "unmark": _("Not known yet"),
+  "removed": _("Note removed. Shiori won't note this kind of thing again for 30 days."),
+  "markedWrong": _("Thank you. Shiori won't use this note again."),
+  "unmarked": _("The word is marked as not known yet."),
+  "failed": _("That didn't work. Please try again."),
+  "categories": {
+    "recurring_confusion": _("Often confused"),
+    "preferred_example": _("Examples you like"),
+    "pace": _("Pace"),
+    "avoided_level": _("A level you avoid"),
+  },
+  "events": {
+    "marked_known": _("marked known"),
+    "unmarked_known": _("unmarked"),
+    "quiz_meaning": _("meaning quiz"),
+    "quiz_reading": _("reading quiz"),
+    "sentence_read": _("sentence read"),
+  },
+} | tojson }}</script>
+{{ island("memory") }}
+{% endblock %}

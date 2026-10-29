@@ -1,0 +1,7 @@
+# A new N5 learner: no activity yet. Everything should be empty or zero,
+# and the plan counts the whole of N5.
+public_id: fix-ayu
+target_level: 5
+timezone: Asia/Jakarta
+exam_date: 2026-12-06
+events: []

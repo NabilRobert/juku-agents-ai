@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ _("About the data") }}{% endblock %}
+{% block content %}
+{# The same text as packages/juku-data/src/juku_data/data/about_the_data.md (D2); a test keeps them in step. #}
+<h1 class="text-xl font-bold">Tentang data</h1>
+<p>Semua pengetahuan bahasa Jepang di Juku (kata, kanji, tata bahasa dan contoh kalimat) berasal dari <strong>OpenJLPT</strong>, bukan dari ingatan model AI. Setiap jawaban Shiori merujuk ke baris data ini.</p>
+<blockquote lang="en">Contains data from <a href="https://github.com/evanclan/OpenJLPT">OpenJLPT</a> (CC BY-SA 4.0), which uses JMdict and KANJIDIC2 (EDRDG), Jonathan Waller's JLPT lists, and Tatoeba.</blockquote>
+<ul class="list-disc pl-5 text-sm">
+  <li><a href="https://github.com/evanclan/OpenJLPT">OpenJLPT</a>, commit <code>bf4e1ee</code> (30 September 2026): kata, kanji, tata bahasa dan contoh kalimat N5–N1. <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</li>
+  <li><a href="https://www.edrdg.org/jmdict/j_jmdict.html">JMdict</a> dan <a href="https://www.edrdg.org/wiki/KANJIDIC_Project.html">KANJIDIC2</a>, Electronic Dictionary Research and Development Group (EDRDG): arti, bacaan dan frekuensi kanji; juga beberapa kata tambahan Juku (父, 母, 顔…). CC BY-SA 4.0, sesuai <a href="https://www.edrdg.org/edrdg/licence.html">lisensi EDRDG</a>.</li>
+  <li><a href="https://www.tanos.co.uk/jlpt/">Daftar JLPT Jonathan Waller</a>: level N5–N1 untuk kata dan kanji. CC BY.</li>
+  <li><a href="https://tatoeba.org">Tatoeba</a>: contoh kalimat (setiap kalimat punya nomor Tatoeba-nya). <a href="https://creativecommons.org/licenses/by/2.0/fr/">CC BY 2.0 FR</a>.</li>
+</ul>
+<p><strong>Level JLPT adalah perkiraan.</strong> Japan Foundation tidak menerbitkan daftar kata resmi sejak 2010. Level di Juku mengikuti daftar komunitas yang paling banyak dipakai, tetapi bisa berbeda dengan isi ujian sebenarnya.</p>
+<p><strong>Data turunan.</strong> Data apa pun yang Juku turunkan dari sumber di atas dan bagikan juga berlisensi CC BY-SA 4.0. Kode Juku sendiri berlisensi terpisah.</p>
+<p><strong>Model AI.</strong> Chat dan laporan mingguan memakai gpt-5-mini melalui Sumopod, di luar Indonesia.</p>
+{% endblock %}

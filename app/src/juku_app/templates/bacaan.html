@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Reading") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Reading practice") }}</h1>
+<p class="text-sm">{{ _("You know every word in these sentences but one.") }}</p>
+<ul class="space-y-3">
+  {% for sentence in sentences %}
+  <li>
+    <p lang="ja" class="text-lg">{% if sentence.furigana %}{{ ruby(sentence.furigana) }}{% else %}{{ sentence.ja }}{% endif %}</p>
+    {% if sentence.en %}<p class="text-sm text-stone-600">{{ sentence.en }}</p>{% endif %}
+    <p class="text-sm">{{ _("New word") }}: <span lang="ja">{{ sentence.new_word }}</span>
+      {% if sentence.tatoeba_id %}· <a href="https://tatoeba.org/sentences/show/{{ sentence.tatoeba_id }}" rel="noopener">Tatoeba #{{ sentence.tatoeba_id }}</a>{% endif %}</p>
+    <form method="post" action="/bacaan/{{ sentence.sentence_id }}/dibaca">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="text-sm underline">{{ _("Read") }}</button>
+    </form>
+  </li>
+  {% else %}
+  <li>{{ _("No sentences yet: learn a few words first.") }}</li>
+  {% endfor %}
+</ul>
+{% endblock %}

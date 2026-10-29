@@ -1,0 +1,11 @@
+# Kept out of every image's build context: environments, downloads, outputs, secrets, history.
+.git
+.venv
+**/node_modules
+**/__pycache__
+**/mutants
+data/raw
+build
+app/src/juku_app/static/dist
+ops/secrets
+ops/.env

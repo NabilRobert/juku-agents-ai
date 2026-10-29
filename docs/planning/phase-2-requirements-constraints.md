@@ -467,6 +467,11 @@ care, not legal advice.
   sent to an AI model provider outside Indonesia. UU PDP has rules on
   transfers abroad, so the notice says so, and the "about" page names the
   provider.
+- **Where it's stored, stated plainly.** Everything Juku keeps is stored in
+  Indonesia, by a managed database provider: a third party (ADR-016,
+  revised 2026-10-29). The notice says so, including its 7-day encrypted
+  backups. This public repo names the provider's region, not the
+  provider.
 - **18+ only.** Many JLPT learners are school students, and under UU PDP a
   child's data needs a parent's consent. Requiring 18+ keeps it simple.
 - Withdrawal is "Hapus data saya", at any time.
@@ -491,7 +496,9 @@ care, not legal advice.
 
 **Who sees it:** the learner sees their own; Arthur sees it for operating
 and reviewing. Agents see only one learner's data in a session, enforced
-by SM2.
+by SM2. The managed database provider in Indonesia stores all of it, and
+its backups, as a processor for Juku; the model provider abroad receives
+only chat questions and report facts.
 
 **Retention**
 - Chat text, reports and run-record content: deleted 60 days after the

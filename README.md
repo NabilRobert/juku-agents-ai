@@ -52,14 +52,74 @@ It runs on the same stack as the others:
   measures quality offline;
 - agent-observability (Project 6): traces each request and run.
 
-**Status: planning.** No app code yet. Building starts after the
-prerequisites in the [slice plan](docs/planning/slice-plan.md) are met.
+**Status: building.** Track D (the skeleton, CI and monitoring), track A
+(the data and the learning engine), track B (Juku's MCP server, identity
+and guardrails), track C (the thin app, with chat on a scripted model)
+slice 4 (memory: evidence-checked notes the learner can correct) and
+slice 6's pipeline half (Keiko, Nikki and Tadashi on scripted models, with
+code's own checks) are in; evals with real models, then deploying, follow
+([slice plan](docs/planning/slice-plan.md)). Nothing is deployed and no
+model has been called.
 
-## Planning docs
+## Run it
 
-- [Phase 1: problem, users and success metrics](docs/planning/phase-1-problem-brief.md)
-- [Phase 2: requirements, constraints and privacy](docs/planning/phase-2-requirements-constraints.md)
-- [Phase 5: architecture decisions](docs/planning/phase-5-architecture-decisions.md)
-- [Slice plan and cost model](docs/planning/slice-plan.md)
-- [Scale path: built for ten, designed for thousands](docs/planning/scale-path.md)
-- [Standard checks: verify at every step](docs/planning/standard-checks.md)
+```bash
+make db-up    # a throwaway postgres:16 on 127.0.0.1:55440, for the tests
+make check    # lint, types, tests and fitness functions, migrations, secrets
+```
+
+`uv` is the only thing to install first: `make check` runs `uv sync`'s
+environment. Squawk, gitleaks and Lighthouse CI are skipped with a note if
+they aren't installed locally; CI installs them and fails instead.
+
+The tests load the dictionary from OpenJLPT's pinned build (commit
+`bf4e1ee`), expected in `data/raw/openjlpt-bf4e1ee/` (git-ignored):
+
+```bash
+uv run juku-data fetch-dictionary
+```
+
+The first run also builds a synthetic database of 5,000 learners for the
+query-plan checks (about 3 minutes); it's kept on the test server until
+the schema or the engine's write side changes.
+
+The app itself, `juku serve`, needs the managed database (set up once
+with `ops/db/setup.sh`, ADR-016), Juku's MCP server and the secrets in
+`ops/compose.yaml`; it runs there, not on a laptop. Its pages can be
+looked at without any of that, rendered with sample data:
+
+```bash
+uv run juku render-previews --out build/previews
+```
+
+## Layout
+
+| Folder | What it does |
+|---|---|
+| `packages/juku-common/` | What every service shares: the rule file loader (`guardrails.yaml`), the hash-chained audit log, and the delegation tokens (signer and verifier) |
+| `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan |
+| `packages/juku-mcp/` | Juku's MCP server (`juku-mcp serve`): the learner's data, read-only, scoped by the delegation token in each call's `_meta`; `attacks/` holds the SAF1 attack suite and its committed prediction |
+| `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep, the nightly state check |
+| `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion; and the weekly pipeline (`juku run-weekly --due`, `app/src/juku_app/pipeline/`) with the Run Inspector |
+| `app/web/` | The two Vue islands, chat and quiz (Vite, Vitest), with FE7's size budget and FF12's Lighthouse config |
+| `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
+| `evals/` | Agent evals and their fixture learners: `memory/` holds MEM1's 15 tasks (agent-eval-harness's format), `pipeline/` the weekly pipeline's 10 learners and the planted bad outputs |
+| `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
+| `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
+| `ops/` | Deployment: `compose.yaml`, the managed database's roles and set-up script, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
+| `docs/planning/` | Specs and plans: phase 1–2, slice plan, scale path, standard checks, spike write-ups |
+| `docs/adr/` | Architecture decisions (ADR-001 to ADR-027) and their index |
+
+A request's path through the code, the glossary and "where to change
+things" are in [the guide](docs/guide.md).
+
+## Docs
+
+- **[Planning](docs/planning/README.md):** every spec and plan (the phase
+  docs, the slice plan and cost model, the scale path, the standard checks)
+  and the six week-0 spike write-ups with their measured results.
+- **[Architecture decisions](docs/adr/README.md):** an index of ADR-001 to
+  ADR-027, each with its options considered, plus the reuse map.
+- **[The guide](docs/guide.md):** how one request flows through the code,
+  a glossary, and where to change things.
+- **[JOURNEY](JOURNEY.md):** what broke, what was wrong, and what changed.

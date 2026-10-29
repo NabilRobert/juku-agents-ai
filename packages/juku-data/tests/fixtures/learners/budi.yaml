@@ -1,0 +1,21 @@
+# An N5 learner a week in (WIB, UTC+7): 60 words marked known, then quiz
+# answers that exercise LE1 (two separate days make a word known) and LE6
+# (Leitner boxes and when each is due).
+public_id: fix-budi
+target_level: 5
+timezone: Asia/Jakarta
+exam_date: null
+events:
+  - {at: "2026-11-02T08:00:00+07:00", type: marked_known, first: 60, level: 5}
+  # 青: correct on two separate days, so known.
+  - {at: "2026-11-03T09:00:00+07:00", type: quiz_meaning, word: 青/あお, correct: true}
+  - {at: "2026-11-04T09:00:00+07:00", type: quiz_meaning, word: 青/あお, correct: true}
+  # 雨: correct twice, but on the same day, so not known yet.
+  - {at: "2026-11-05T10:00:00+07:00", type: quiz_reading, word: 雨/あめ, correct: true}
+  - {at: "2026-11-05T18:00:00+07:00", type: quiz_reading, word: 雨/あめ, correct: true}
+  # 山: wrong, then right: box 2, due two days after the right answer.
+  - {at: "2026-11-05T10:00:00+07:00", type: quiz_meaning, word: 山/やま, correct: false}
+  - {at: "2026-11-06T10:00:00+07:00", type: quiz_meaning, word: 山/やま, correct: true}
+  # 川: wrong once: box 1, due a day later.
+  - {at: "2026-11-06T11:00:00+07:00", type: quiz_meaning, word: 川/かわ, correct: false}
+  - {at: "2026-11-06T12:00:00+07:00", type: sentence_read, sentence: 1}

@@ -1,0 +1,69 @@
+# make check, the same command as the pre-commit hook, on every push and
+# pull request (standard-checks.md, section 1). CI sets JUKU_REQUIRE_TOOLS
+# and JUKU_REQUIRE_DB, so a check that a laptop may skip (no Squawk, no
+# gitleaks, no test database) fails here instead. No secrets, no model
+# calls, no network beyond installing the pinned tools.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          # A throwaway server for the tests only, never real data.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 55440:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      JUKU_REQUIRE_TOOLS: "1"
+      JUKU_REQUIRE_DB: "1"
+      JUKU_TEST_ADMIN_URL: postgresql://postgres@localhost:55440/postgres
+      SQUAWK_VERSION: "2.70.0"
+      GITLEAKS_VERSION: "8.30.1"
+      LHCI_VERSION: "0.15.1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks scans every commit, not only the last one.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.1"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      # The exact versions in uv.lock. --locked fails if uv.lock no longer
+      # matches the pyproject files; make check then runs with --frozen.
+      - run: uv sync --locked --python 3.12
+      - name: Install Squawk (FF4)
+        run: uv tool install "squawk-cli==${SQUAWK_VERSION}"
+      - name: Install gitleaks, checked against its published checksum
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "${base}/${archive}"
+          curl -sSfL "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt" | grep " ${archive}$" | sha256sum -c -
+          tar -xzf "${archive}" gitleaks
+          sudo install gitleaks /usr/local/bin/gitleaks
+      # The pinned OpenJLPT build (commit bf4e1ee), checked against its SHA-256,
+      # for the dictionary and learning-engine tests.
+      - name: Fetch the dictionary
+        run: uv run --frozen juku-data fetch-dictionary --to data/raw/openjlpt-bf4e1ee
+      - name: Install Lighthouse CI (FF12)
+        run: npm install -g "@lhci/cli@${LHCI_VERSION}"
+      - run: make check

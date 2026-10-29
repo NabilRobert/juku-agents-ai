@@ -1,0 +1,117 @@
+{
+ "known_words": 151,
+ "recommendations": [
+  {
+   "word_id": "782272bfda",
+   "word": "物",
+   "level": 5,
+   "new_kanji": "物",
+   "leverage": 15
+  },
+  {
+   "word_id": "5c89b3094a",
+   "word": "食べ物",
+   "level": 5,
+   "new_kanji": "物",
+   "leverage": 15
+  },
+  {
+   "word_id": "ada066edfd",
+   "word": "会う",
+   "level": 5,
+   "new_kanji": "会",
+   "leverage": 10
+  },
+  {
+   "word_id": "1763fc412a",
+   "word": "上手",
+   "level": 5,
+   "new_kanji": "手",
+   "leverage": 9
+  },
+  {
+   "word_id": "5b9670420a",
+   "word": "手",
+   "level": 5,
+   "new_kanji": "手",
+   "leverage": 9
+  },
+  {
+   "word_id": "619dae70e9",
+   "word": "下手",
+   "level": 5,
+   "new_kanji": "手",
+   "leverage": 9
+  },
+  {
+   "word_id": "04e80a2ba1",
+   "word": "月曜日",
+   "level": 5,
+   "new_kanji": "曜",
+   "leverage": 7
+  },
+  {
+   "word_id": "0dbf9ef8ca",
+   "word": "火曜日",
+   "level": 5,
+   "new_kanji": "曜",
+   "leverage": 7
+  },
+  {
+   "word_id": "44d9d70862",
+   "word": "水曜日",
+   "level": 5,
+   "new_kanji": "曜",
+   "leverage": 7
+  },
+  {
+   "word_id": "ca332ac7b4",
+   "word": "所",
+   "level": 5,
+   "new_kanji": "所",
+   "leverage": 6
+  }
+ ],
+ "reading_sentences": [
+  {
+   "sentence_id": 12220,
+   "new_word_id": "3beb5d12ff"
+  },
+  {
+   "sentence_id": 2163,
+   "new_word_id": "d1a7b5a2a1"
+  },
+  {
+   "sentence_id": 3372,
+   "new_word_id": "76502785af"
+  },
+  {
+   "sentence_id": 3475,
+   "new_word_id": "6cf505ee55"
+  },
+  {
+   "sentence_id": 4491,
+   "new_word_id": "a6b276960f"
+  },
+  {
+   "sentence_id": 5237,
+   "new_word_id": "13ab63d79a"
+  },
+  {
+   "sentence_id": 5632,
+   "new_word_id": "45f5de7d2d"
+  },
+  {
+   "sentence_id": 9105,
+   "new_word_id": "907c41fbcf"
+  },
+  {
+   "sentence_id": 11725,
+   "new_word_id": "0c08f09a61"
+  },
+  {
+   "sentence_id": 740,
+   "new_word_id": "694ea10b56"
+  }
+ ]
+}

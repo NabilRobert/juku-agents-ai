@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Plan") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("Your plan") }}</h1>
+<p>{{ _("Words you know") }}: {{ progress.known_words }} {{ _("words") }}</p>
+<table class="mt-2 text-sm">
+  <tr><th>{{ _("Level") }}</th><th>{{ _("Words") }}</th><th>{{ _("Kanji") }}</th></tr>
+  {% for level in progress.levels %}
+  <tr><td>{{ level.level_name }}</td><td>{{ level.words_known }} / {{ level.words_total }}</td><td>{{ level.kanji_known }} / {{ level.kanji_total }}</td></tr>
+  {% endfor %}
+</table>
+<h2 class="mt-4 font-bold">{{ _("Pace") }}</h2>
+{% if plan.words_per_week is not none %}
+<p>{{ plan.words_per_week }} {{ _("words a week until the exam") }} ({{ plan.weeks_left }} {{ _("weeks") }}).</p>
+{% endif %}
+<p class="text-sm text-stone-600">{{ plan.formula }}</p>
+{% endblock %}

@@ -1,0 +1,244 @@
+# guardrails.yaml: every limit Juku enforces, in one reviewed file (ADR-019).
+#
+# Services load it at start-up (packages/juku-common/src/juku_common/rules.py)
+# and refuse to start if it is invalid. Raising a limit is a visible change
+# in a pull request, never a silent edit. Each rule has a test that fails
+# when the rule is removed (Phase 1, G1).
+version: 1
+
+# When Arthur is alerted (Phase 2 M5). The Grafana rules in
+# ops/grafana/provisioning/alerting/rules.yaml use these numbers; a test
+# keeps them equal.
+alerts:
+  heartbeat_stale_seconds: 300
+  tool_error_rate_per_hour: 0.05
+
+# Privacy floors (Phase 2 EV2, M4): no aggregate, on a dashboard or in
+# published evidence, covers fewer learners than this.
+privacy:
+  min_learners_per_cell: 5
+
+# Agent identity and delegation (ADR-018; Phase 2 ID-R1 to ID-R4). Every
+# MCP call carries a single-use token, signed by the app, naming the
+# learner, the chain of agents acting for them, and the tools allowed.
+delegation:
+  issuer: juku-app
+  audience: juku-mcp
+  token_ttl_seconds: 60
+  # learner -> Shiori -> Keiko is the longest chain; anything deeper is refused.
+  max_agent_hops: 2
+  # Behind the gateway, the chain's current agent must be the one whose key made the call.
+  require_gateway_caller: true
+  # The one multi-hop path: Shiori asks Keiko for a new plan through request_replan.
+  allowed_delegations:
+    - {from_agent: shiori, to_agent: keiko, via_tool: request_replan}
+
+# Which of Juku's MCP tools each agent's tokens may name (ID-R1). The
+# gateway's policy file holds the same lists for its allow-lists; Nikki and
+# Tadashi work only from what they're given, so they have none.
+agents:
+  shiori:
+    - get_progress
+    - get_mistakes
+    - recommend_words
+    - find_reading_sentences
+    - get_plan
+    - get_recent_activity
+    - get_memory
+    - search_words
+    - request_replan
+  keiko:
+    - get_progress
+    - get_mistakes
+    - recommend_words
+    - find_reading_sentences
+    - get_plan
+    - get_recent_activity
+    - get_memory
+  nikki: []
+  tadashi: []
+
+# The one action tool (SM4): it only queues a Keiko run, and at most this
+# many a day per learner (their local day).
+replan:
+  max_requests_per_day: 1
+
+# Spend (ADR-012, Phase 2 B1-B3; the cost model in the slice plan). The
+# app's budget guard checks these before every model call. Reports have a
+# reserved pool, so chat can't starve them; chat has daily caps and a hard
+# stop. The key cap at the provider is the backstop, not the first line.
+budget:
+  # gpt-5-mini through Sumopod, US dollars per million tokens (the harness's
+  # prices.yaml, from Sumopod's table, checked 2026-10-23). Cached input is
+  # charged at the full input price, so recorded cost errs high (B2).
+  input_usd_per_million: 0.25
+  output_usd_per_million: 2.00
+  reports_pool_usd: 0.90
+  chat_pool_usd: 1.20
+  chat_daily_global_usd: 0.20
+  chat_daily_questions_per_learner: 20
+  # PydanticAI's UsageLimits on each run: a runaway loop stops here.
+  chat_run_request_limit: 6
+  chat_run_total_tokens_limit: 20000
+  report_run_request_limit: 8
+  report_run_total_tokens_limit: 40000
+  # Budget alerts fire at these shares of each pool (M5).
+  alert_fractions: [0.5, 0.8, 1.0]
+
+# Agent notes (ADR-008; Phase 2 MEM-R2 to MEM-R5). Agents only propose
+# notes; code stores one only if all of these hold
+# (packages/juku-data/src/juku_data/memory/evidence.py). The categories are
+# also a database check (migration 0004_data), kept equal by a test.
+memory:
+  # Learning only (MEM-R3).
+  allowed_categories: [recurring_confusion, preferred_example, pace, avoided_level]
+  # Refused in code, counted (MEM2), and high severity for Tadashi.
+  forbidden_categories: [health, emotions, personal_life, work, other_people]
+  # Words that put a note's text outside learning, whatever its category
+  # (lower case; a note containing any of them is refused).
+  forbidden_text_markers: [sakit, lelah, capek, sedih, stres, depresi, cemas, kerja, kantor, gaji, pacar,
+                           suami, istri, keluarga, orang tua, anak saya, hamil, dokter, obat, agama]
+  # The evidence: at least this many activity rows, the newest no older than this.
+  min_evidence_events: 3
+  evidence_max_age_days: 30
+  # A confusion lapses once the learner has answered it right this many times since its last miss (MEM4).
+  contradicting_answers: 2
+  # After the learner removes a note, the same kind isn't proposed again for this long (MEM-R5).
+  suppress_after_removal_days: 30
+  # Small by design (scale path): a learner has at most this many active notes.
+  max_active_notes: 12
+  max_text_chars: 160
+
+# The weekly pipeline (ADR-007, ADR-014; Phase 2 AG1, AG2, AG4).
+pipeline:
+  # Revisions of one output before the learner gets the facts-only report.
+  max_revisions: 2
+  # Nikki's report, at most (AG1).
+  report_max_words: 300
+  # A learner's weekly run is due on this weekday (Monday is 0) at this hour, in their own timezone (AG2).
+  due_weekday: 6
+  due_hour: 18
+  # A run still marked running this long after it started was killed; a rerun takes it over (FF7).
+  run_lease_minutes: 30
+  # The dead-man's switch: a due run not finished this long after its hour alerts Arthur.
+  overdue_after_minutes: 60
+  # The feedback job treats an issue as a pattern from this many in a week (AG4).
+  feedback_min_occurrences: 3
+
+# Connections to the managed database (ADR-016, revised 2026-10-29). The
+# provider allows this many to the cluster; the shares below must fit in
+# it. Each pool is fixed, with no overflow, and each login role's
+# CONNECTION LIMIT in ops/db/roles.sql is its share, so Postgres itself
+# refuses the connection that would pass it.
+database:
+  connection_limit: 20
+  # Left free for the provider's admin login: setup, or a psql session.
+  reserved_for_admin: 1
+  # juku_app: the web app's pools on the app and dict databases.
+  app_pool: 3
+  app_dict_pool: 2
+  # juku_app too: a hand-run command (the weekly run, juku invite,
+  # delete-learner) or the nightly state check, beside the app: one
+  # connection for each database it reads.
+  app_commands: 2
+  # juku_mcp: Juku's MCP server's pools.
+  mcp_pool: 3
+  mcp_dict_pool: 1
+  # juku_ops: one connection per job; the heartbeat, the audit import and
+  # the nightly state check can start in the same minute (ops/crontab).
+  ops_connections: 3
+  # juku_migrator: migrations and partition upkeep, one at a time.
+  migrator_connections: 1
+  # dict_owner: the dictionary reload, run by hand.
+  dict_owner_connections: 1
+  # grafana_reader: its data source's maxOpenConns.
+  grafana_connections: 2
+  # mcp_backbone: MCP-backbone's read-only login on the dictionary.
+  mcp_backbone_connections: 1
+
+# Fitness functions (scale path, ADR-023): automated checks that fail the
+# build when a change degrades a quality the design depends on. `pending`
+# ones name the slice that activates them; the harness lists them as
+# missing rather than skipping them silently.
+fitness:
+  FF1:
+    title: Query plans on a synthetic 5,000-learner database
+    status: active
+    thresholds:
+      # ADR-010's latency rule, for the learner who knows 4,000 words.
+      recommend_words_max_ms: 200
+      # A sequential scan of an event partition with more rows than this fails.
+      max_event_seq_scan_rows: 1000
+      # Plan-cost ceilings for the 4,000-word learner, about twice the cost
+      # measured on 2026-10-28 (in brackets). A query whose plan gets worse
+      # fails here; raising a ceiling is a reviewed change to this file.
+      cost_recommend_words: 5000     # (2,591)
+      cost_coverage: 2000            # (948)
+      cost_known_count: 14000        # (6,857)
+      cost_known_ids: 14000          # (6,847)
+      cost_mistakes: 600             # (263)
+      cost_recent_activity: 50       # (19)
+      cost_reading_sentences: 6000   # (2,695)
+      cost_quiz_due_items: 50        # (12)
+      cost_quiz_in_progress: 14000   # (6,871)
+  FF2:
+    title: Hot paths read summaries only, never learning_events
+    status: active
+  FF3:
+    title: Incremental state equals a full recompute
+    status: active
+  FF4:
+    title: Migrations are safe (Squawk)
+    status: active
+    checked_by: squawk
+  FF5:
+    title: MCP tool schemas match their snapshots
+    status: active
+  FF6:
+    title: Prompt and context token ceilings
+    status: active
+    # A turn's or a run's input tokens, every request added up, counted with
+    # tiktoken's o200k_base (gpt-5-mini's). The plan's ceilings, with what the
+    # fixtures measured on 2026-10-29 in brackets (lowest to highest).
+    thresholds:
+      question_input_tokens_max: 15000   # (MEM1's 15 questions: 1,645 to 1,922)
+      report_input_tokens_max: 30000     # (the pipeline's 10 learners: 7,114 to 9,739)
+  FF7:
+    title: Idempotent weekly runs
+    status: active
+  FF8:
+    title: Guardrail, delegation and isolation suites
+    status: active
+  FF9:
+    title: No content in records, traces or logs
+    status: active
+  FF10:
+    title: Load test against the recorded baseline
+    status: pending
+    until: the load test (Should)
+    checked_by: locust
+  FF11:
+    title: Agent quality (the harness regression gate)
+    status: pending
+    until: slice 7 (paid evals, with Arthur's OK)
+    checked_by: agent-eval-harness
+  FF12:
+    title: Frontend budget (Lighthouse CI, mobile)
+    status: active
+    checked_by: lighthouse-ci
+    thresholds:
+      # FE7: per page, compressed; Lighthouse's mobile profile. Lab runs can't
+      # measure INP, so Total Blocking Time stands in for it there; real INP
+      # comes from the web-vitals island (FE8).
+      javascript_kb: 100
+      css_kb: 30
+      largest_contentful_paint_ms: 2500
+      total_blocking_time_ms: 200
+      cumulative_layout_shift: 0.1
+  FF13:
+    title: Tool query plans stay under their cost ceilings, with JIT off
+    status: active
+    thresholds:
+      # Postgres's jit_above_cost default: below it, JIT never compiles a
+      # plan, even if `jit = off` were lost from Juku's MCP role (spike 2).
+      jit_above_cost: 100000

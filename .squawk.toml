@@ -1,0 +1,13 @@
+# Squawk (fitness function FF4) lints the SQL that `alembic upgrade heads
+# --sql` prints, for statements that lock or rewrite a large table.
+pg_version = "16.0"
+# Each migration runs in its own transaction (migrations/env.py).
+assume_in_transaction = false
+excluded_rules = [
+    # These two guard against an ID column running out. Juku's IDs are all
+    # bigint; its integer and smallint columns are bounded values (a
+    # duration, an event type, a Leitner box), kept small on purpose so an
+    # event row stays near 40 bytes (scale path, the data design).
+    "prefer-bigint-over-int",
+    "prefer-bigint-over-smallint",
+]

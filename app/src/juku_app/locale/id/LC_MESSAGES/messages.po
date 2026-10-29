@@ -1,0 +1,311 @@
+# Juku's Indonesian copy. msgids are English; templates use _("...").
+# Regenerate the list of phrases with: grep -rhoE '_\("[^"]+"\)' app/src/juku_app/templates
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Juku 1\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-10-28 21:36+0700\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: id\n"
+"Language-Team: id <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+msgid "A few details"
+msgstr "Sedikit data tentangmu"
+
+msgid "About the data"
+msgstr "Tentang data"
+
+msgid "Agree and continue"
+msgstr "Setuju dan lanjut"
+
+msgid "Anonymous totals may appear in Arthur's public portfolio."
+msgstr "Angka total tanpa nama boleh muncul di portofolio publik Arthur."
+
+msgid "Ask Shiori"
+msgstr "Tanya Shiori"
+
+msgid "Before you start"
+msgstr "Sebelum mulai"
+
+msgid "Chat"
+msgstr "Chat"
+
+msgid "Consent"
+msgstr "Persetujuan"
+
+msgid "Correct!"
+msgstr "Benar!"
+
+msgid "Count me in the group's anonymous weekly summary (optional)."
+msgstr "Hitung saya dalam ringkasan mingguan kelompok tanpa nama (opsional)."
+
+msgid "Delete my data"
+msgstr "Hapus data saya"
+
+msgid "Deleted"
+msgstr "Terhapus"
+
+msgid "Deleting removes everything about you from Juku now. Type HAPUS to confirm."
+msgstr "Menghapus akan membuang semua datamu dari Juku sekarang juga. Ketik HAPUS untuk memastikan."
+
+msgid "Done for now. Well done!"
+msgstr "Selesai untuk sekarang. Bagus!"
+
+msgid "Download my data"
+msgstr "Unduh data saya"
+
+msgid "Enter the invite code Arthur gave you."
+msgstr "Masukkan kode undangan dari Arthur."
+
+msgid "Everything about you is gone from Juku. Encrypted backups are kept for 7 days, so the last copies disappear within 7 days."
+msgstr "Semua datamu sudah dihapus dari Juku. Cadangan terenkripsi disimpan selama 7 hari, jadi salinan terakhir hilang dalam 7 hari."
+
+msgid "Exam date (optional)"
+msgstr "Tanggal ujian (opsional)"
+
+msgid "Get started"
+msgstr "Mulai"
+
+msgid "Hello"
+msgstr "Halo"
+
+msgid "Helpful"
+msgstr "Membantu"
+
+msgid "Home"
+msgstr "Beranda"
+
+msgid "I agree to use the service as described above, including progress tracking, weekly reports and Shiori remembering how I learn."
+msgstr "Saya setuju memakai layanan seperti dijelaskan di atas, termasuk pencatatan kemajuan, laporan mingguan, dan Shiori yang mengingat cara saya belajar."
+
+msgid "I am 18 or older."
+msgstr "Saya berusia 18 tahun atau lebih."
+
+msgid "I know this word"
+msgstr "Saya sudah tahu kata ini"
+
+msgid "Invite code"
+msgstr "Kode undangan"
+
+msgid "Juku is for people aged 18 or over, and needs your consent to the service."
+msgstr "Juku hanya untuk usia 18 tahun ke atas, dan memerlukan persetujuanmu untuk layanannya."
+
+msgid "Kanji"
+msgstr "Kanji"
+
+msgid "Level"
+msgstr "Level"
+
+msgid "New word"
+msgstr "Kata baru"
+
+msgid "Next"
+msgstr "Berikutnya"
+
+msgid "Nickname (not your real name)"
+msgstr "Nama panggilan (bukan nama asli)"
+
+msgid "No sentences yet: learn a few words first."
+msgstr "Belum ada kalimat: pelajari beberapa kata dulu."
+
+msgid "Not helpful"
+msgstr "Tidak membantu"
+
+msgid "Not quite. The answer:"
+msgstr "Belum tepat. Jawabannya:"
+
+msgid "Notice version"
+msgstr "Versi pemberitahuan"
+
+msgid "Pace"
+msgstr "Kecepatan"
+
+msgid "Plan"
+msgstr "Rencana"
+
+msgid "Quiz"
+msgstr "Kuis"
+
+msgid "Read"
+msgstr "Sudah dibaca"
+
+msgid "Reading"
+msgstr "Bacaan"
+
+msgid "Reading practice"
+msgstr "Latihan membaca"
+
+msgid "Recommendations"
+msgstr "Rekomendasi"
+
+msgid "Save"
+msgstr "Simpan"
+
+msgid "Send"
+msgstr "Kirim"
+
+msgid "Settings"
+msgstr "Pengaturan"
+
+msgid "Sign in"
+msgstr "Masuk"
+
+msgid "Start"
+msgstr "Mulai"
+
+msgid "Target level"
+msgstr "Level target"
+
+msgid "The chat needs JavaScript."
+msgstr "Chat memerlukan JavaScript."
+
+msgid "The quiz needs JavaScript."
+msgstr "Kuis memerlukan JavaScript."
+
+msgid "Time zone"
+msgstr "Zona waktu"
+
+msgid "Type HAPUS to confirm."
+msgstr "Ketik HAPUS untuk memastikan."
+
+msgid "Unknown code. Check it and try again."
+msgstr "Kode tidak dikenal. Periksa lagi, lalu coba sekali lagi."
+
+msgid "Welcome to Juku"
+msgstr "Selamat datang di Juku"
+
+msgid "Words"
+msgstr "Kata"
+
+msgid "Words you know"
+msgstr "Kata yang kamu kuasai"
+
+msgid "Write your question"
+msgstr "Tulis pertanyaanmu"
+
+msgid "You know every word in these sentences but one."
+msgstr "Kamu sudah tahu semua kata di kalimat ini, kecuali satu."
+
+msgid "Your data"
+msgstr "Datamu"
+
+msgid "Your data has been deleted"
+msgstr "Datamu sudah dihapus"
+
+msgid "Your plan"
+msgstr "Rencanamu"
+
+msgid "unverified"
+msgstr "belum terverifikasi"
+
+msgid "weeks"
+msgstr "minggu"
+
+msgid "words"
+msgstr "kata"
+
+msgid "words a week until the exam"
+msgstr "kata per minggu sampai ujian"
+
+msgid "Shiori remembers"
+msgstr "Shiori ingat"
+
+msgid "Shiori remembers…"
+msgstr "Shiori ingat…"
+
+msgid "These are Shiori's notes about how you learn, each with the activity behind it. You can remove a note, or tell Shiori it's wrong, at any time."
+msgstr "Ini catatan Shiori tentang cara kamu belajar, masing-masing dengan aktivitas yang mendasarinya. Kamu bisa menghapus catatan, atau memberi tahu Shiori bahwa catatan itu salah, kapan saja."
+
+msgid "Words you know:"
+msgstr "Kata yang kamu kuasai:"
+
+msgid "This page needs JavaScript to change your notes."
+msgstr "Halaman ini butuh JavaScript untuk mengubah catatanmu."
+
+msgid "Notes about how you learn"
+msgstr "Catatan tentang cara kamu belajar"
+
+msgid "Shiori has no notes about you yet."
+msgstr "Shiori belum punya catatan tentang kamu."
+
+msgid "Words you know, latest first"
+msgstr "Kata yang kamu kuasai, terbaru dulu"
+
+msgid "You haven't marked any words known yet."
+msgstr "Kamu belum menandai kata apa pun sebagai dikuasai."
+
+msgid "noted"
+msgstr "dicatat"
+
+msgid "days ago"
+msgstr "hari lalu"
+
+msgid "right"
+msgstr "benar"
+
+msgid "wrong"
+msgstr "salah"
+
+msgid "Remove"
+msgstr "Hapus"
+
+msgid "This is wrong"
+msgstr "Ini salah"
+
+msgid "Not known yet"
+msgstr "Belum dikuasai"
+
+msgid "Note removed. Shiori won't note this kind of thing again for 30 days."
+msgstr "Catatan dihapus. Shiori tidak akan mencatat hal seperti ini lagi selama 30 hari."
+
+msgid "Thank you. Shiori won't use this note again."
+msgstr "Terima kasih. Shiori tidak akan memakai catatan ini lagi."
+
+msgid "The word is marked as not known yet."
+msgstr "Kata ini ditandai belum dikuasai."
+
+msgid "That didn't work. Please try again."
+msgstr "Gagal. Coba lagi."
+
+msgid "Often confused"
+msgstr "Sering tertukar"
+
+msgid "Examples you like"
+msgstr "Contoh yang kamu sukai"
+
+msgid "A level you avoid"
+msgstr "Level yang kamu hindari"
+
+msgid "marked known"
+msgstr "ditandai dikuasai"
+
+msgid "unmarked"
+msgstr "batal dikuasai"
+
+msgid "meaning quiz"
+msgstr "kuis arti"
+
+msgid "reading quiz"
+msgstr "kuis bacaan"
+
+msgid "sentence read"
+msgstr "kalimat dibaca"
+
+msgid "Report"
+msgstr "Laporan"
+
+msgid "Your weekly report"
+msgstr "Laporan mingguanmu"
+
+msgid "Week of"
+msgstr "Minggu mulai"
+
+msgid "Your first report comes on Sunday evening."
+msgstr "Laporan pertamamu datang hari Minggu sore."

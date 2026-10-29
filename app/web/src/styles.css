@@ -1,0 +1,8 @@
+/* Tailwind, with only the classes the templates and islands use (FE5). Japanese
+   text uses the phone's own fonts: no web font is downloaded (FE3). */
+@import "tailwindcss";
+@source "../../src/juku_app/templates";
+
+@theme {
+  --font-sans: system-ui, "Hiragino Sans", "Noto Sans CJK JP", "Yu Gothic", Meiryo, sans-serif;
+}

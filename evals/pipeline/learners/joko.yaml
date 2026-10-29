@@ -1,0 +1,14 @@
+# Pipeline fixture: a steady N5 week, with an exam in four weeks, so the plan has a pace.
+public_id: pipe-joko
+nickname: Joko
+target_level: 5
+timezone: Asia/Jakarta
+exam_date: 2026-12-06
+events:
+  - {label: k1, at: "2026-11-02T19:00:00+07:00", type: marked_known, word: 毎日/まいにち}
+  - {label: k2, at: "2026-11-03T19:00:00+07:00", type: marked_known, word: 友達/ともだち}
+  - {label: k3, at: "2026-11-04T19:00:00+07:00", type: marked_known, word: 時間/じかん}
+  - {label: q1, at: "2026-11-05T19:00:00+07:00", type: quiz_meaning, word: 新しい/あたらしい, correct: true}
+  - {label: q2, at: "2026-11-05T19:01:00+07:00", type: quiz_meaning, word: 大きい/おおきい, correct: false}
+  - {label: q3, at: "2026-11-06T19:00:00+07:00", type: quiz_reading, word: 会社/かいしゃ, correct: true}
+  - {label: s1, at: "2026-11-07T19:00:00+07:00", type: sentence_read, sentence: 4}

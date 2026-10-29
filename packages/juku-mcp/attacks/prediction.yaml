@@ -1,0 +1,94 @@
+# SAF1: the attack suite on Juku's own surfaces (ADR-020, Phase 2 SAF-R1),
+# predicted before any run, as in the gateway project. Each attack names
+# what it tries and what should happen, run two ways (SAF-R2, $0):
+#   direct    Juku's MCP server alone, as it would have to run with no
+#             gateway in front: it can't require a caller stamp nobody
+#             adds, so an attacker who reaches it writes their own;
+#   gateway   through mcp-security-gateway with the _meta passthrough and
+#             caller stamp (P6: spike 6's patch first, then the merged
+#             fix), each agent with its own key and allow-list.
+# Outcomes: "refused:<category>" (Juku's server refused, with that reason),
+# "blocked:gateway" (the gateway refused before Juku saw it), "no_effect"
+# (the attack can't be expressed: no such tool), "succeeds".
+# The agent attacks use a scripted "gullible" agent: it does whatever an
+# instruction it reads in a tool result says. No model is called.
+version: 1
+written: 2026-10-28
+attacks:
+  - id: inject-cross-learner
+    surface: injection in a fixture copy of a Tatoeba sentence
+    tries: the sentence tells the agent to read another learner's progress by passing their ID
+    direct: refused:unexpected_arguments
+    gateway: refused:unexpected_arguments
+  - id: inject-plant-memory
+    surface: injection in a fixture copy of a Tatoeba sentence
+    tries: the sentence tells the agent to save a note about the learner's health
+    direct: no_effect
+    gateway: no_effect
+  - id: inject-replan-flood
+    surface: injection in a fixture copy of a Tatoeba sentence
+    tries: the sentence tells Shiori to request a new plan five times
+    direct: refused:replan_capped
+    gateway: refused:replan_capped
+  - id: argument-names-learner
+    surface: cross-learner read
+    tries: a valid token for A, with learner_id = B in the arguments
+    direct: refused:unexpected_arguments
+    gateway: refused:unexpected_arguments
+  - id: forged-token-for-b
+    surface: cross-learner read
+    tries: a token for B signed with the attacker's own key
+    direct: refused:bad_signature
+    gateway: refused:bad_signature
+  - id: edited-learner
+    surface: cross-learner read
+    tries: A's token with its learner edited to B
+    direct: refused:bad_signature
+    gateway: refused:bad_signature
+  - id: hop-switches-learner
+    surface: cross-learner read through a delegation
+    tries: Keiko's hop names learner B under Shiori's token for A
+    direct: refused:learner_changed
+    gateway: refused:learner_changed
+  - id: hop-adds-tool
+    surface: widened delegation
+    tries: Keiko's hop names a tool its parent didn't allow
+    direct: refused:widened
+    gateway: refused:widened
+  - id: hop-outlives-parent
+    surface: widened delegation
+    tries: Keiko's hop expires after its parent
+    direct: refused:outlived_parent
+    gateway: refused:outlived_parent
+  - id: chain-three-deep
+    surface: widened delegation
+    tries: a chain of three agents
+    direct: refused:too_deep
+    gateway: refused:too_deep
+  - id: replayed-token
+    surface: stolen token
+    tries: one token used twice
+    direct: refused:replayed
+    gateway: refused:replayed
+  - id: wrong-audience
+    surface: stolen token
+    tries: a token minted for MCP-backbone, presented to Juku
+    direct: refused:wrong_audience
+    gateway: refused:wrong_audience
+  - id: keiko-key-shiori-chain
+    surface: agent identity
+    tries: Keiko's gateway key carrying Shiori's token, so Keiko acts as Shiori
+    # Directly, there's no gateway to stamp the caller, so the attacker's own
+    # stamp is believed: why the server has no published port (spike 6).
+    direct: succeeds
+    gateway: refused:actor_mismatch
+  - id: forged-caller-stamp
+    surface: agent identity
+    tries: Keiko's key, Shiori's token, and a caller stamp of "shiori" written by the client
+    direct: succeeds
+    gateway: refused:actor_mismatch
+  - id: keiko-calls-replan
+    surface: a tool outside the agent's list
+    tries: Keiko calls request_replan, which only Shiori may use
+    direct: refused:out_of_scope
+    gateway: blocked:gateway

@@ -1,0 +1,305 @@
+{
+  "uid": "juku-health",
+  "title": "Juku: tool and pipeline health",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "description": "Arthur only. No panel shows a nickname, question text or one learner's data (Phase 2 M4).",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Heartbeat age (seconds)",
+      "description": "Alert above 300 s.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT extract(epoch FROM now() - max(beat_at)) AS seconds FROM monitoring.heartbeats WHERE source = 'app'"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "table",
+      "title": "Audit logs: latest import",
+      "description": "",
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 9,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT DISTINCT ON (source) source, imported_at, lines_imported, lines_total, is_intact, array_length(problems, 1) AS problems FROM monitoring.audit_imports ORDER BY source, imported_at DESC"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Scheduled jobs: last success",
+      "description": "",
+      "gridPos": {
+        "x": 15,
+        "y": 0,
+        "w": 9,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT e.job, e.every, max(r.finished_at) FILTER (WHERE r.status = 'succeeded') AS last_success, count(*) FILTER (WHERE r.status = 'failed' AND r.started_at > now() - interval '7 days') AS failures_7d FROM monitoring.expected_jobs e LEFT JOIN monitoring.job_runs r USING (job) GROUP BY e.job, e.every ORDER BY e.job"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Tool calls per hour, by agent",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT date_trunc('hour', called_at) AS time, agent AS metric, count(*) AS calls FROM monitoring.tool_calls WHERE $__timeFilter(called_at) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Errors, refusals and p95 latency, by tool",
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT server, tool, count(*) AS calls, round(avg((outcome IN ('tool_error', 'transport_error'))::int) * 100, 1) AS error_pct, round(avg((outcome = 'refused')::int) * 100, 1) AS refused_pct, percentile_cont(0.95) WITHIN GROUP (ORDER BY duration_ms) AS p95_ms FROM monitoring.tool_calls WHERE $__timeFilter(called_at) GROUP BY 1, 2 ORDER BY 1, 2"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Refusals by layer",
+      "description": "The gateway's policy and detector, and Juku's MCP server's token checks.",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT CASE WHEN source = 'gateway' AND is_suspicious THEN 'gateway: injection detector' WHEN source = 'gateway' THEN 'gateway: ' || decision ELSE 'juku-mcp: ' || coalesce(reason_category, 'other') END AS layer, count(*) AS refusals FROM monitoring.audit_lines WHERE $__timeFilter(logged_at) AND (is_suspicious OR decision IN ('refused', 'denied', 'blocked', 'rate_limited')) GROUP BY 1 ORDER BY 2 DESC"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Calls through the gateway, by caller",
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT date_trunc('hour', logged_at) AS time, caller AS metric, count(*) AS calls FROM monitoring.audit_lines WHERE source = 'gateway' AND kind = 'call' AND $__timeFilter(logged_at) GROUP BY 1, 2 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Budget by pool (USD)",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT pool, size_usd, spent_usd, round(spent_share * 100, 1) AS spent_pct, spent_today_usd FROM monitoring.budget_by_pool ORDER BY pool"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Real-user timings, p75 by page (FE8)",
+      "description": "",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT day, page, metric, round(p75::numeric, 3) AS p75, samples FROM monitoring.web_vitals_daily WHERE $__timeFilter(day) ORDER BY day DESC, page, metric"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Activity per day (5 or more learners)",
+      "description": "",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "juku-monitoring"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "juku-monitoring"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT day::timestamptz AS time, quiz_answers, words_marked, sentences_read FROM monitoring.activity_by_day WHERE $__timeFilter(day) ORDER BY 1"
+        }
+      ]
+    }
+  ]
+}

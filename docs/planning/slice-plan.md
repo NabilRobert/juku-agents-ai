@@ -12,7 +12,7 @@ to start sooner.
 | P3 | The model budget is topped up ($5), and a new key is created with its cap (about $4.50) | Arthur, when building starts |
 | P4 | A subdomain for the app and one for the dashboard | Arthur |
 | P5 | Arthur has joined a JLPT study group as a member (any time; joining isn't building) | Arthur |
-| P6 | **The gateway forwards `_meta` and stamps the caller** (spike 6). Its `main` drops `_meta` today. The fix is spike 6's 6-line patch (`spikes/6-delegation-chain/gateway-meta-passthrough.patch`) plus a test that a client-sent caller is overwritten, made in the gateway's own repo on a branch. Minor: add a `__main__` guard to `mcp_gateway/cli.py`. **Needed before slice 3 runs through the gateway**, not only before launch | Arthur (gateway repo) |
+| P6 | **The gateway forwards `_meta` and stamps the caller** (spike 6). **Done 2026-10-28: merged as NabilRobert/mcp-security-gateway#6.** As planned: its `main` dropped `_meta`, and the fix was spike 6's 6-line patch (`spikes/6-delegation-chain/gateway-meta-passthrough.patch`, on branch spike/delegation-chain) plus a test that a client-sent caller is overwritten, made in the gateway's own repo on a branch. Minor: add a `__main__` guard to `mcp_gateway/cli.py`. **Needed before slice 3 runs through the gateway**, not only before launch | Arthur (gateway repo) |
 
 ## Spikes (local, $0)
 

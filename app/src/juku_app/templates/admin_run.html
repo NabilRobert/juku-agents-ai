@@ -1,0 +1,21 @@
+{# One run in the Run Inspector (AG3), for Arthur only: its facts, every draft and review, the decision. #}
+{% extends "base.html" %}
+{% block title %}Run {{ run.id }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">Run {{ run.id }}: {{ run.kind }}, {{ run.status }}</h1>
+<p class="text-sm">{{ run.public_id }} · week of {{ run.week_start }} · attempts {{ run.attempts }} · {{ run.started_at }} to {{ run.finished_at or "-" }}</p>
+<h2 class="mt-4 font-bold">Facts</h2>
+<pre class="overflow-x-auto text-xs">{{ facts }}</pre>
+{% for attempt in attempts %}
+<section class="mt-4 border p-2 text-sm">
+  <h2 class="font-bold">{{ attempt.agent }}, attempt {{ attempt.attempt + 1 }}: {{ "approved" if attempt.is_approved else "blocked" }} ({{ attempt.reason }})</h2>
+  <pre class="overflow-x-auto text-xs">{{ attempt.content | tojson(indent=1) }}</pre>
+  <p>Tadashi: grade {{ attempt.grade or "none" }}</p>
+  <ul>{% for issue in attempt.issues %}<li>{{ issue.severity }}: {{ issue.reason }} ({{ issue.quote }})</li>{% endfor %}</ul>
+  <p>Code's checks:</p>
+  <ul>{% for issue in attempt.code_issues %}<li>{{ issue.kind }}: {{ issue.reason }}</li>{% else %}<li>none</li>{% endfor %}</ul>
+</section>
+{% endfor %}
+<h2 class="mt-4 font-bold">Report{% if report and report.is_fallback %} (facts-only fallback){% endif %}</h2>
+<p class="whitespace-pre-line text-sm">{{ report.body if report else "-" }}</p>
+{% endblock %}

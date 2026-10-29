@@ -1,0 +1,11 @@
+# Pipeline fixture: a learner in Japan. Her week is Monday to Sunday in Tokyo:
+# the answer at 23:30 last Sunday is last week's, the one at 00:30 Monday is this week's.
+public_id: pipe-kartika
+nickname: Kartika
+target_level: 4
+timezone: Asia/Tokyo
+events:
+  - {label: old, at: "2026-11-01T23:30:00+09:00", type: quiz_meaning, word: 季節/きせつ, correct: true}
+  - {label: new, at: "2026-11-02T00:30:00+09:00", type: quiz_meaning, word: 季節/きせつ, correct: true}
+  - {label: k1, at: "2026-11-04T21:00:00+09:00", type: marked_known, word: 銀行/ぎんこう}
+  - {label: k2, at: "2026-11-06T21:00:00+09:00", type: marked_known, word: 病院/びょういん}

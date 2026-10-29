@@ -1,0 +1,9 @@
+# Pipeline fixture: a quiet week. She studied two weeks ago and not since,
+# so the report has no activity to praise and must not invent any.
+public_id: pipe-lestari
+nickname: Lestari
+target_level: 5
+timezone: Asia/Jakarta
+events:
+  - {label: k1, at: "2026-10-22T20:00:00+07:00", type: marked_known, word: 料理/りょうり}
+  - {label: k2, at: "2026-10-23T20:00:00+07:00", type: marked_known, word: 旅行/りょこう}

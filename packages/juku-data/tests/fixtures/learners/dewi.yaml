@@ -1,0 +1,14 @@
+# An N3 learner in Japan (JST, UTC+9). Unmarking a word makes it unknown
+# and resets its count of correct days: 飲む's answer before the unmark
+# doesn't count, so it takes two more days to become known.
+public_id: fix-dewi
+target_level: 3
+timezone: Asia/Tokyo
+exam_date: null
+events:
+  - {at: "2026-11-01T10:00:00+09:00", type: marked_known, word: 食べる/たべる}
+  - {at: "2026-11-02T10:00:00+09:00", type: unmarked_known, word: 食べる/たべる}
+  - {at: "2026-11-01T11:00:00+09:00", type: quiz_meaning, word: 飲む/のむ, correct: true}
+  - {at: "2026-11-02T08:00:00+09:00", type: unmarked_known, word: 飲む/のむ}
+  - {at: "2026-11-03T10:00:00+09:00", type: quiz_meaning, word: 飲む/のむ, correct: true}
+  - {at: "2026-11-04T10:00:00+09:00", type: quiz_reading, word: 飲む/のむ, correct: true}

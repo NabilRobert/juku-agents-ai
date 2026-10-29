@@ -1,0 +1,20 @@
+# Juku's schedule (ADR-014): external cron, so "no crontab" means "no runs",
+# which the alerts notice. Install on the server with `crontab ops/crontab`
+# (a server step, done by Arthur). Every job runs inside the app container.
+#
+# Each juku-ops job here (except the heartbeat) must match a row in
+# monitoring.expected_jobs; tests/test_crontab.py checks that they agree.
+SHELL=/bin/sh
+JUKU_COMPOSE=docker compose --project-directory /srv/juku -f /srv/juku/ops/compose.yaml
+
+# m    h  dom mon dow  command
+*      *  *   *   *    $JUKU_COMPOSE exec -T app juku-ops heartbeat
+*/5    *  *   *   *    $JUKU_COMPOSE exec -T app juku-ops import-audit
+17     3  *   *   *    $JUKU_COMPOSE exec -T app juku-ops ensure-partitions
+10     3  *   *   *    $JUKU_COMPOSE exec -T app juku-ops consolidate-memory
+40     2  *   *   *    $JUKU_COMPOSE exec -T app juku-ops verify-state
+# The weekly pipeline: hourly, for each learner whose Sunday 18:00 has come in their timezone (AG2).
+0      *  *   *   *    $JUKU_COMPOSE exec -T app juku run-weekly --due
+# Monday morning: draft prompt changes from last week's recurring issues, for Arthur (AG4).
+0      9  *   *   1    $JUKU_COMPOSE exec -T app juku draft-feedback
+

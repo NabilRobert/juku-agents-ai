@@ -1,0 +1,13 @@
+# Juku's supplement: common words that are in neither the JLPT lists nor
+# OpenJLPT (spike 4), so reading practice can map them in example sentences.
+# They have no JLPT level, so the recommender and coverage never use them.
+# IDs and glosses are from JMdict (EDRDG, CC BY-SA 4.0), checked by hand
+# against JMdict_e of 2026-10-28. Each ID is `sup-` plus the JMdict entry,
+# so it stays stable. Add a word only after checking it isn't in OpenJLPT.
+id,word,reading,jmdict_id,meanings
+sup-1497610,父,ちち,1497610,father
+sup-1514990,母,はは,1514990,mother
+sup-1217730,顔,かお,1217730,face; looks
+sup-1861770,多く,おおく,1861770,many; much
+sup-1580650,人々,ひとびと,1580650,people; each person
+sup-1542730,夕食,ゆうしょく,1542730,evening meal; dinner

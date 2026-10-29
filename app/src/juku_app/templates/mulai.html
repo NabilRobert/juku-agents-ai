@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Get started") }}{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">{{ _("A few details") }}</h1>
+<form method="post" action="/mulai" class="space-y-2">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label class="block">{{ _("Nickname (not your real name)") }} <input name="nickname" maxlength="30" required class="border p-1"></label>
+  <label class="block">{{ _("Target level") }}
+    <select name="target_level">{% for level in levels %}<option value="{{ level }}">N{{ level }}</option>{% endfor %}</select>
+  </label>
+  <label class="block">{{ _("Time zone") }}
+    <select name="timezone">{% for zone in timezones %}<option value="{{ zone }}">{{ zone }}</option>{% endfor %}</select>
+  </label>
+  <label class="block">{{ _("Exam date (optional)") }} <input type="date" name="exam_date" class="border p-1"></label>
+  <button type="submit" class="border px-3 py-1">{{ _("Start") }}</button>
+</form>
+{% endblock %}

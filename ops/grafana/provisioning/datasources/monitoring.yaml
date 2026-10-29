@@ -1,0 +1,21 @@
+# Grafana's only data source: the app database on the managed Postgres, as
+# `grafana_reader`, which can read the monitoring schema and nothing else
+# (ops/db/roles.sql and the monitoring migration). The address comes from
+# ops/.env and the password from a secret file, never the repo; TLS is
+# required, and maxOpenConns is grafana_reader's share in guardrails.yaml.
+apiVersion: 1
+datasources:
+  - name: juku-monitoring
+    uid: juku-monitoring
+    type: grafana-postgresql-datasource
+    url: $JUKU_DB_HOST:$JUKU_DB_PORT
+    user: grafana_reader
+    secureJsonData:
+      password: $__file{/run/secrets/grafana_reader_password}
+    jsonData:
+      database: app
+      sslmode: require
+      postgresVersion: 1600
+      maxOpenConns: 2
+    isDefault: true
+    editable: false

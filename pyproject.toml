@@ -1,0 +1,79 @@
+# The uv workspace root. Each folder under packages/ (and app/, from track C)
+# is its own package with its own tests; this root holds the shared tool
+# settings and the dev tools, and installs every member so one `uv sync`
+# gives one environment.
+[project]
+name = "juku-agents"
+version = "0.0.0"
+description = "Juku: an agentic JLPT learning platform for Indonesian learners"
+requires-python = ">=3.12,<3.13"
+dependencies = ["juku-app", "juku-common", "juku-data", "juku-mcp", "juku-ops"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/*", "app"]
+
+[tool.uv.sources]
+juku-app = { workspace = true }
+juku-common = { workspace = true }
+juku-data = { workspace = true }
+juku-mcp = { workspace = true }
+juku-ops = { workspace = true }
+juku-testkit = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "juku-testkit",
+    "mutmut==3.8.0",
+    # Scripted agents for the attack suite (SAF1) and, in track C, Shiori's tests: TestModel, FunctionModel.
+    "pydantic-ai-slim[mcp]==2.56.0",
+    "pre-commit==4.7.0",
+    "pyright==1.1.414",
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-timeout==2.4.0",
+    "ruff==0.17.0",
+    # FF6: each prompt's input tokens, counted offline with gpt-5-mini's encoding (o200k_base).
+    "tiktoken==0.14.0",
+    "types-pyyaml==6.0.12.20250915",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ARG", "RUF"]
+# S101: pytest's asserts.
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+# Migrations and tests build SQL from fixed strings, never from input.
+"migrations/**" = ["S608"]
+"**/tests/**" = ["S105", "S106", "S608"]
+# Full-width and half-width characters are the point of the normalization tests.
+"**/tests/test_japanese.py" = ["RUF001"]
+"**/tests/test_search_words.py" = ["RUF001"]
+
+[tool.pyright]
+include = ["packages", "app", "migrations"]
+exclude = ["**/node_modules", "**/.venv"]
+strict = ["packages/*/src", "app/src"]
+pythonVersion = "3.12"
+# Hand-written stubs for libraries that ship no types (SudachiPy).
+stubPath = "typings"
+# The attack suite is evaluation code beside the server, imported by its test.
+extraPaths = ["packages/juku-mcp/attacks"]
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["packages", "app"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+# A test that hangs fails instead of stalling the run or CI.
+timeout = 60
+addopts = "--import-mode=importlib"

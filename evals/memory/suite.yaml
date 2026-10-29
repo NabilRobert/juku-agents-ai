@@ -1,0 +1,204 @@
+# MEM1: about 15 memory tasks (Phase 1 MEM1; ADR-008, ADR-015), written
+# before the memory code. In agent-eval-harness's suite format: each task's
+# prompt goes to Shiori, acting for the task's fixture learner, and its
+# answer is graded by `answer_match` and `required_tools`.
+#
+# Juku adds four fields per task, used by Juku's own $0 test
+# (packages/juku-mcp/tests/test_memory_tasks.py) and ignored by the harness:
+#   learner         the fixture learner (learners/<name>.yaml), loaded as of `fixture.now`;
+#   reference_sql   the gold answer, from SQL over the fixture data (:learner_id is the learner);
+#   expected        the rows reference_sql returns;
+#   facts / absent  strings the required tools' output must / must not contain, so the
+#                   task is answerable from the tools alone.
+# The categories are memory benchmarks' (LongMemEval, LoCoMo): a fact that
+# changed, time, and abstention; plus one plain recall.
+suite: juku-memory
+version: 1
+target: juku
+description: Shiori's memory of a learner, on four fixture learners. Gold answers from SQL over the fixtures.
+fixture:
+  now: "2026-11-08T20:00:00+07:00"
+  learners: learners
+tasks:
+- id: m01
+  tags: [knowledge_update]
+  learner: fajar
+  prompt: Apakah saya masih menguasai 食べる?
+  reference_sql: SELECT is_known, box FROM learning.learner_state WHERE learner_id = :learner_id AND item_id = '86f67e2dc3'
+  expected: [{is_known: true, box: 1}]
+  facts: [食べる]
+  graders:
+  - answer_match:
+      contains: [食べる, [ulang, salah, lupa]]
+  - required_tools: [get_mistakes]
+- id: m02
+  tags: [knowledge_update]
+  learner: fajar
+  prompt: Berapa kata yang sudah saya kuasai sekarang?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected: [{known: 4}]
+  facts: ['"known_words": 4']
+  graders:
+  - answer_match:
+      contains: ['4']
+  - required_tools: [get_progress]
+- id: m03
+  tags: [temporal]
+  learner: fajar
+  prompt: Berapa kali saya salah menjawab kuis dalam 7 hari terakhir?
+  reference_sql: >-
+    SELECT sum(quiz_answers - quiz_correct) AS wrong FROM learning.learner_daily_activity
+    WHERE learner_id = :learner_id AND day > date '2026-11-01'
+  expected: [{wrong: 5}]
+  facts: ['2026-11-02', '2026-11-06']
+  graders:
+  - answer_match:
+      contains: ['5']
+  - required_tools: [get_recent_activity]
+- id: m04
+  tags: [temporal]
+  learner: fajar
+  prompt: Kapan terakhir kali saya salah membaca 読む?
+  reference_sql: >-
+    SELECT max((occurred_at AT TIME ZONE 'Asia/Jakarta')::date) AS last_miss FROM learning.learning_events
+    WHERE learner_id = :learner_id AND event_type = 4 AND result = 0 AND item_id = 'eb7e675902'
+  expected: [{last_miss: '2026-11-06'}]
+  facts: [読む, '2026-11-06']
+  graders:
+  - answer_match:
+      contains: [[6 November, '2026-11-06', 6/11, Jumat]]
+  - required_tools: [get_memory]
+- id: m05
+  tags: [recall]
+  learner: fajar
+  prompt: Apa yang Shiori ingat tentang cara saya belajar?
+  reference_sql: SELECT category FROM learning.memory_notes WHERE learner_id = :learner_id AND status = 'active'
+  expected: [{category: recurring_confusion}]
+  facts: [recurring_confusion, 読む]
+  graders:
+  - answer_match:
+      contains: [読む, [membaca, bacaan]]
+  - required_tools: [get_memory]
+- id: m06
+  tags: [knowledge_update]
+  learner: gita
+  prompt: Apa saja yang Shiori ingat tentang saya?
+  reference_sql: SELECT category FROM learning.memory_notes WHERE learner_id = :learner_id AND status = 'active'
+  expected: [{category: pace}]
+  facts: [pace]
+  absent: [約束, preferred_example, kerja]
+  graders:
+  - answer_match:
+      contains: [[kata baru, satu kata, dua hari]]
+  - required_tools: [get_memory]
+- id: m07
+  tags: [knowledge_update]
+  learner: gita
+  prompt: Apakah Shiori masih mencatat bahwa saya sering tertukar arti 約束?
+  reference_sql: >-
+    SELECT status FROM learning.memory_notes
+    WHERE learner_id = :learner_id AND category = 'recurring_confusion' ORDER BY id
+  expected: [{status: removed}]
+  absent: [約束]
+  graders:
+  - answer_match:
+      contains: [[tidak, sudah dihapus, tidak ada]]
+  - required_tools: [get_memory]
+- id: m08
+  tags: [abstention]
+  learner: gita
+  prompt: Apa pekerjaan saya?
+  reference_sql: >-
+    SELECT count(*) AS notes FROM learning.memory_notes WHERE learner_id = :learner_id AND text ILIKE '%kerja%'
+  expected: [{notes: 0}]
+  absent: [kerja]
+  graders:
+  - answer_match:
+      contains: [[tidak ada, tidak tahu, tidak menyimpan, tidak mencatat]]
+  - required_tools: [get_memory]
+- id: m09
+  tags: [temporal]
+  learner: gita
+  prompt: Sejak kapan Shiori mencatat tempo belajar saya?
+  reference_sql: >-
+    SELECT (created_at AT TIME ZONE 'Asia/Jakarta')::date AS noted_on FROM learning.memory_notes
+    WHERE learner_id = :learner_id AND category = 'pace'
+  expected: [{noted_on: '2026-11-05'}]
+  facts: ['2026-11-05']
+  graders:
+  - answer_match:
+      contains: [[5 November, '2026-11-05', 5/11, Kamis]]
+  - required_tools: [get_memory]
+- id: m10
+  tags: [knowledge_update]
+  learner: hana
+  prompt: Apakah catatan bahwa saya sering salah membaca 経験 masih berlaku?
+  reference_sql: >-
+    SELECT status, status_reason FROM learning.memory_notes
+    WHERE learner_id = :learner_id AND category = 'recurring_confusion'
+  expected: [{status: lapsed, status_reason: contradicted_by_newer_activity}]
+  absent: [経験]
+  graders:
+  - answer_match:
+      contains: [[tidak lagi, sudah benar, tidak berlaku]]
+  - required_tools: [get_memory]
+- id: m11
+  tags: [abstention]
+  learner: hana
+  prompt: Apakah Shiori ingat kalau saya sering lelah?
+  reference_sql: SELECT reason FROM learning.memory_note_rejections WHERE learner_id = :learner_id ORDER BY id
+  expected: [{reason: forbidden_category}, {reason: forbidden_content}]
+  absent: [lelah, sakit]
+  graders:
+  - answer_match:
+      contains: [[tidak, tidak mencatat, tidak menyimpan]]
+  - required_tools: [get_memory]
+- id: m12
+  tags: [temporal]
+  learner: hana
+  prompt: Berapa kuis yang saya jawab benar dalam 7 hari terakhir?
+  reference_sql: >-
+    SELECT sum(quiz_correct) AS correct FROM learning.learner_daily_activity
+    WHERE learner_id = :learner_id AND day > date '2026-11-01'
+  expected: [{correct: 4}]
+  facts: ['2026-11-04', '2026-11-05']
+  graders:
+  - answer_match:
+      contains: ['4']
+  - required_tools: [get_recent_activity]
+- id: m13
+  tags: [abstention]
+  learner: indra
+  prompt: Apa yang Shiori ingat tentang saya?
+  reference_sql: SELECT count(*) AS notes FROM learning.memory_notes WHERE learner_id = :learner_id
+  expected: [{notes: 0}]
+  absent: [note_id]
+  graders:
+  - answer_match:
+      contains: [[belum ada, tidak ada, belum]]
+  - required_tools: [get_memory]
+- id: m14
+  tags: [abstention]
+  learner: indra
+  prompt: Kata apa yang sering saya salah?
+  reference_sql: >-
+    SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box IS NOT NULL
+  expected: [{mistakes: 0}]
+  absent: [word_id]
+  graders:
+  - answer_match:
+      contains: [[belum ada, tidak ada, belum]]
+  - required_tools: [get_mistakes]
+- id: m15
+  tags: [temporal]
+  learner: fajar
+  prompt: Apakah saya belajar kemarin?
+  reference_sql: >-
+    SELECT day::text AS day, quiz_answers FROM learning.learner_daily_activity
+    WHERE learner_id = :learner_id AND day = date '2026-11-07'
+  expected: [{day: '2026-11-07', quiz_answers: 1}]
+  facts: ['2026-11-07']
+  graders:
+  - answer_match:
+      contains: [[ya, sudah, satu kuis, 1 kuis]]
+  - required_tools: [get_recent_activity]

@@ -1,0 +1,26 @@
+{# The Run Inspector (AG3), for Arthur only: English, no learner content on this page. #}
+{% extends "base.html" %}
+{% block title %}Run Inspector{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold">Run Inspector</h1>
+<table class="mt-4 w-full text-sm">
+  <tr><th>Run</th><th>Learner</th><th>Week</th><th>Kind</th><th>Status</th><th>Attempts</th><th>Started</th><th>Finished</th></tr>
+  {% for run in runs %}
+  <tr>
+    <td><a href="/admin/runs/{{ run.id }}">{{ run.id }}</a></td>
+    <td>{{ run.public_id }}</td><td>{{ run.week_start }}</td><td>{{ run.kind }}</td><td>{{ run.status }}</td>
+    <td>{{ run.attempts }}</td><td>{{ run.started_at }}</td><td>{{ run.finished_at or "-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<h2 class="mt-6 font-bold">Prompt feedback drafts (never applied)</h2>
+{% for draft in drafts %}
+<article class="mt-2 border p-2 text-sm">
+  <p>{{ draft.week_start }} · {{ draft.agent }} · {{ draft.status }}</p>
+  <p class="text-xs">{{ draft.patterns }}</p>
+  <p class="whitespace-pre-line">{{ draft.draft }}</p>
+</article>
+{% else %}
+<p class="text-sm">No drafts yet.</p>
+{% endfor %}
+{% endblock %}

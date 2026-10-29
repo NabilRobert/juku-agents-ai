@@ -1,0 +1,413 @@
+# Juku's alert rules (Phase 2 M5), provisioned from this file. Each reads
+# the monitoring schema through the read-only data source and goes to
+# Arthur's Telegram (contact-points.yaml). Every threshold matches
+# guardrails.yaml's `alerts` section, and the budget alerts its
+# `budget.alert_fractions`; tests keep them in step. The missed weekly
+# pipeline run arrives with slice 6. "No data" counts as alerting: a dead-man's
+# switch must not go quiet because its table is empty.
+apiVersion: 1
+groups:
+- orgId: 1
+  name: juku
+  folder: Juku
+  interval: 1m
+  rules:
+  - uid: juku-heartbeat-stale
+    title: Heartbeat stale
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(extract(epoch FROM now() - max(beat_at)), 1e9) AS value FROM monitoring.heartbeats WHERE source = 'app'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 300
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: 'No heartbeat from the app for over 5 minutes: the app, its container or cron is down.'
+  - uid: juku-missed-run
+    title: Scheduled run missed
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.expected_jobs e WHERE coalesce((SELECT max(r.finished_at) FROM monitoring.job_runs r WHERE r.job = e.job AND r.status = 'succeeded'), '-infinity')
+          < now() - e.every - e.grace
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: '{{ $values.A }} scheduled job(s) haven''t completed on time (monitoring.expected_jobs).'
+  - uid: juku-tool-error-rate
+    title: Tool error rate over 5% in an hour
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(error_rate), 0) AS value FROM (SELECT tool, avg((outcome IN ('tool_error', 'transport_error'))::int) AS error_rate FROM monitoring.tool_calls WHERE called_at > now()
+          - interval '1 hour' GROUP BY tool) per_tool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0.05
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A tool's error rate over the last hour is {{ $values.A }} (limit 0.05).
+  - uid: juku-detector-flag
+    title: Injection detector flagged a tool output
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.audit_lines WHERE source = 'gateway' AND is_suspicious AND imported_at > now() - interval '10 minutes'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: The gateway's detector flagged {{ $values.A }} tool output(s) in the last import.
+  - uid: juku-audit-chain-broken
+    title: Audit chain broken
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM (SELECT DISTINCT ON (source) is_intact FROM monitoring.audit_imports ORDER BY source, imported_at DESC) latest WHERE NOT is_intact
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: An audit log failed its hash-chain check; nothing was imported from it. See monitoring.audit_imports.
+  - uid: juku-mcp-refusal
+    title: Juku's MCP server refused a call
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.audit_lines WHERE source = 'juku-mcp' AND decision = 'refused' AND imported_at > now() - interval '10 minutes'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: 'Juku''s MCP server refused {{ $values.A }} call(s): a cross-learner or widened-delegation attempt, or a bug. The reason categories are in monitoring.audit_lines.'
+  - uid: juku-job-failed
+    title: A scheduled job failed
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM (SELECT DISTINCT ON (job) status FROM monitoring.job_runs ORDER BY job, started_at DESC) latest WHERE status = 'failed'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: '{{ $values.A }} job(s) failed on their latest run, e.g. verify-state finding learner summaries that differ from the events (FF3). See monitoring.job_runs.'
+  - uid: juku-budget-50
+    title: A budget pool reached 50%
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(spent_share), 0) AS value FROM monitoring.budget_by_pool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gte
+            params:
+            - 0.5
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A budget pool has spent {{ $values.A }} of its size (alert at 50%). See monitoring.budget_by_pool.
+  - uid: juku-budget-80
+    title: A budget pool reached 80%
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(spent_share), 0) AS value FROM monitoring.budget_by_pool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gte
+            params:
+            - 0.8
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A budget pool has spent {{ $values.A }} of its size (alert at 80%). See monitoring.budget_by_pool.
+  - uid: juku-budget-100
+    title: A budget pool reached 100%
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT coalesce(max(spent_share), 0) AS value FROM monitoring.budget_by_pool
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gte
+            params:
+            - 1.0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: A budget pool has spent {{ $values.A }} of its size (alert at 100%). See monitoring.budget_by_pool.
+  - uid: juku-distress
+    title: A learner may be in distress
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        rawSql: SELECT count(*) AS value FROM monitoring.distress_events WHERE occurred_at > now() - interval '10 minutes'
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: The moderation check flagged {{ $values.A }} message(s) in the last 10 minutes; Shiori gave the fixed reply. No content is stored.
+  - uid: juku-pipeline-overdue
+    title: A weekly run is overdue
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: juku-monitoring
+      model:
+        refId: A
+        format: table
+        rawQuery: true
+        editorMode: code
+        # guardrails.yaml's pipeline.due_weekday, due_hour and overdue_after_minutes; a test keeps them equal.
+        rawSql: SELECT overdue AS value FROM monitoring.pipeline_overdue_at(now(), 6, 18, 60)
+    - refId: C
+      datasourceUid: __expr__
+      model:
+        refId: C
+        type: threshold
+        expression: A
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+    noDataState: Alerting
+    execErrState: Alerting
+    for: 0m
+    labels:
+      project: juku
+    annotations:
+      summary: "{{ $values.A }} learner(s) have no weekly report an hour after their Sunday 18:00: the dead-man's switch (ADR-014). Check the run-weekly job and the Run Inspector."
