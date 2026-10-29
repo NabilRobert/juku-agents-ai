@@ -10,6 +10,10 @@ HANDOVER*.md
 
 # Dictionary downloads and database dumps (large; licence-bound; rebuilt by scripts)
 data/raw/
+# Every downloaded or generated dataset (for example the OpenJLPT SQLite file).
+data/*
+!data/README.md
+*.sqlite
 *.dump
 *.sql.gz
 
@@ -38,3 +42,6 @@ ops/gateway-audit/
 
 # The islands' build output (made by `npm run build` in app/web)
 app/src/juku_app/static/dist/
+
+# Worktrees the Claude Code app makes inside the repo.
+.claude/worktrees/
