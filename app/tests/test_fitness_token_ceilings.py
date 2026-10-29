@@ -40,14 +40,14 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 ENCODING = tiktoken.get_encoding("o200k_base")
-EDD = pytest.mark.xfail(strict=True, reason="EDD: FF6's ceilings and the counter's fix land in the next commit")
 QUESTIONS = {str(task["id"]): task for task in load_suite()["tasks"]}
 PIPELINE = yaml.safe_load((PIPELINE_EVALS / "fixtures.yaml").read_text(encoding="utf-8"))
 LEARNERS = {str(item["name"]): str(item["source"]) for item in PIPELINE["learners"]}
 
 
 def tokens(text: str) -> int:
-    return len(ENCODING.encode(text))
+    # Special-token strings ("<|endoftext|>") are counted as the plain text a learner typed, not refused.
+    return len(ENCODING.encode(text, disallowed_special=()))
 
 
 def part_text(part: Any) -> str:
@@ -102,7 +102,6 @@ def shiori_answering(task: dict[str, Any]) -> Any:
     return respond
 
 
-@EDD
 @pytest.mark.fitness("FF6")
 @pytest.mark.parametrize("task_id", sorted(QUESTIONS))
 async def test_a_fixture_questions_input_tokens_stay_under_the_ceiling(
@@ -125,7 +124,6 @@ async def test_a_fixture_questions_input_tokens_stay_under_the_ceiling(
     assert meter.total <= rules.threshold("FF6", "question_input_tokens_max")
 
 
-@EDD
 @pytest.mark.fitness("FF6")
 @pytest.mark.parametrize("name", sorted(LEARNERS))
 async def test_a_fixture_reports_input_tokens_stay_under_the_ceiling(
@@ -154,7 +152,6 @@ def test_the_counts_use_gpt_5_minis_encoding() -> None:
 # --- the break-it pass on the counter itself ---
 
 
-@EDD
 def test_a_special_token_string_in_a_prompt_is_counted_as_plain_text() -> None:
     """A learner may type "<|endoftext|>"; tiktoken refuses special-token strings unless told to count them as text."""
     assert tokens("apa itu <|endoftext|>?") > tokens("apa itu ?")

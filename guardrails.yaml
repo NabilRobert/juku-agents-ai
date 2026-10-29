@@ -195,8 +195,13 @@ fitness:
     status: active
   FF6:
     title: Prompt and context token ceilings
-    status: pending
-    until: slice 6 (the pipeline)
+    status: active
+    # A turn's or a run's input tokens, every request added up, counted with
+    # tiktoken's o200k_base (gpt-5-mini's). The plan's ceilings, with what the
+    # fixtures measured on 2026-10-29 in brackets (lowest to highest).
+    thresholds:
+      question_input_tokens_max: 15000   # (MEM1's 15 questions: 1,645 to 1,922)
+      report_input_tokens_max: 30000     # (the pipeline's 10 learners: 7,114 to 9,739)
   FF7:
     title: Idempotent weekly runs
     status: active

@@ -257,3 +257,18 @@ What went wrong while building, and what changed because of it
 - **Mutation checks:** six breaks (the run's check, recording and clearing
   the skip, the replans' check, the overdue function, the pages' gate),
   each failing a test.
+
+## FF6: token ceilings (2026-10-29)
+
+- **Counted as sent.** A scripted model counts each request PydanticAI
+  assembles (instructions, tool and output definitions, every message so
+  far) with tiktoken's o200k_base, and a turn's or run's requests are added
+  up. MEM1's 15 questions take 1,645 to 1,922 input tokens a turn; the
+  pipeline's 10 learners take 7,114 to 9,739 a report. The ceilings stay at
+  the plan's 15,000 and 30,000, with the measurements beside them in
+  guardrails.yaml.
+- **A break-it find in the counter itself:** tiktoken refuses text holding
+  a special-token string such as `<|endoftext|>`, so a learner typing one
+  would have crashed the count. It's counted as plain text now, with a test.
+- **Mutation checks:** a ceiling below what's measured, a prompt grown past
+  its ceiling, and the counter without the fix each fail the tests.
