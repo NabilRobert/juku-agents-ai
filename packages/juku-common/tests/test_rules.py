@@ -55,6 +55,20 @@ pipeline:
   run_lease_minutes: 30
   overdue_after_minutes: 60
   feedback_min_occurrences: 3
+
+database:
+  connection_limit: 20
+  reserved_for_admin: 2
+  app_pool: 3
+  app_dict_pool: 2
+  app_commands: 1
+  mcp_pool: 3
+  mcp_dict_pool: 2
+  ops_connections: 2
+  migrator_connections: 1
+  dict_owner_connections: 1
+  grafana_connections: 2
+  mcp_backbone_connections: 1
 fitness:
   FF4:
     title: Migrations are safe

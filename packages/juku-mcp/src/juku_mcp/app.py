@@ -28,8 +28,6 @@ from juku_mcp.settings import McpSettings
 from juku_mcp.telemetry import install_tracing
 
 MCP_PATH = "/mcp"
-# A small pool: one process, a handful of agents at once (ADR-016's 128 MB container).
-POOL_SIZE = 4
 
 
 def public_key_from_pem(pem: str) -> ed25519.Ed25519PublicKey:
@@ -41,13 +39,19 @@ def public_key_from_pem(pem: str) -> ed25519.Ed25519PublicKey:
     return key
 
 
+def databases(settings: McpSettings, rules: Rules) -> Databases:
+    """Fixed pools from the rule file, no overflow, so juku_mcp stays within its share of the provider's limit."""
+    budget = rules.database
+    return Databases(
+        app=create_async_engine(settings.app_database_url, pool_size=budget.mcp_pool, max_overflow=0),
+        dictionary=create_async_engine(settings.dict_database_url, pool_size=budget.mcp_dict_pool, max_overflow=0),
+    )
+
+
 def create_app(settings: McpSettings, rules: Rules | None = None) -> Starlette:
     rules = rules or load_rules()
     install_tracing()
-    db = Databases(
-        app=create_async_engine(settings.app_database_url, pool_size=POOL_SIZE),
-        dictionary=create_async_engine(settings.dict_database_url, pool_size=POOL_SIZE),
-    )
+    db = databases(settings, rules)
     deps = ServerDeps(
         db=db,
         verifier=Verifier(public_key_from_pem(settings.delegation_public_key), rules),
