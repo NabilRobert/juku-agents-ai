@@ -2,7 +2,6 @@
 
 from datetime import UTC, datetime
 
-import pytest
 from juku_app.privacy import delete_learner, export_learner
 from juku_data.engine import Databases, create_learner, mark_known
 from juku_data.engine.models import Learner
@@ -123,7 +122,6 @@ async def test_an_export_holds_every_row_of_the_learners_and_no_one_elses(engine
 AWKWARD_TABLE = 'Catatan "Lama" v2'
 
 
-@pytest.mark.xfail(strict=True, reason="EDD: quoting the catalog's names lands in the next commit")
 async def test_a_learner_table_whose_name_needs_quoting_is_still_exported_and_deleted(
     engine_databases: Databases,
 ) -> None:
