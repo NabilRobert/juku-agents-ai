@@ -29,7 +29,7 @@ from juku_data.engine.models import (
 from juku_data.memory import EvidenceEvent, MemoryNote
 
 from juku_app import assets
-from juku_app.web import LEVELS, TIMEZONES, templates
+from juku_app.routes.common import LEVELS, TIMEZONES, templates
 
 SAMPLE_LEARNER = Learner(
     id=0, public_id="preview", cohort_id=1, target_level=5, timezone="Asia/Jakarta", exam_date=date(2026, 12, 6)

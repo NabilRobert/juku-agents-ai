@@ -1,0 +1,492 @@
+[
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/",
+  "name": "root",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": []
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/admin/runs",
+  "name": "admin_runs",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "admin",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/admin/runs/{run_id}",
+  "name": "admin_run",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "admin",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/bacaan",
+  "name": "reading",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/bacaan/{sentence_id}/dibaca",
+  "name": "sentence_read",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/beranda",
+  "name": "home",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/chat",
+  "name": "chat_page",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/chat/kirim",
+  "name": "send",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/hapus-data",
+  "name": "delete",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/healthz",
+  "name": "healthz",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": []
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/ingat",
+  "name": "memory_page",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/ingat/catatan/{note_ref}/hapus",
+  "name": "remove",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/ingat/catatan/{note_ref}/salah",
+  "name": "mark_wrong",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/ingat/kata/{word_id}/belum",
+  "name": "unmark",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/kata/{word_id}/dikuasai",
+  "name": "mark_known",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/kuis",
+  "name": "quiz",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/kuis/data",
+  "name": "quiz_batch",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/kuis/jawab",
+  "name": "answer_quiz",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/laporan",
+  "name": "report_page",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/masuk",
+  "name": "sign_in_form",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": []
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/masuk",
+  "name": "sign_in",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf"
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/mulai",
+  "name": "start_form",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": []
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/mulai",
+  "name": "start",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf"
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/nilai",
+  "name": "rate",
+  "response_class": "JSONResponse",
+  "status_code": 204,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/pengaturan",
+  "name": "settings_page",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/pengaturan",
+  "name": "update_settings",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/persetujuan",
+  "name": "consent_form",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": []
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/persetujuan",
+  "name": "consent",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf"
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/rencana",
+  "name": "plan",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/tentang-data",
+  "name": "about_the_data",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": []
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/unduh-data",
+  "name": "download",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/web-vitals",
+  "name": "web_vitals",
+  "response_class": "JSONResponse",
+  "status_code": 204,
+  "dependencies": []
+ }
+]
