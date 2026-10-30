@@ -14,7 +14,9 @@ In order, each step able to end the turn without calling the model:
 
 `ask_streaming` does the same, yielding the answer's text as the model
 writes it, then the checked ChatAnswer last, for the page's server-sent
-events.
+events. A model or tool failure there ends the turn with a plain reply:
+the stream is the learner's only view of the run, so it must always end
+with an explanation. `ask` lets failures through, for its callers to see.
 """
 
 from __future__ import annotations
@@ -23,6 +25,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+import structlog
 from juku_common.delegation import Signer
 from juku_data.engine.models import Learner
 from pydantic_ai import Agent
@@ -40,7 +43,10 @@ from juku_app.shiori import ShioriRun
 TEXT_RETENTION = timedelta(days=90)
 FREE_FEATURES = " Fitur gratis (kuis, rekomendasi, bacaan, rencana) tetap bisa dipakai."
 RUN_LIMIT_REPLY = "Maaf, pertanyaan ini butuh terlalu banyak langkah. Coba tanyakan bagian yang lebih kecil."
+MODEL_ERROR_REPLY = "Maaf, ada gangguan dan Shiori belum bisa menjawab. Coba lagi sebentar lagi."
 UNSET_CRISIS_LINE = "(nomor belum diisi: lihat JUKU_CRISIS_LINE)"
+
+log = structlog.get_logger("juku_app")
 
 
 @dataclass(frozen=True)
@@ -145,6 +151,15 @@ async def ask_streaming(
     except UsageLimitExceeded:
         yield RUN_LIMIT_REPLY
         yield ChatAnswer(RUN_LIMIT_REPLY, is_verified=True, stopped_because="run_limit")
+        return
+    except Exception as failure:
+        # Broad on purpose: a provider, a tool or the network can fail in many ways, and each one must reach the
+        # learner as a reply. Only the type is logged, because a provider's message can quote the question (FF9).
+        log.warning("chat_run_failed", error=type(failure).__name__)
+        reply = f" {MODEL_ERROR_REPLY}" if pieces else MODEL_ERROR_REPLY
+        yield reply
+        # Text that was already shown never reached the citation check, so it can't count as verified.
+        yield ChatAnswer("".join(pieces) + reply, is_verified=not pieces, stopped_because="model_error")
         return
     finally:
         await services.guard.record("chat", learner.id, usage)

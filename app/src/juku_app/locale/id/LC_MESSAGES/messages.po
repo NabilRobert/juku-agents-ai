@@ -202,6 +202,9 @@ msgstr "Datamu sudah dihapus"
 msgid "Your plan"
 msgstr "Rencanamu"
 
+msgid "Something went wrong and the answer didn't finish. Please try again."
+msgstr "Maaf, ada gangguan dan jawabannya belum selesai. Coba lagi sebentar lagi."
+
 msgid "unverified"
 msgstr "belum terverifikasi"
 
