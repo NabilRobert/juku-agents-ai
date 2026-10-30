@@ -1,0 +1,62 @@
+# FF10's stack: Juku's app and MCP server with their production memory caps
+# (ops/compose.yaml), on CPU shares that stand in for the 2-vCPU server, and
+# a throwaway Postgres 16 the size of the managed plan (1 GB RAM, about 20
+# connections; ADR-016). Started by evals/load/run.py, which first writes
+# build/load/: the rule file, and each service's settings as secret files.
+#
+# Two differences from production, both stated in results.md:
+# - no gateway: the app calls juku-mcp directly, so the rule file turns off
+#   the gateway-caller check (as the tests' direct_rules() does);
+# - the app runs evals/load/serve.py, which is `juku serve` with a scripted
+#   Shiori ($0) in place of the paid model.
+name: juku-load
+
+x-hardened: &hardened
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp:size=16m"]
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      # Loopback only and deleted after the run, so no password.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    command: ["postgres", "-c", "max_connections=25", "-c", "shared_buffers=256MB"]
+    ports: ["127.0.0.1:55442:5432"]
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+
+  juku-mcp:
+    <<: *hardened
+    image: juku-mcp:local
+    environment:
+      JUKU_RULES_PATH: /load/guardrails.yaml
+      JUKU_MCP_AUDIT_LOG: /tmp/audit.jsonl
+    volumes:
+      - ../../build/load/guardrails.yaml:/load/guardrails.yaml:ro
+      - ../../build/load/mcp-secrets:/run/secrets:ro
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.5
+
+  app:
+    <<: *hardened
+    image: juku-app:local
+    command: ["python", "/load/serve.py"]
+    environment:
+      JUKU_RULES_PATH: /load/guardrails.yaml
+      JUKU_SECURE_COOKIES: "false"
+      JUKU_CRISIS_LINE: LOAD-TEST
+    volumes:
+      - ../../build/load/guardrails.yaml:/load/guardrails.yaml:ro
+      - ./serve.py:/load/serve.py:ro
+      - ../../build/load/app-secrets:/run/secrets:ro
+    ports: ["127.0.0.1:55480:8000"]
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 1.5

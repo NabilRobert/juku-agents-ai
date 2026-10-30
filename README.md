@@ -103,7 +103,7 @@ uv run juku render-previews --out build/previews
 | `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion; and the weekly pipeline (`juku run-weekly --due`, `app/src/juku_app/pipeline/`) with the Run Inspector |
 | `app/web/` | The two Vue islands, chat and quiz (Vite, Vitest), with FE7's size budget and FF12's Lighthouse config |
 | `packages/juku-testkit/` | Test helpers: the fitness-function and guardrail (G1) harnesses, both pytest plugins, and throwaway databases |
-| `evals/` | Agent evals and their fixture learners: `memory/` holds MEM1's 15 tasks (agent-eval-harness's format), `pipeline/` the weekly pipeline's 10 learners and the planted bad outputs |
+| `evals/` | Agent evals and their fixture learners: `memory/` holds MEM1's 15 tasks (agent-eval-harness's format), `pipeline/` the weekly pipeline's 10 learners and the planted bad outputs `load/` holds the load test (FF10): `run.py`, Locust and `results.md`. |
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
 | `ops/` | Deployment: `compose.yaml`, the managed database's roles and set-up script, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
