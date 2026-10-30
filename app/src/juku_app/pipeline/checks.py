@@ -80,7 +80,9 @@ def fact_dates(facts: WeekFacts) -> set[str]:
 
 def _number_issues(text: str, facts: WeekFacts) -> list[Issue]:
     dates = fact_dates(facts)
-    without_dates = ISO_DATE.sub(lambda found: " " if found.group(0) in dates else found.group(0), text)
+    # A citation is an ID, not a claim, and an ID can be all digits; _citation_issues checks it against the facts.
+    without_citations = CITATION.sub(" ", text)
+    without_dates = ISO_DATE.sub(lambda found: " " if found.group(0) in dates else found.group(0), without_citations)
     allowed = fact_numbers(facts)
     return [
         _issue("number_not_in_facts", f"{number} isn't in the facts", number)
