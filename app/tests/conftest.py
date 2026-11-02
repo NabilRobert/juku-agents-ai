@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import sys
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.rules import Rules, load_rules
-from juku_data.engine import Databases, create_learner
+from juku_data.engine import Databases, create_learner, mark_known
 from juku_data.engine.models import Learner
 from juku_mcp.app import create_app
 from juku_mcp.settings import McpSettings
@@ -68,3 +69,14 @@ async def clean_budget(app_engine: AsyncEngine) -> AsyncIterator[AsyncEngine]:
     async with app_engine.begin() as connection:
         await connection.execute(text("TRUNCATE app.model_calls"))
     yield app_engine
+
+
+@pytest.fixture
+async def studying(engine_databases: Databases, learner: Learner) -> Learner:
+    async with engine_databases.app.connect() as connection:
+        words = list(
+            await connection.scalars(text("SELECT word_id FROM learning.dictionary_words ORDER BY word_id LIMIT 20"))
+        )
+    for word in words:
+        await mark_known(engine_databases, learner.id, str(word), datetime(2026, 11, 2, tzinfo=UTC))
+    return learner

@@ -9,6 +9,7 @@ approves. The planted crew returns a fixed output, whatever it's told.
 from __future__ import annotations
 
 import json
+import uuid
 from collections.abc import Callable
 from datetime import datetime, time
 from typing import Any
@@ -23,8 +24,10 @@ from juku_common.delegation import Signer
 from juku_common.rules import Rules
 from juku_data.engine import Databases
 from juku_data.engine.models import Learner
+from juku_testkit.memory_fixtures import load_memory_fixture
 from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse, TextPart, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+from sqlalchemy import text
 
 ModelFunction = Callable[[list[ModelMessage], AgentInfo], ModelResponse]
 RUN_DATE = "2026-11-08"
@@ -128,3 +131,18 @@ async def consented(db: Databases, learner: Learner) -> Learner:
     answers = ConsentAnswers(is_adult=True, accepts_service=True, accepts_aggregates=False, accepts_group_digest=False)
     await record_consent(db.app, learner.id, answers)
     return learner
+
+
+async def fixture_learner(db: Databases, rules: Rules, name: str = "joko") -> Learner:
+    source = "memory" if name in {"fajar", "gita", "hana", "indra"} else "pipeline"
+    loaded = await load_memory_fixture(db, rules, name, suffix=f"-{uuid.uuid4().hex[:6]}", source=source)
+    return await consented(db, loaded.learner)
+
+
+async def scalar(db: Databases, sql: str, **parameters: Any) -> Any:
+    async with db.app.connect() as connection:
+        return await connection.scalar(text(sql), parameters)
+
+
+async def reports_of(db: Databases, learner: Learner) -> int:
+    return int(await scalar(db, "SELECT count(*) FROM app.reports WHERE learner_id = :l", l=learner.id))
