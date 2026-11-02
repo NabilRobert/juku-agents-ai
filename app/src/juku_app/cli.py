@@ -30,7 +30,7 @@ from juku_ops.jobs import recorded_run
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
-from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
@@ -85,7 +85,9 @@ def chat_model(config: AppSettings) -> Model:
     """Sumopod's gpt-5-mini when a key is set; otherwise a stand-in that says chat isn't available yet."""
     if config.model_api_key:
         provider = OpenAIProvider(base_url=config.model_base_url, api_key=config.model_api_key)
-        return OpenAIChatModel(config.model_name, provider=provider)
+        effort = config.model_reasoning_effort
+        settings = OpenAIChatModelSettings(openai_reasoning_effort=effort) if effort else None
+        return OpenAIChatModel(config.model_name, provider=provider, settings=settings)
 
     def unavailable(_messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
         return ModelResponse(parts=[TextPart(CHAT_UNAVAILABLE)])
