@@ -11,6 +11,9 @@ dependencies = ["juku-app", "juku-common", "juku-data", "juku-mcp", "juku-ops"]
 
 [tool.uv]
 package = false
+# The harness pins openai exactly, for its own Inspect runs. Juku's runner never uses Inspect's model
+# calls, so this keeps the eval tool from moving what the app ships.
+override-dependencies = ["openai==3.40.0"]
 
 [tool.uv.workspace]
 members = ["packages/*", "app"]
@@ -25,6 +28,8 @@ juku-testkit = { workspace = true }
 
 [dependency-groups]
 dev = [
+    # Slice 7: evals/run_suite.py grades and records runs with the harness's own code.
+    "agent-eval-harness @ git+https://github.com/NabilRobert/agent-eval-harness@a44cad4",
     "juku-testkit",
     "mutmut==3.8.0",
     # Scripted agents for the attack suite (SAF1) and, in track C, Shiori's tests: TestModel, FunctionModel.
@@ -76,8 +81,8 @@ strict = ["packages/*/src", "app/src"]
 pythonVersion = "3.12"
 # Hand-written stubs for libraries that ship no types (SudachiPy).
 stubPath = "typings"
-# The attack suite is evaluation code beside the server, imported by its test.
-extraPaths = ["packages/juku-mcp/attacks"]
+# Evaluation code beside what it tests, imported by its tests.
+extraPaths = ["packages/juku-mcp/attacks", "evals"]
 venvPath = "."
 venv = ".venv"
 
