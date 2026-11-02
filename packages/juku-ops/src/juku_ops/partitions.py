@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import date
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 MONTHS_AHEAD = 3
 
@@ -41,6 +41,22 @@ def months_from(today: date, count: int) -> list[date]:
     return months
 
 
+async def _create_missing_partition(
+    connection: AsyncConnection, schema_name: str, table_name: str, month: date
+) -> str | None:
+    """Create one month's partition unless it exists; return its name if it was created."""
+    partition = f'"{schema_name}"."{table_name}_{month:%Y_%m}"'
+    if await connection.scalar(_PARTITION_EXISTS, {"qualified_name": partition}):
+        return None
+    await connection.execute(
+        text(
+            f'CREATE TABLE {partition} PARTITION OF "{schema_name}"."{table_name}" '
+            f"FOR VALUES FROM ('{month}') TO ('{first_of_next_month(month)}')"
+        )
+    )
+    return f"{schema_name}.{table_name}_{month:%Y_%m}"
+
+
 async def ensure_month_partitions(engine: AsyncEngine, today: date) -> list[str]:
     """Create any missing partition from this month to MONTHS_AHEAD months on; return the new ones' names."""
     created: list[str] = []
@@ -48,14 +64,7 @@ async def ensure_month_partitions(engine: AsyncEngine, today: date) -> list[str]
         tables = (await connection.execute(_RANGE_PARTITIONED_TABLES)).all()
         for schema_name, table_name in tables:
             for month in months_from(today, MONTHS_AHEAD):
-                partition = f'"{schema_name}"."{table_name}_{month:%Y_%m}"'
-                if await connection.scalar(_PARTITION_EXISTS, {"qualified_name": partition}):
-                    continue
-                await connection.execute(
-                    text(
-                        f'CREATE TABLE {partition} PARTITION OF "{schema_name}"."{table_name}" '
-                        f"FOR VALUES FROM ('{month}') TO ('{first_of_next_month(month)}')"
-                    )
-                )
-                created.append(f"{schema_name}.{table_name}_{month:%Y_%m}")
+                new_partition = await _create_missing_partition(connection, schema_name, table_name, month)
+                if new_partition:
+                    created.append(new_partition)
     return created
