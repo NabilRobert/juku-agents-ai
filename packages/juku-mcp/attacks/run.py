@@ -66,6 +66,25 @@ def gateway_config(work: Path, juku_url: str, agent_keys: dict[str, str]) -> Pat
     return path
 
 
+def start_gateway(
+    gateway_python: Path, gateway_src: Path, work: Path, config: Path, port: int
+) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(  # noqa: S603 (the gateway's own interpreter, our own arguments)
+        [
+            str(gateway_python),
+            "-c",
+            "import sys; from mcp_gateway.cli import main; sys.argv[0] = 'mcp-gateway'; main()",
+            "serve",
+            "--config",
+            str(config),
+            "--port",
+            str(port),
+        ],
+        cwd=work,
+        env={**os.environ, "PYTHONPATH": str(gateway_src)},
+    )
+
+
 async def wait_for_port(port: int) -> None:
     for _ in range(100):
         try:
@@ -176,20 +195,7 @@ async def main(gateway_src: Path, gateway_python: Path, work: Path) -> None:
                 else:
                     gateway_port = free_port()
                     config = gateway_config(work, f"http://127.0.0.1:{juku_port}/mcp", agent_keys)
-                    gateway = subprocess.Popen(  # noqa: S603 (the gateway's own interpreter, our own arguments)
-                        [
-                            str(gateway_python),
-                            "-c",
-                            "import sys; from mcp_gateway.cli import main; sys.argv[0] = 'mcp-gateway'; main()",
-                            "serve",
-                            "--config",
-                            str(config),
-                            "--port",
-                            str(gateway_port),
-                        ],
-                        cwd=work,
-                        env={**os.environ, "PYTHONPATH": str(gateway_src)},
-                    )
+                    gateway = start_gateway(gateway_python, gateway_src, work, config, gateway_port)
                     await wait_for_port(gateway_port)
                     target = Target(
                         mode="gateway", url=f"http://127.0.0.1:{gateway_port}/mcp/juku/", agent_keys=agent_keys

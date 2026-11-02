@@ -9,9 +9,11 @@ fresh token per tool call, a fixture learner per task, and Shiori's real code pa
 `juku_app.chat.ask` and reads what happened from Juku's own records, then grades with the harness's
 graders and writes its run files, so `agent-eval report` and `compare` work on the result (ADR-028).
 
-A real run needs `--real`, a `--purpose` and a `--budget`, and stops before a trial could cross the
-budget. It reads JUKU_MODEL_API_KEY from .env. Everything else runs in throwaway test databases,
-with Juku's MCP server in this process, reached directly: the gateway isn't in the path.
+A real run needs `--real`, a `--purpose`, a `--budget` and a `--total-cap`, and goes through the
+real gateway, rules only. It stops before a trial could cross what's left, and `paid-ledger.jsonl`
+carries the spend across runs, so a rerun can't pass the cap either. It reads JUKU_MODEL_API_KEY from
+.env. A scripted run has no gateway unless given `--through-gateway`. Everything runs in throwaway
+test databases, with Juku's MCP server in this process.
 """
 
 from __future__ import annotations
@@ -20,122 +22,47 @@ import argparse
 import asyncio
 import json
 import sys
-import tempfile
 import time
 import uuid
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from unittest import mock
 
 from agent_eval.envfile import read_env_file
 from agent_eval.grading import GRADER_VERSION
 from agent_eval.records import task_hash, write_run
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ed25519
-from eval_records import build_meta, grade, worst_trial_usd
+from eval_gateway import GATEWAY_REF
+from eval_parts import pipeline_runner, pipeline_suite, safety_runner, safety_suite
+from eval_records import build_meta, grade, worst_pipeline_call_usd, worst_trial_usd
+from eval_stack import UNCAPPED_USD, AllowAll, Stack, eval_rules, running_stack
 from juku_app.budget import BudgetGuard
 from juku_app.chat import ChatServices, ask
-from juku_app.moderation import Verdict
 from juku_app.shiori import build_shiori, juku_toolset
-from juku_common.delegation import Signer
-from juku_common.rules import Rules, load_rules
-from juku_data.dictionary.load import load_dictionary
-from juku_data.dictionary.source import verify_source
-from juku_data.dictionary.sync import sync_index
-from juku_data.engine import Databases
-from juku_mcp.app import create_app
-from juku_mcp.settings import McpSettings
-from juku_testkit.databases import create_database, create_roles, drop_database, migrate_to_heads, openjlpt_dir
+from juku_common.rules import load_rules
 from juku_testkit.memory_fixtures import load_memory_fixture, load_suite, source_of
-from juku_testkit.serving import serving
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models import Model
 from pydantic_ai.models.function import AgentInfo, FunctionModel
-from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
 
 ROOT = Path(__file__).resolve().parents[1]
+LEDGER_NAME = "paid-ledger.jsonl"
+Effort = Literal["minimal", "low", "medium", "high"]
+RunOne = Callable[[dict[str, Any], int], Awaitable[dict[str, Any]]]
 RUNS = ROOT / "build" / "evals"
 SUITE_FOLDERS = {"chat": ROOT / "evals" / "chat", "memory": ROOT / "evals" / "memory"}
 REAL_MODEL = "gpt-5-mini"
 REAL_BASE_URL = "https://ai.sumopod.com/v1"  # juku_app.settings.AppSettings.model_base_url
-# The eval's own learners mustn't trip the app's budget: `--budget` is the cap here.
-UNCAPPED_USD = 100_000.0
-UNCAPPED_QUESTIONS = 1_000_000
 TOOLS_CALLED = "SELECT tool FROM monitoring.tool_calls WHERE learner_id = :learner ORDER BY called_at"
 USAGE = """
 SELECT coalesce(sum(input_tokens), 0), coalesce(sum(output_tokens), 0), coalesce(sum(cost_usd), 0)
 FROM app.model_calls WHERE learner_id = :learner
 """
-
-
-class AllowAll:
-    """The moderation check is AG6's, tested on its own. It isn't what these tasks measure."""
-
-    async def check(self, message: str) -> Verdict:
-        assert message
-        return Verdict(suggests_self_harm=False)
-
-
-@dataclass(frozen=True)
-class Stack:
-    db: Databases
-    rules: Rules
-    signer: Signer
-    mcp_url: str
-
-
-def eval_rules() -> Rules:
-    """The rule file, with no caller stamp to require (no gateway here) and no budget caps to hit."""
-    rules = load_rules()
-    budget = rules.budget.model_copy(
-        update={
-            "chat_pool_usd": UNCAPPED_USD,
-            "chat_daily_global_usd": UNCAPPED_USD,
-            "chat_daily_questions_per_learner": UNCAPPED_QUESTIONS,
-        }
-    )
-    delegation = rules.delegation.model_copy(update={"require_gateway_caller": False})
-    return rules.model_copy(update={"budget": budget, "delegation": delegation})
-
-
-@asynccontextmanager
-async def running_stack() -> AsyncIterator[Stack]:
-    """Throwaway databases and Juku's MCP server, gone when the block ends."""
-    key = ed25519.Ed25519PrivateKey.generate()
-    pem = key.public_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
-    rules = eval_rules()
-    app_db = await asyncio.to_thread(create_database, "juku_eval_app")
-    dict_db = await asyncio.to_thread(create_database, "juku_eval_dict")
-    db = Databases(
-        app=create_async_engine(app_db.sqlalchemy_url), dictionary=create_async_engine(dict_db.sqlalchemy_url)
-    )
-    try:
-        await asyncio.to_thread(create_roles)
-        await asyncio.to_thread(migrate_to_heads, app_db)
-        await load_dictionary(db.dictionary, verify_source(openjlpt_dir()))
-        await sync_index(db.dictionary, db.app)
-        with tempfile.TemporaryDirectory() as work:
-            settings = McpSettings(
-                app_database_url=app_db.sqlalchemy_url,
-                dict_database_url=dict_db.sqlalchemy_url,
-                delegation_public_key=pem.decode(),
-                audit_log=Path(work) / "audit.jsonl",
-            )
-            async with serving(create_app(settings, rules)) as base_url:
-                yield Stack(db=db, rules=rules, signer=Signer(key, rules), mcp_url=f"{base_url}/mcp")
-    finally:
-        await db.app.dispose()
-        await db.dictionary.dispose()
-        await asyncio.to_thread(drop_database, app_db)
-        await asyncio.to_thread(drop_database, dict_db)
 
 
 def required_tools(task: dict[str, Any]) -> list[str]:
@@ -158,11 +85,12 @@ def scripted_model(task: dict[str, Any]) -> FunctionModel:
     return FunctionModel(step)
 
 
-def real_model(env_file: Path) -> Model:
+def real_model(env_file: Path, effort: Effort | None = None) -> Model:
     key = read_env_file(env_file).get("JUKU_MODEL_API_KEY")
     if not key:
         raise SystemExit(f"JUKU_MODEL_API_KEY isn't set in {env_file}: add it, or leave out --real")
-    return OpenAIChatModel(REAL_MODEL, provider=OpenAIProvider(base_url=REAL_BASE_URL, api_key=key))
+    settings = OpenAIChatModelSettings(openai_reasoning_effort=effort) if effort else None
+    return OpenAIChatModel(REAL_MODEL, provider=OpenAIProvider(base_url=REAL_BASE_URL, api_key=key), settings=settings)
 
 
 async def recorded_usage(stack: Stack, learner_id: int) -> tuple[list[str], int, int, float]:
@@ -180,7 +108,7 @@ async def run_trial(stack: Stack, task: dict[str, Any], attempt: int, model: Mod
         stack.db, stack.rules, name, suffix=f"-{uuid.uuid4().hex[:6]}", source=source_of(name)
     )
     services = ChatServices(
-        agent=build_shiori(model, juku_toolset(stack.mcp_url)),
+        agent=build_shiori(model, juku_toolset(stack.mcp_url, stack.gateway_keys.get("shiori"))),
         guard=BudgetGuard(stack.db.app, stack.rules),
         moderator=AllowAll(),
         signer=stack.signer,
@@ -221,52 +149,102 @@ async def run_trial(stack: Stack, task: dict[str, Any], attempt: int, model: Mod
     }
 
 
-async def run_trials(
-    stack: Stack, suite: dict[str, Any], epochs: int, budget: float | None, make_model: Any
+def spent_so_far(ledger: Path) -> float:
+    """What every real run has cost, from the ledger each trial is added to as it ends."""
+    if not ledger.is_file():
+        return 0.0
+    return sum(float(json.loads(line)["cost_usd"]) for line in ledger.read_text(encoding="utf-8").splitlines())
+
+
+async def run_trials(  # noqa: PLR0913 (what bounds a run, each one separate)
+    tasks: list[dict[str, Any]],
+    epochs: int,
+    run_one: RunOne,
+    limit_usd: float | None,
+    worst_usd: float,
+    ledger: Path | None = None,
 ) -> tuple[list[dict[str, Any]], bool]:
-    """Every task, `epochs` times. Stops before a trial could cross `budget`; says if it finished."""
-    now = datetime.fromisoformat(str(suite["fixture"]["now"]))
+    """Every task, `epochs` times. Stops before a trial could cross `limit_usd`; says if it finished."""
     trials: list[dict[str, Any]] = []
     spent = 0.0
-    with mock.patch("juku_mcp.server.utc_now", lambda: now):  # the tools see the fixture's week
-        for attempt in range(1, epochs + 1):
-            for task in suite["tasks"]:
-                if budget is not None and spent + worst_trial_usd(stack.rules) > budget:
-                    print(f"stopped: ${spent:.4f} spent, and one more trial could pass ${budget:.2f}", flush=True)
-                    return trials, False
-                trial = await run_trial(stack, task, attempt, make_model(task), now)
-                spent += float(trial["cost_usd"])
-                trials.append(trial)
-                print(f"{trial['task_id']} #{attempt}: {trial['outcome']}, ${spent:.4f} so far", flush=True)
+    for attempt in range(1, epochs + 1):
+        for task in tasks:
+            if limit_usd is not None and spent + worst_usd > limit_usd:
+                print(f"stopped: ${spent:.4f} spent, and one more trial could pass ${limit_usd:.2f}", flush=True)
+                return trials, False
+            trial = await run_one(task, attempt)
+            spent += float(trial["cost_usd"])
+            trials.append(trial)
+            if ledger is not None:
+                ledger.parent.mkdir(parents=True, exist_ok=True)
+                with ledger.open("a", encoding="utf-8") as lines:
+                    lines.write(json.dumps({"task": trial["task_id"], "cost_usd": trial["cost_usd"]}) + "\n")
+            print(f"{trial['task_id']} #{attempt}: {trial['outcome']}, ${spent:.4f} so far", flush=True)
     return trials, True
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("suite", choices=sorted(SUITE_FOLDERS))
+    parser.add_argument("suite", choices=[*sorted(SUITE_FOLDERS), "pipeline", "safety"])
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--real", action="store_true", help="call the real model: this spends money")
     parser.add_argument("--budget", type=float, help="US dollars for the whole run; required with --real")
     parser.add_argument("--purpose", help="what the run is for, and whose OK it has; required with --real")
+    parser.add_argument("--total-cap", type=float, help="US dollars across every real run; required with --real")
+    parser.add_argument("--effort", choices=["minimal", "low", "medium", "high"], help="the model's reasoning effort")
+    parser.add_argument("--through-gateway", action="store_true", help="a scripted run on a real run's path")
+    parser.add_argument("--gateway-ref", default=GATEWAY_REF, help="the mcp-security-gateway commit a real run uses")
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env")
     args = parser.parse_args(argv)
-    if args.real and (args.budget is None or not args.purpose):
-        parser.error("--real spends money: it needs --budget and --purpose")
+    if args.real and (args.budget is None or args.total_cap is None or not args.purpose):
+        parser.error("--real spends money: it needs --budget, --total-cap and --purpose")
     return args
 
 
+def suite_and_text(name: str) -> tuple[dict[str, Any], str]:
+    if name == "pipeline":
+        return pipeline_suite()
+    if name == "safety":
+        return safety_suite()
+    folder = SUITE_FOLDERS[name]
+    return load_suite(folder), (folder / "suite.yaml").read_text(encoding="utf-8")
+
+
+def chat_runner(stack: Stack, make_model: Callable[[dict[str, Any]], Model], now: datetime) -> RunOne:
+    async def run_one(task: dict[str, Any], attempt: int) -> dict[str, Any]:
+        return await run_trial(stack, task, attempt, make_model(task), now)
+
+    return run_one
+
+
 async def run(args: argparse.Namespace) -> Path:
-    folder = SUITE_FOLDERS[args.suite]
-    suite = load_suite(folder)
-    suite_text = (folder / "suite.yaml").read_text(encoding="utf-8")
-    real = real_model(args.env_file) if args.real else None
+    suite, suite_text = suite_and_text(args.suite)
+    real = real_model(args.env_file, args.effort) if args.real else None
+    limit = None
+    ledger = None
+    if args.real:
+        ledger = RUNS / LEDGER_NAME
+        limit = min(args.budget, args.total_cap - spent_so_far(ledger))
+    worst = worst_pipeline_call_usd(load_rules()) if args.suite == "pipeline" else worst_trial_usd(load_rules())
+    # Under the cap: the guard checks before each agent call, so the last call can't pass the limit.
+    pool = max((limit or UNCAPPED_USD) - worst, 0.0)
+    through_gateway = args.real or args.through_gateway
+    rules = eval_rules(with_gateway=through_gateway, reports_pool_usd=pool)
+    now = datetime.fromisoformat(str(suite["fixture"]["now"]))
 
     def make_model(task: dict[str, Any]) -> Model:
         return real if real is not None else scripted_model(task)
 
-    async with running_stack() as stack:
-        trials, is_complete = await run_trials(stack, suite, args.epochs, args.budget, make_model)
+    async with running_stack(rules, gateway_ref=args.gateway_ref if through_gateway else None) as stack:
+        if args.suite == "pipeline":
+            run_one = pipeline_runner(stack, real)
+        elif args.suite == "safety":
+            run_one = await safety_runner(stack, real, now)
+        else:
+            run_one = chat_runner(stack, make_model, now)
+        with mock.patch("juku_mcp.server.utc_now", lambda: now):  # the tools see the fixture's week
+            trials, is_complete = await run_trials(suite["tasks"], args.epochs, run_one, limit, worst, ledger)
     run_dir = RUNS / args.run_id
     write_run(run_dir, build_meta(args.run_id, suite, suite_text, trials, is_complete, args), trials)
     return run_dir

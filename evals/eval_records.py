@@ -36,6 +36,11 @@ def worst_trial_usd(rules: Rules) -> float:
     return rules.budget.chat_run_total_tokens_limit * rules.budget.output_usd_per_million / 1_000_000
 
 
+def worst_pipeline_call_usd(rules: Rules) -> float:
+    """The most one crew call can cost. The reports pool is checked before each call, so this is the overshoot."""
+    return rules.budget.report_run_total_tokens_limit * rules.budget.output_usd_per_million / 1_000_000
+
+
 def data_fingerprint() -> str:
     """The fixture learners and the dictionary's pin: a run on other data can't be compared."""
     digest = hashlib.sha256(OPENJLPT_COMMIT.encode())
@@ -87,7 +92,7 @@ def build_meta(  # noqa: PLR0913 (the run's facts, each one recorded)
         "target": {"name": "juku", "transport": "streamable-http", "address": "in-process"},
         "agent": {
             "model": model,
-            "model_args": {},
+            "model_args": {"reasoning_effort": args.effort} if args.effort else {},
             "system_prompt_sha256": hashlib.sha256(INSTRUCTIONS.encode()).hexdigest(),
             "system_prompt": INSTRUCTIONS,
             "tool_allowlist": None,
