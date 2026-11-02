@@ -187,6 +187,13 @@ def test_a_number_not_in_the_facts_is_blocked(rules: Rules) -> None:
     assert kinds(check_report(report, facts, facts, rules)) == {"number_not_in_facts"}
 
 
+def test_a_cited_word_id_made_only_of_digits_is_not_counted_as_a_claim(rules: Rules) -> None:
+    # Word IDs are hex, so about 1 in 100 has no letters. Citing one must not cost the learner their report.
+    facts = sample_facts(mistakes=("2584943533",))
+    report = f"{GOOD_REPORT} Ulangi kata ini [ref:2584943533]."
+    assert check_report(report, facts, facts, rules) == []
+
+
 def test_the_weeks_dates_and_word_levels_are_not_counted_as_claims(rules: Rules) -> None:
     facts = sample_facts()
     report = "Laporan 2026-11-02 sampai 2026-11-08: 12 kuis [ref:activity], kata N5 [ref:c5]."
