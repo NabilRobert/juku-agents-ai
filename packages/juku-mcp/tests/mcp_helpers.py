@@ -20,17 +20,7 @@ from juku_mcp.server import ServerDeps
 from mcp import Client
 from mcp.server import Server
 
-ALL_SHIORI_TOOLS = [
-    "get_progress",
-    "get_mistakes",
-    "recommend_words",
-    "find_reading_sentences",
-    "get_plan",
-    "get_recent_activity",
-    "get_memory",
-    "search_words",
-    "request_replan",
-]
+ALL_SHIORI_TOOLS = sorted(load_rules().tools_of("shiori"))
 
 
 @dataclass

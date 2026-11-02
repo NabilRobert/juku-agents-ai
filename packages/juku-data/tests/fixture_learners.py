@@ -19,6 +19,7 @@ import yaml
 from juku_data.engine import Databases, create_learner, mark_known, record_sentence_read, unmark_known
 from juku_data.engine.api import record_quiz_answer
 from juku_data.engine.models import Learner, QuizKind
+from juku_testkit.memory_fixtures import word_id_of
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -46,20 +47,6 @@ class FixtureLearner:
     timezone: str
     exam_date: date | None
     events: list[FixtureEvent]
-
-
-async def word_id_of(dict_engine: AsyncEngine, spelling_and_reading: str) -> str:
-    spelling, reading = spelling_and_reading.split("/")
-    async with dict_engine.connect() as connection:
-        found = list(
-            await connection.scalars(
-                text("SELECT id FROM ojlpt.vocab WHERE word = :word AND reading = :reading"),
-                {"word": spelling, "reading": reading},
-            )
-        )
-    if len(found) != 1:
-        raise ValueError(f"fixture word {spelling_and_reading} matches {len(found)} words; it must match one")
-    return str(found[0])
 
 
 async def first_words(dict_engine: AsyncEngine, count: int, level: int) -> list[str]:
