@@ -1,19 +1,17 @@
 """The server over Streamable HTTP, as the gateway reaches it: /healthz, and a tool call with its token."""
 
-import asyncio
-import socket
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
 import pytest
-import uvicorn
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.delegation import Signer
 from juku_mcp.app import create_app
 from juku_mcp.settings import McpSettings
 from juku_testkit.databases import TestDatabase
+from juku_testkit.serving import serving
 from mcp import Client
 from mcp_helpers import Learners, call, direct_rules, token_for
 
@@ -24,12 +22,6 @@ INITIALIZE = {
     "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
 }
 MCP_HEADERS = {"Accept": "application/json, text/event-stream"}
-
-
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
 
 
 @pytest.fixture
@@ -48,16 +40,8 @@ async def base_url(
         delegation_public_key=pem.decode(),
         audit_log=tmp_path / "audit.jsonl",
     )
-    port = free_port()
-    server = uvicorn.Server(uvicorn.Config(create_app(settings, direct_rules()), port=port, log_level="warning"))
-    task = asyncio.create_task(server.serve())
-    while not server.started:
-        await asyncio.sleep(0.05)
-    try:
-        yield f"http://127.0.0.1:{port}"
-    finally:
-        server.should_exit = True
-        await task
+    async with serving(create_app(settings, direct_rules())) as url:
+        yield url
 
 
 async def test_the_health_check_answers(base_url: str) -> None:

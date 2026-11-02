@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-import socket
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
-import uvicorn
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.rules import Rules, load_rules
@@ -18,16 +15,11 @@ from juku_data.engine.models import Learner
 from juku_mcp.app import create_app
 from juku_mcp.settings import McpSettings
 from juku_testkit.databases import TestDatabase
+from juku_testkit.serving import serving
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 sys.path.insert(0, str(Path(__file__).parent))
-
-
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
 
 
 def direct_rules() -> Rules:
@@ -59,16 +51,8 @@ async def juku_mcp_url(
         delegation_public_key=pem.decode(),
         audit_log=tmp_path / "juku-mcp.jsonl",
     )
-    port = free_port()
-    server = uvicorn.Server(uvicorn.Config(create_app(settings, direct_rules()), port=port, log_level="warning"))
-    task = asyncio.create_task(server.serve())
-    while not server.started:
-        await asyncio.sleep(0.05)
-    try:
-        yield f"http://127.0.0.1:{port}/mcp"
-    finally:
-        server.should_exit = True
-        await task
+    async with serving(create_app(settings, direct_rules())) as base_url:
+        yield f"{base_url}/mcp"
 
 
 @pytest.fixture

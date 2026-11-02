@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import secrets
-import socket
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -35,6 +34,7 @@ from juku_data.engine import Databases, create_learner, mark_known
 from juku_mcp.app import create_app
 from juku_mcp.settings import McpSettings
 from juku_testkit.databases import create_database, create_roles, drop_database, migrate_to_heads, openjlpt_dir
+from juku_testkit.serving import free_port
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -44,12 +44,6 @@ sys.path.insert(0, str(HERE))
 from suite import ALL_SHIORI_TOOLS, Target, World, planted_instruction, run_suite  # noqa: E402
 
 ALL_KEIKO_TOOLS = [tool for tool in ALL_SHIORI_TOOLS if tool not in ("search_words", "request_replan")]
-
-
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
 
 
 def gateway_config(work: Path, juku_url: str, agent_keys: dict[str, str]) -> Path:
