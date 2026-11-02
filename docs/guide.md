@@ -443,6 +443,13 @@ setup`, then `measure`, then `down` to delete its data. It needs at least
 15 GB free. The numbers and what they mean are in
 `evals/load/results.md`; FF10's baseline is in `guardrails.yaml`.
 
+**Run the evals.** `uv run python evals/run_suite.py chat --run-id try-1`
+runs the chat suite with a scripted model, at $0, and proves the plumbing
+only. `memory` runs the memory suite. Then `uv run agent-eval report
+build/evals/try-1` writes the report, and `agent-eval compare <old> <new>`
+is the regression gate. A real run spends money: it needs `--real`,
+`--budget` and `--purpose`, and Arthur's OK (ADR-028).
+
 **Add an eval task.** Add it to `evals/chat/suite.yaml` or
 `evals/memory/suite.yaml`, with its gold answer from `reference_sql`.
 `packages/juku-mcp/tests/suite_checks.py` checks each task at $0: it's
