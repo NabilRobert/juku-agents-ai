@@ -6,14 +6,12 @@ gateway's own environment, is attacks/run_through_gateway.sh.
 """
 
 import asyncio
-import socket
 import sys
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
-import uvicorn
 import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -24,6 +22,7 @@ from juku_data.engine import Databases, create_learner, mark_known
 from juku_mcp.app import create_app
 from juku_mcp.settings import McpSettings
 from juku_testkit.databases import TestDatabase, create_database, drop_database, require_openjlpt
+from juku_testkit.serving import serving
 from mcp_helpers import direct_rules
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -69,12 +68,6 @@ def planted_dictionary() -> Iterator[TestDatabase]:
         drop_database(database)
 
 
-def free_port() -> int:
-    with socket.socket() as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
-
-
 @pytest.fixture
 async def world_and_target(
     app_database: TestDatabase, planted_dictionary: TestDatabase, mirrored_dictionary: None, tmp_path: Path
@@ -106,17 +99,11 @@ async def world_and_target(
         delegation_public_key=pem.decode(),
         audit_log=tmp_path / "audit.jsonl",
     )
-    port = free_port()
-    server = uvicorn.Server(uvicorn.Config(create_app(settings, direct_rules()), port=port, log_level="warning"))
-    task = asyncio.create_task(server.serve())
-    while not server.started:
-        await asyncio.sleep(0.05)
     try:
         world = World(signer=Signer(key, load_rules()), learner_a=a.public_id, learner_b=b.public_id)
-        yield world, Target(mode="direct", url=f"http://127.0.0.1:{port}/mcp")
+        async with serving(create_app(settings, direct_rules())) as base_url:
+            yield world, Target(mode="direct", url=f"{base_url}/mcp")
     finally:
-        server.should_exit = True
-        await task
         await db.app.dispose()
         await db.dictionary.dispose()
 

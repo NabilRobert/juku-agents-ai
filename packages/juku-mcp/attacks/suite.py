@@ -25,6 +25,7 @@ import httpx2
 import jwt
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.delegation import CALLER_META_KEY, META_KEY, Signer
+from juku_common.rules import load_rules
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 from pydantic_ai import Agent, RunContext
@@ -37,17 +38,7 @@ os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 Mode = Literal["direct", "gateway"]
 INSTRUCTION = "JUKU-INSTRUCTION:"
 FLOOD = 5
-ALL_SHIORI_TOOLS = [
-    "get_progress",
-    "get_mistakes",
-    "recommend_words",
-    "find_reading_sentences",
-    "get_plan",
-    "get_recent_activity",
-    "get_memory",
-    "search_words",
-    "request_replan",
-]
+ALL_SHIORI_TOOLS = sorted(load_rules().tools_of("shiori"))
 KEIKO_TOOLS = ["get_progress", "get_memory"]
 
 

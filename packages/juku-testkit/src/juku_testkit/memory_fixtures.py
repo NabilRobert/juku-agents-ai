@@ -25,6 +25,7 @@ from juku_data.engine.api import record_quiz_answer
 from juku_data.engine.models import Learner, QuizKind
 from juku_data.memory import NoteProposal, consolidate, mark_note_wrong, propose_note, remove_note
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from juku_testkit.databases import repo_root
 
@@ -57,9 +58,9 @@ def _read(name: str, source: str) -> dict[str, Any]:
     return cast(dict[str, Any], yaml.safe_load(path.read_text(encoding="utf-8")))
 
 
-async def _word_id(db: Databases, spelling_and_reading: str) -> str:
+async def word_id_of(dict_engine: AsyncEngine, spelling_and_reading: str) -> str:
     spelling, reading = spelling_and_reading.split("/")
-    async with db.dictionary.connect() as connection:
+    async with dict_engine.connect() as connection:
         found = list(
             await connection.scalars(
                 text("SELECT id FROM ojlpt.vocab WHERE word = :word AND reading = :reading"),
@@ -84,7 +85,7 @@ async def _replay_event(db: Databases, learner: Learner, item: dict[str, Any], a
     if kind == "sentence_read":
         await record_sentence_read(db, learner.id, int(item["sentence"]), at)
         return
-    word_id = await _word_id(db, str(item["word"]))
+    word_id = await word_id_of(db.dictionary, str(item["word"]))
     if kind == "marked_known":
         await mark_known(db, learner.id, word_id, at)
     elif kind == "unmarked_known":

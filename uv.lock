@@ -1075,6 +1075,7 @@ dependencies = [
     { name = "juku-data" },
     { name = "pytest" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -1085,6 +1086,7 @@ requires-dist = [
     { name = "juku-data", editable = "packages/juku-data" },
     { name = "pytest", specifier = "==9.1.1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = "==2.1.4" },
+    { name = "uvicorn", specifier = "==0.54.0" },
 ]
 
 [[package]]
