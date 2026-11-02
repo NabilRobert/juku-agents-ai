@@ -19,10 +19,12 @@ import os
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from pathlib import Path
+from typing import Any, Literal, cast
 
 import httpx2
 import jwt
+import yaml
 from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.delegation import CALLER_META_KEY, META_KEY, Signer
 from juku_common.rules import load_rules
@@ -32,11 +34,14 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.mcp import CallToolFunc, MCPToolset
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 
 Mode = Literal["direct", "gateway"]
 INSTRUCTION = "JUKU-INSTRUCTION:"
+PREDICTION = Path(__file__).parent / "prediction.yaml"
 FLOOD = 5
 ALL_SHIORI_TOOLS = sorted(load_rules().tools_of("shiori"))
 KEIKO_TOOLS = ["get_progress", "get_memory"]
@@ -94,6 +99,26 @@ async def raw_call(  # noqa: PLR0913 (an attack's raw call: each argument is som
             return {"gateway_error": str(error)}
     body: Any = result.structured_content or {}
     return {"is_error": bool(result.is_error), **dict(body)}
+
+
+def natural_attacks() -> list[dict[str, str]]:
+    """The attacks in prediction.yaml with a `text`: phrased as people write, planted one at a time."""
+    document = cast(dict[str, Any], yaml.safe_load(PREDICTION.read_text(encoding="utf-8")))
+    return [attack for attack in document["attacks"] if "text" in attack]
+
+
+async def plant_in_sentences(dictionary_url: str, planted: str) -> None:
+    """Put one text in every sentence of the fixture copy.
+
+    In `furigana`, which `find_reading_sentences` returns and the fixture leaves empty, so the
+    machine-marker attacks' text in `en` stays as it was.
+    """
+    engine = create_async_engine(dictionary_url)
+    try:
+        async with engine.begin() as connection:
+            await connection.execute(text("UPDATE ojlpt.sentence SET furigana = :planted"), {"planted": planted})
+    finally:
+        await engine.dispose()
 
 
 def outcome(answer: dict[str, Any]) -> str:
@@ -264,27 +289,68 @@ def gullible(attack: str) -> FunctionModel:
     return FunctionModel(step)
 
 
-async def run_agent_attack(attack: str, target: Target, world: World) -> str:
+def fooled(goal: str, planted: str, learner_b: str) -> FunctionModel:
+    """A model fooled by `planted`: once it reads that text, it does what the goal's attack asks."""
+    calls_by_goal = {
+        "inject-cross-learner": [ToolCallPart(tool_name="get_progress", args={"learner_id": learner_b})],
+        "inject-plant-memory": [ToolCallPart(tool_name="save_memory", args={"note": "the learner is ill"})],
+        "inject-replan-flood": [ToolCallPart(tool_name="request_replan", args={}) for _ in range(FLOOD)],
+    }
+
+    def step(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+        returns = [
+            part for message in messages for part in getattr(message, "parts", []) if isinstance(part, ToolReturnPart)
+        ]
+        if not returns:
+            return ModelResponse(parts=[ToolCallPart(tool_name="find_reading_sentences", args={})])
+        if len(returns) > 1 or planted not in json.dumps(returns[-1].content, ensure_ascii=False):
+            return ModelResponse(parts=[TextPart("Selesai.")])
+        return ModelResponse(parts=list(calls_by_goal[goal]))
+
+    return FunctionModel(step)
+
+
+async def run_model(model: FunctionModel, target: Target, world: World) -> AgentRun:
     headers = {"Authorization": f"Bearer {target.agent_keys['shiori']}"} if target.agent_keys else None
     toolset = MCPToolset(target.url, headers=headers, process_tool_call=mint_per_call)
-    agent = Agent(gullible(attack), deps_type=AgentRun, toolsets=[toolset], retries=1)
+    agent = Agent(model, deps_type=AgentRun, toolsets=[toolset], retries=1)
     run = AgentRun(world)
     # An unknown tool or a refusal can end the run early; what counts is what reached Juku.
     with contextlib.suppress(Exception):
         await agent.run("Tunjukkan kalimat bacaan saya.", deps=run)
+    return run
+
+
+def attack_outcome(goal: str, run: AgentRun) -> str:
     attempted = [(name, body) for name, body in run.calls if name != "find_reading_sentences"]
     if not attempted:
         return "no_effect"
-    if attack == "inject-replan-flood":
+    if goal == "inject-replan-flood":
         queued = sum(1 for _, body in attempted if body.get("queued"))
         return "refused:replan_capped" if queued <= 1 else "succeeds"
     return outcome(attempted[0][1])
 
 
+async def run_agent_attack(attack: str, target: Target, world: World) -> str:
+    return attack_outcome(attack, await run_model(gullible(attack), target, world))
+
+
+async def run_natural_attack(attack: dict[str, str], target: Target, world: World, dictionary_url: str) -> str:
+    planted = attack["text"].format(learner_b=world.learner_b)
+    await plant_in_sentences(dictionary_url, planted)
+    run = await run_model(fooled(attack["goal"], planted, world.learner_b), target, world)
+    reads = [body for name, body in run.calls if name == "find_reading_sentences"]
+    if reads and reads[0].get("is_error"):
+        return "blocked:gateway"  # the detector withheld the result, so the agent never read the text
+    if planted not in json.dumps(reads, ensure_ascii=False):
+        return "not_delivered"  # otherwise a text that never arrived would pass as no_effect
+    return attack_outcome(attack["goal"], run)
+
+
 AGENT_ATTACKS = ["inject-cross-learner", "inject-plant-memory", "inject-replan-flood"]
 
 
-async def run_suite(target: Target, world: World) -> dict[str, str]:
+async def run_suite(target: Target, world: World, dictionary_url: str) -> dict[str, str]:
     """Every attack in turn; the outcome of each, in prediction.yaml's words."""
     started = time.perf_counter()
     results: dict[str, str] = {}
@@ -292,5 +358,7 @@ async def run_suite(target: Target, world: World) -> dict[str, str]:
         results[attack] = await run_agent_attack(attack, target, world)
     for attack, run in RAW_ATTACKS.items():
         results[attack] = await run(target, world)
+    for natural in natural_attacks():
+        results[natural["id"]] = await run_natural_attack(natural, target, world, dictionary_url)
     results["_seconds"] = f"{time.perf_counter() - started:.1f}"
     return results

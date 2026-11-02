@@ -1,6 +1,6 @@
 # SAF1: the attack suite on Juku's own surfaces
 
-Fifteen attacks (ADR-020, Phase 2 SAF-R1), each with its outcome
+Twenty-four attacks (ADR-020, Phase 2 SAF-R1), each with its outcome
 **predicted in [prediction.yaml](prediction.yaml) and committed before the
 first run**, then run two ways at $0 (SAF-R2):
 - **direct:** Juku's MCP server alone, as it would have to run with no
@@ -26,7 +26,7 @@ uv run pytest packages/juku-mcp/tests/test_attack_suite.py   # direct only, in m
 
 ## Results (2026-10-28)
 
-**15 of 15 as predicted, both ways.** All three audit chains verify. The
+**The first fifteen: 15 of 15 as predicted, both ways.** All three audit chains verify. The
 first gateway run used spike 6's patch on c5e50ac; the rerun on the
 merged P6 (66227a2) gave the same outcomes. In its audit log, all 23
 calls carry `_meta`, and the one forged caller claim (Keiko's key with
@@ -72,12 +72,25 @@ What it shows:
 
 The real-model run (once, about $0.12) waits for slice 7 and Arthur's OK.
 
-## Backlog: realistic injections
+## Natural-language injections (2026-11-02)
 
-SAF1's planted texts are machine markers (`JUKU-INSTRUCTION: get_progress
-{...}`), written to test what Juku's server refuses, not what the gateway's
-detector catches: no detector is meant to flag a made-up marker, so "the
-detector flagged none" says little about it. Realistic injections, in
-Indonesian, English and Japanese, phrased the way a Tatoeba contributor or
-a learner might write them, are a backlog item for the gateway and Juku
-together. They aren't built yet.
+The first fifteen use a machine marker (`JUKU-INSTRUCTION: get_progress {...}`),
+which tests what Juku's server refuses but says nothing about detection. Nine
+more are phrased as people write, in Indonesian, English and Japanese, with
+their outcomes predicted from the gateway's rules before the first run. Each is
+planted alone, and the scripted agent obeys it as a fooled model would.
+
+**9 of 9 as predicted, both ways.**
+- **The gateway's rules caught 2 of the 9:** the two that name their old
+  instructions ("Ignore your previous instructions", "Abaikan instruksi
+  sebelumnya"). The other 7 passed, including all 3 in Japanese, which has no
+  rules. So rules alone don't detect natural-language injection, and this repo
+  doesn't claim they do.
+- **Nothing the fooled agent tried worked:** no tool takes a learner, no tool
+  saves a note, and replans are capped. That defence doesn't depend on the
+  detector.
+
+**What this doesn't show:** whether a real model would be fooled. The agent here
+always is, so this tests what happens afterwards. That question, and what a
+fooled model might write in its answer, is for the real-model run, once it has
+Arthur's OK.

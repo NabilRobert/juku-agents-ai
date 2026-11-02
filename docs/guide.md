@@ -346,7 +346,7 @@ the internal numeric `id` never leaves the database.
 **Rule file.** `guardrails.yaml`: every limit in one reviewed file,
 loaded by `juku_common/rules.py: load_rules`.
 
-**SAF1 (the attack suite).** Fifteen attacks on Juku's own surfaces,
+**SAF1 (the attack suite).** Twenty-four attacks on Juku's own surfaces,
 with a committed prediction of which succeed directly and which the
 gateway stops (`packages/juku-mcp/attacks/`).
 

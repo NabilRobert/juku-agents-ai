@@ -194,7 +194,7 @@ async def main(gateway_src: Path, gateway_python: Path, work: Path) -> None:
                     target = Target(
                         mode="gateway", url=f"http://127.0.0.1:{gateway_port}/mcp/juku/", agent_keys=agent_keys
                     )
-                reports.append(compare(await run_suite(target, world), mode))
+                reports.append(compare(await run_suite(target, world, dict_db.sqlalchemy_url), mode))
             finally:
                 if gateway is not None:
                     gateway.terminate()
