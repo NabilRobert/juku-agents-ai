@@ -1,4 +1,4 @@
-"""Agent notes in the database: proposals checked and stored, the learner's corrections, and consolidation.
+"""Agent notes in the database: proposals checked and stored, and the learner's corrections.
 
 The order of checks on a proposal, each ending it with a reason:
 1. its category is allowed, not forbidden (MEM-R3);
@@ -21,16 +21,14 @@ from zoneinfo import ZoneInfo
 
 from juku_common.rules import Rules
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncConnection
 
 from juku_data.engine import Databases
 from juku_data.engine.reads import word_details
-from juku_data.engine.recompute import rebuild_learners
 from juku_data.engine.writes import lock_learner
 from juku_data.memory import evidence as rules_of
 from juku_data.memory.evidence import EvidenceRow
 from juku_data.memory.models import (
-    ConsolidationDecision,
     EvidenceEvent,
     Memory,
     MemoryNote,
@@ -49,14 +47,6 @@ FROM learning.learning_events e
 JOIN learning.event_types t ON t.id = e.event_type
 LEFT JOIN learning.dictionary_words w ON w.word_id = e.item_id
 WHERE e.id = ANY(:ids)
-ORDER BY e.occurred_at, e.id
-"""
-ROWS_SINCE = """
-SELECT e.id, e.learner_id, t.name, e.item_id, w.level, e.result, e.occurred_at
-FROM learning.learning_events e
-JOIN learning.event_types t ON t.id = e.event_type
-LEFT JOIN learning.dictionary_words w ON w.word_id = e.item_id
-WHERE e.learner_id = :learner AND e.occurred_at > :since AND e.occurred_at <= :now
 ORDER BY e.occurred_at, e.id
 """
 RECENTLY_REMOVED = """
@@ -97,7 +87,7 @@ class NoteNotFoundError(Exception):
     """No active note with this ID for this learner."""
 
 
-def _row(record: Any) -> EvidenceRow:
+def evidence_row(record: Any) -> EvidenceRow:
     event_id, learner_id, event_type, item_id, level, result, occurred_at = record
     return EvidenceRow(
         event_id=int(event_id),
@@ -175,7 +165,7 @@ async def propose_note(  # noqa: PLR0913 (memory's public API; the rest are keyw
         if reason:
             return await _refuse(connection, learner_id, proposal, proposed_by, reason, now)
         ids = sorted(set(proposal.evidence_event_ids))
-        rows = [_row(record) for record in (await connection.execute(text(EVIDENCE_ROWS), {"ids": ids})).all()]
+        rows = [evidence_row(record) for record in (await connection.execute(text(EVIDENCE_ROWS), {"ids": ids})).all()]
         reason = rules_of.check_evidence(proposal.category, ids, rows, learner_id, rules.memory, now)
         if reason is None and await connection.scalar(
             text(SAME_EVIDENCE), {"learner": learner_id, "category": proposal.category, "ids": ids}
@@ -249,64 +239,3 @@ async def get_memory(db: Databases, learner_id: int, now: datetime) -> Memory:
         for note_id, category, note_text, evidence, created_at, last_evidence_at in records
     ]
     return Memory(notes=notes, note=SOME_NOTES if notes else NO_NOTES)
-
-
-def _stored_rows(learner_id: int, evidence: list[dict[str, Any]]) -> list[EvidenceRow]:
-    return [
-        EvidenceRow(
-            event_id=int(item["event_id"]),
-            learner_id=learner_id,
-            event_type=str(item["event_type"]),
-            item_id=str(item["word_id"] or ""),
-            level=item["level"],
-            is_correct=item["is_correct"],
-            occurred_at=datetime.fromisoformat(str(item["occurred_at"])),
-        )
-        for item in evidence
-    ]
-
-
-async def consolidate(app: AsyncEngine, learner_id: int, rules: Rules, now: datetime) -> list[ConsolidationDecision]:
-    """MEM-R4: recompute what's known, then keep or lapse each active note, recording why. One transaction."""
-    decisions: list[ConsolidationDecision] = []
-    async with app.begin() as connection:
-        await lock_learner(connection, learner_id)
-        await rebuild_learners(connection, [learner_id])
-        records = (
-            await connection.execute(
-                text(
-                    "SELECT id, category, evidence, last_evidence_at FROM learning.memory_notes "
-                    "WHERE learner_id = :learner AND status = 'active' ORDER BY id"
-                ),
-                {"learner": learner_id},
-            )
-        ).all()
-        for note_id, category, evidence, last_evidence_at in records:
-            stored = _stored_rows(learner_id, cast(list[dict[str, Any]], evidence))
-            newer_records = await connection.execute(
-                text(ROWS_SINCE), {"learner": learner_id, "since": min(row.occurred_at for row in stored), "now": now}
-            )
-            newer = [
-                row for row in map(_row, newer_records.all()) if row.event_id not in {item.event_id for item in stored}
-            ]
-            decision, reason = rules_of.consolidation_decision(str(category), stored, newer, rules.memory, now)
-            supported = [row.occurred_at for row in newer if rules_of.recurs(str(category), stored, row)]
-            if decision == "lapsed":
-                await connection.execute(
-                    text(SET_STATUS),
-                    {"status": "lapsed", "reason": reason, "now": now, "id": note_id, "learner": learner_id},
-                )
-            elif supported:
-                await connection.execute(
-                    text("UPDATE learning.memory_notes SET last_evidence_at = :at WHERE id = :id"),
-                    {"at": max([last_evidence_at, *supported]), "id": note_id},
-                )
-            await connection.execute(
-                text(
-                    "INSERT INTO learning.memory_consolidations (learner_id, note_id, decided_at, decision, reason) "
-                    "VALUES (:learner, :note, :now, :decision, :reason)"
-                ),
-                {"learner": learner_id, "note": note_id, "now": now, "decision": decision, "reason": reason},
-            )
-            decisions.append(ConsolidationDecision(note_id=int(note_id), decision=decision, reason=reason, at=now))
-    return decisions

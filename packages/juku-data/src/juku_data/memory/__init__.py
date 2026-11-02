@@ -4,6 +4,7 @@ The engine (juku_data.engine) already holds the other two kinds of memory,
 what the learner knows and what happened. This package holds the third.
 """
 
+from juku_data.memory.consolidation import consolidate
 from juku_data.memory.models import (
     ConsolidationDecision,
     EvidenceEvent,
@@ -14,7 +15,6 @@ from juku_data.memory.models import (
 )
 from juku_data.memory.store import (
     NoteNotFoundError,
-    consolidate,
     get_memory,
     mark_note_wrong,
     propose_note,
