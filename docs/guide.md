@@ -398,7 +398,9 @@ does; change it in the same commit if the behaviour changes.
 
 **Change what Shiori is told.** `shiori.py: INSTRUCTIONS`.
 
-**Change the chat model.** The `JUKU_MODEL_*` settings
+**Change the chat model.** `JUKU_MODEL_REASONING_EFFORT` sets its effort
+(`minimal`, `low`, `medium` or `high`); unset, the model uses its own
+default. The `JUKU_MODEL_*` settings
 (`app/src/juku_app/settings.py`); `cli.py: chat_model` builds it.
 
 **Choose the moderation checker.** Write a class with an async
