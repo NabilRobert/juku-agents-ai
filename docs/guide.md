@@ -443,6 +443,11 @@ setup`, then `measure`, then `down` to delete its data. It needs at least
 15 GB free. The numbers and what they mean are in
 `evals/load/results.md`; FF10's baseline is in `guardrails.yaml`.
 
+**Add an eval task.** Add it to `evals/chat/suite.yaml` or
+`evals/memory/suite.yaml`, with its gold answer from `reference_sql`.
+`packages/juku-mcp/tests/suite_checks.py` checks each task at $0: it's
+answerable from the tools, and the SQL gives the gold.
+
 **Add a fitness function.** An entry in `guardrails.yaml`'s `fitness`
 section, and a test marked `@pytest.mark.fitness("FF<n>")`. An active
 entry with no test fails `make check`.

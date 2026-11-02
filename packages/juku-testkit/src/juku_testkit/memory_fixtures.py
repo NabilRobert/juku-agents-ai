@@ -45,12 +45,20 @@ class LoadedFixture:
     note_ids: list[int | None] = field(default_factory=list[int | None])
 
 
-def load_suite() -> dict[str, Any]:
-    return cast(dict[str, Any], yaml.safe_load((MEMORY_EVALS / "suite.yaml").read_text(encoding="utf-8")))
+def load_suite(evals_folder: Path = MEMORY_EVALS) -> dict[str, Any]:
+    return cast(dict[str, Any], yaml.safe_load((evals_folder / "suite.yaml").read_text(encoding="utf-8")))
 
 
 def fixture_now() -> datetime:
     return datetime.fromisoformat(str(load_suite()["fixture"]["now"]))
+
+
+def source_of(name: str) -> str:
+    """Which evals folder holds this fixture learner: the argument `load_memory_fixture` calls `source`."""
+    for source, folder in SOURCES.items():
+        if (folder / f"{name}.yaml").exists():
+            return source
+    raise ValueError(f"no fixture learner called {name!r}: look in {sorted(SOURCES)}")
 
 
 def _read(name: str, source: str) -> dict[str, Any]:

@@ -1,0 +1,722 @@
+# Q1: the offline chat task set, about 40 tasks (Phase 1 Q1), with answers
+# checkable from the data. Same format as evals/memory/suite.yaml: each prompt
+# goes to Shiori for the task's fixture learner, and the answer is graded by
+# `answer_match` and `required_tools` in agent-eval-harness.
+#
+# Juku's own fields, used by the $0 test (packages/juku-mcp/tests/test_chat_tasks.py)
+# and ignored by the harness:
+#   learner         the fixture learner, from evals/memory/learners or evals/pipeline/learners;
+#   reference_sql   the gold answer, from SQL over the fixture data, not from the tools;
+#   expected        the rows reference_sql returns;
+#   tool_arguments  what a tool needs to be called with (only search_words takes any);
+#   facts / absent  strings the tools' output must / must not contain.
+# Word IDs are OpenJLPT's, from the pinned build. The week is Monday 2 to Sunday
+# 8 November 2026. `abstention` tasks have no data to answer from: AG5 says the
+# answer must then say so, not guess.
+suite: juku-chat
+version: 1
+target: juku
+description: Shiori answering from the learner's data, on the ten fixture learners. Gold answers from SQL over the
+  fixtures.
+fixture:
+  now: '2026-11-08T20:00:00+07:00'
+tasks:
+- id: c01
+  tags:
+  - progress
+  learner: joko
+  prompt: Berapa kata yang sudah saya kuasai?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 3
+  facts:
+  - '"known_words": 3'
+  graders:
+  - answer_match:
+      contains:
+      - '3'
+  - required_tools:
+    - get_progress
+- id: c02
+  tags:
+  - progress
+  learner: oka
+  prompt: Sudah berapa kata yang saya hafal sekarang?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 2
+  facts:
+  - '"known_words": 2'
+  graders:
+  - answer_match:
+      contains:
+      - '2'
+  - required_tools:
+    - get_progress
+- id: c03
+  tags:
+  - progress
+  learner: hana
+  prompt: Target JLPT saya level berapa?
+  reference_sql: SELECT target_level FROM learning.learners WHERE id = :learner_id
+  expected:
+  - target_level: 4
+  facts:
+  - '"target_level": 4'
+  graders:
+  - answer_match:
+      contains:
+      - N4
+  - required_tools:
+    - get_progress
+- id: c04
+  tags:
+  - progress
+  learner: oka
+  prompt: Saya sedang mengejar JLPT level berapa?
+  reference_sql: SELECT target_level FROM learning.learners WHERE id = :learner_id
+  expected:
+  - target_level: 3
+  facts:
+  - '"target_level": 3'
+  graders:
+  - answer_match:
+      contains:
+      - N3
+  - required_tools:
+    - get_progress
+- id: c05
+  tags:
+  - progress
+  learner: lestari
+  prompt: Total kata yang sudah saya kuasai ada berapa?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 2
+  facts:
+  - '"known_words": 2'
+  graders:
+  - answer_match:
+      contains:
+      - '2'
+  - required_tools:
+    - get_progress
+- id: c06
+  tags:
+  - progress
+  learner: made
+  prompt: Sampai sekarang saya menguasai berapa kata?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 3
+  facts:
+  - '"known_words": 3'
+  graders:
+  - answer_match:
+      contains:
+      - '3'
+  - required_tools:
+    - get_progress
+- id: c07
+  tags:
+  - progress
+  learner: nur
+  prompt: Berapa kata yang sudah saya kuasai?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 0
+  facts:
+  - '"known_words": 0'
+  graders:
+  - answer_match:
+      contains:
+      - - '0'
+        - nol
+        - belum
+  - required_tools:
+    - get_progress
+- id: c08
+  tags:
+  - plan
+  learner: joko
+  prompt: Berapa kata per minggu yang harus saya pelajari sampai ujian?
+  reference_sql: SELECT ceil((ceil(0.8 * (SELECT count(*) FROM learning.dictionary_words WHERE level >= 5)) - count(*))
+    / 4.0) AS per_week FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - per_week: 135
+  facts:
+  - '"words_per_week": 135'
+  graders:
+  - answer_match:
+      contains:
+      - '135'
+  - required_tools:
+    - get_plan
+- id: c09
+  tags:
+  - plan
+  learner: joko
+  prompt: Ujian saya tinggal berapa minggu lagi?
+  reference_sql: SELECT exam_date FROM learning.learners WHERE id = :learner_id
+  expected:
+  - exam_date: '2026-12-06'
+  facts:
+  - '"weeks_left": 4'
+  - '2026-12-06'
+  graders:
+  - answer_match:
+      contains:
+      - '4'
+  - required_tools:
+    - get_plan
+- id: c10
+  tags:
+  - plan
+  learner: joko
+  prompt: Berapa kata lagi yang saya butuhkan untuk mencapai target?
+  reference_sql: SELECT ceil(0.8 * (SELECT count(*) FROM learning.dictionary_words WHERE level >= 5)) - count(*)
+    AS needed FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - needed: 537
+  facts:
+  - '"words_needed": 537'
+  graders:
+  - answer_match:
+      contains:
+      - '537'
+  - required_tools:
+    - get_plan
+- id: c11
+  tags:
+  - plan
+  learner: gita
+  prompt: Berapa kata lagi yang saya perlukan untuk target N4?
+  reference_sql: SELECT ceil(0.8 * (SELECT count(*) FROM learning.dictionary_words WHERE level >= 4)) - count(*)
+    AS needed FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - needed: 1041
+  facts:
+  - '"words_needed": 1041'
+  graders:
+  - answer_match:
+      contains:
+      - - '1041'
+        - '1.041'
+  - required_tools:
+    - get_plan
+- id: c12
+  tags:
+  - plan
+  learner: oka
+  prompt: Target saya mencakup berapa kata seluruhnya?
+  reference_sql: SELECT count(*) AS scope FROM learning.dictionary_words WHERE level >= 3
+  expected:
+  - scope: 2963
+  facts:
+  - '"words_in_scope": 2963'
+  graders:
+  - answer_match:
+      contains:
+      - - '2963'
+        - '2.963'
+  - required_tools:
+    - get_plan
+- id: c13
+  tags:
+  - plan
+  learner: indra
+  prompt: Berapa kata yang harus saya kuasai untuk mencapai target?
+  reference_sql: SELECT ceil(0.8 * (SELECT count(*) FROM learning.dictionary_words WHERE level >= 5)) - count(*)
+    AS needed FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - needed: 540
+  facts:
+  - '"words_needed": 540'
+  graders:
+  - answer_match:
+      contains:
+      - '540'
+  - required_tools:
+    - get_plan
+- id: c14
+  tags:
+  - abstention
+  learner: fajar
+  prompt: Berapa kata per minggu yang harus saya pelajari?
+  reference_sql: SELECT exam_date FROM learning.learners WHERE id = :learner_id
+  expected:
+  - exam_date: null
+  facts:
+  - '"words_per_week": null'
+  graders:
+  - answer_match:
+      contains:
+      - - tanggal ujian
+        - tidak ada di data
+  - required_tools:
+    - get_plan
+- id: c15
+  tags:
+  - mistakes
+  learner: nur
+  prompt: Kata apa saja yang sering saya salah?
+  reference_sql: SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box
+    IS NOT NULL
+  expected:
+  - mistakes: 4
+  facts:
+  - 猫
+  - 犬
+  - 魚
+  - 雨
+  graders:
+  - answer_match:
+      contains:
+      - 猫
+      - 犬
+      - 魚
+      - 雨
+  - required_tools:
+    - get_mistakes
+- id: c16
+  tags:
+  - mistakes
+  learner: joko
+  prompt: Kata apa yang harus saya ulang?
+  reference_sql: SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box
+    IS NOT NULL
+  expected:
+  - mistakes: 1
+  facts:
+  - 大きい
+  graders:
+  - answer_match:
+      contains:
+      - 大きい
+  - required_tools:
+    - get_mistakes
+- id: c17
+  tags:
+  - mistakes
+  learner: oka
+  prompt: Ada kata yang perlu saya ulang hari ini?
+  reference_sql: SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box
+    IS NOT NULL
+  expected:
+  - mistakes: 1
+  facts:
+  - 影響
+  - '"is_due": true'
+  graders:
+  - answer_match:
+      contains:
+      - 影響
+  - required_tools:
+    - get_mistakes
+- id: c18
+  tags:
+  - mistakes
+  learner: gita
+  prompt: Kata apa yang pernah saya salah jawab?
+  reference_sql: SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box
+    IS NOT NULL
+  expected:
+  - mistakes: 1
+  facts:
+  - 約束
+  graders:
+  - answer_match:
+      contains:
+      - 約束
+  - required_tools:
+    - get_mistakes
+- id: c19
+  tags:
+  - mistakes
+  learner: hana
+  prompt: Apakah 経験 sudah waktunya diulang hari ini?
+  reference_sql: SELECT box FROM learning.learner_state WHERE learner_id = :learner_id AND item_id = '9746b57413'
+  expected:
+  - box: 3
+  facts:
+  - '"is_due": false'
+  graders:
+  - answer_match:
+      contains:
+      - - belum
+        - tidak perlu
+        - besok
+  - required_tools:
+    - get_mistakes
+- id: c20
+  tags:
+  - abstention
+  learner: kartika
+  prompt: Kata apa yang sering saya salah?
+  reference_sql: SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box
+    IS NOT NULL
+  expected:
+  - mistakes: 0
+  absent:
+  - word_id
+  graders:
+  - answer_match:
+      contains: &id001
+      - - belum ada
+        - tidak ada
+        - belum
+  - required_tools:
+    - get_mistakes
+- id: c21
+  tags:
+  - abstention
+  learner: lestari
+  prompt: Ada kata yang perlu saya ulang?
+  reference_sql: SELECT count(*) AS mistakes FROM learning.learner_state WHERE learner_id = :learner_id AND box
+    IS NOT NULL
+  expected:
+  - mistakes: 0
+  absent:
+  - word_id
+  graders:
+  - answer_match:
+      contains: *id001
+  - required_tools:
+    - get_mistakes
+- id: c22
+  tags:
+  - activity
+  learner: joko
+  prompt: Berapa kata yang saya tandai dikuasai minggu ini?
+  reference_sql: SELECT sum(words_marked) AS marked FROM learning.learner_daily_activity WHERE learner_id = :learner_id
+    AND day > date '2026-11-01'
+  expected:
+  - marked: 3
+  facts:
+  - '"words_marked": 1'
+  graders:
+  - answer_match:
+      contains:
+      - '3'
+  - required_tools:
+    - get_recent_activity
+- id: c23
+  tags:
+  - activity
+  learner: joko
+  prompt: Berapa soal kuis yang saya jawab minggu ini?
+  reference_sql: SELECT sum(quiz_answers) AS answers FROM learning.learner_daily_activity WHERE learner_id = :learner_id
+    AND day > date '2026-11-01'
+  expected:
+  - answers: 3
+  facts:
+  - '"quiz_answers": 2'
+  graders:
+  - answer_match:
+      contains:
+      - '3'
+  - required_tools:
+    - get_recent_activity
+- id: c24
+  tags:
+  - activity
+  learner: kartika
+  prompt: Berapa jawaban kuis saya yang benar minggu ini?
+  reference_sql: SELECT sum(quiz_correct) AS correct FROM learning.learner_daily_activity WHERE learner_id = :learner_id
+    AND day > date '2026-11-01'
+  expected:
+  - correct: 1
+  facts:
+  - '"quiz_correct": 1'
+  graders:
+  - answer_match:
+      contains:
+      - - '1'
+        - satu
+  - required_tools:
+    - get_recent_activity
+- id: c25
+  tags:
+  - activity
+  learner: nur
+  prompt: Berapa kali saya salah di kuis minggu ini?
+  reference_sql: SELECT sum(quiz_answers - quiz_correct) AS wrong FROM learning.learner_daily_activity WHERE learner_id
+    = :learner_id AND day > date '2026-11-01'
+  expected:
+  - wrong: 4
+  facts:
+  - '2026-11-02'
+  - '2026-11-06'
+  graders:
+  - answer_match:
+      contains:
+      - '4'
+  - required_tools:
+    - get_recent_activity
+- id: c26
+  tags:
+  - activity
+  learner: gita
+  prompt: Berapa kalimat yang saya baca minggu ini?
+  reference_sql: SELECT sum(sentences_read) AS sentences FROM learning.learner_daily_activity WHERE learner_id =
+    :learner_id AND day > date '2026-11-01'
+  expected:
+  - sentences: 3
+  facts:
+  - '"sentences_read": 1'
+  graders:
+  - answer_match:
+      contains:
+      - '3'
+  - required_tools:
+    - get_recent_activity
+- id: c27
+  tags:
+  - activity
+  learner: hana
+  prompt: Hari apa saja saya mengerjakan kuis minggu ini?
+  reference_sql: SELECT count(*) AS days FROM learning.learner_daily_activity WHERE learner_id = :learner_id AND
+    day > date '2026-11-01' AND quiz_answers > 0
+  expected:
+  - days: 2
+  facts:
+  - '2026-11-04'
+  - '2026-11-05'
+  graders:
+  - answer_match:
+      contains:
+      - - '2026-11-04'
+        - 4 November
+        - Rabu
+      - - '2026-11-05'
+        - 5 November
+        - Kamis
+  - required_tools:
+    - get_recent_activity
+- id: c28
+  tags:
+  - abstention
+  learner: indra
+  prompt: Apa saja yang saya kerjakan minggu ini?
+  reference_sql: SELECT count(*) AS days FROM learning.learner_daily_activity WHERE learner_id = :learner_id AND
+    day > date '2026-11-01'
+  expected:
+  - days: 0
+  absent:
+  - quiz_answers
+  graders:
+  - answer_match:
+      contains: *id001
+  - required_tools:
+    - get_recent_activity
+- id: c29
+  tags:
+  - recommend
+  learner: oka
+  prompt: Kata apa yang sebaiknya saya pelajari sekarang?
+  reference_sql: SELECT level FROM learning.learner_candidate WHERE learner_id = :learner_id AND word_id = '54e1f7a772'
+  expected:
+  - level: 4
+  facts:
+  - 合う
+  graders:
+  - answer_match:
+      contains:
+      - 合う
+  - required_tools:
+    - recommend_words
+- id: c30
+  tags:
+  - recommend
+  learner: joko
+  prompt: Beri saya satu kata baru untuk dipelajari.
+  reference_sql: SELECT level FROM learning.learner_candidate WHERE learner_id = :learner_id AND word_id = '1cfccd0cdd'
+  expected:
+  - level: 5
+  facts:
+  - 一日
+  graders:
+  - answer_match:
+      contains:
+      - 一日
+  - required_tools:
+    - recommend_words
+- id: c31
+  tags:
+  - recommend
+  learner: gita
+  prompt: Kata apa yang paling berguna untuk saya hafal berikutnya?
+  reference_sql: SELECT level FROM learning.learner_candidate WHERE learner_id = :learner_id AND word_id = '782272bfda'
+  expected:
+  - level: 5
+  facts:
+  - 物
+  graders:
+  - answer_match:
+      contains:
+      - 物
+  - required_tools:
+    - recommend_words
+- id: c32
+  tags:
+  - recommend
+  learner: fajar
+  prompt: Sebaiknya saya belajar kata apa setelah ini?
+  reference_sql: SELECT level FROM learning.learner_candidate WHERE learner_id = :learner_id AND word_id = '537f8af3d6'
+  expected:
+  - level: 5
+  facts:
+  - 一つ
+  graders:
+  - answer_match:
+      contains:
+      - 一つ
+  - required_tools:
+    - recommend_words
+- id: c33
+  tags:
+  - reading
+  learner: indra
+  prompt: Ada kalimat untuk latihan membaca?
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 0
+  facts:
+  - こんばんは
+  - Good evening
+  graders:
+  - answer_match:
+      contains:
+      - こんばんは
+  - required_tools:
+    - find_reading_sentences
+- id: c34
+  tags:
+  - reading
+  learner: joko
+  prompt: Berikan satu kalimat bacaan yang cocok untuk saya.
+  reference_sql: SELECT count(*) AS known FROM learning.learner_state WHERE learner_id = :learner_id AND is_known
+  expected:
+  - known: 3
+  facts:
+  - sentence_id
+  graders:
+  - answer_match:
+      contains:
+      - '[ref:'
+  - required_tools:
+    - find_reading_sentences
+- id: c35
+  tags:
+  - dictionary
+  learner: nur
+  prompt: Apa arti 猫?
+  reference_sql: SELECT level FROM learning.dictionary_words WHERE word_id = 'cbbfc8cad6'
+  expected:
+  - level: 5
+  tool_arguments:
+    search_words:
+      query: 猫
+  facts:
+  - 猫
+  - cat
+  graders:
+  - answer_match:
+      contains:
+      - - kucing
+        - cat
+  - required_tools:
+    - search_words
+- id: c36
+  tags:
+  - dictionary
+  learner: joko
+  prompt: Bagaimana cara membaca 大きい?
+  reference_sql: SELECT level FROM learning.dictionary_words WHERE word_id = '8fa5a63fc7'
+  expected:
+  - level: 5
+  tool_arguments:
+    search_words:
+      query: 大きい
+  facts:
+  - おおきい
+  graders:
+  - answer_match:
+      contains:
+      - おおきい
+  - required_tools:
+    - search_words
+- id: c37
+  tags:
+  - dictionary
+  learner: gita
+  prompt: 約束 itu level JLPT berapa?
+  reference_sql: SELECT level FROM learning.dictionary_words WHERE word_id = '2ef2e06612'
+  expected:
+  - level: 4
+  tool_arguments:
+    search_words:
+      query: 約束
+  facts:
+  - 約束
+  - '"level": "N4"'
+  graders:
+  - answer_match:
+      contains:
+      - N4
+  - required_tools:
+    - search_words
+- id: c38
+  tags:
+  - dictionary
+  learner: oka
+  prompt: Apa bacaan 影響?
+  reference_sql: SELECT level FROM learning.dictionary_words WHERE word_id = 'ef5af5c903'
+  expected:
+  - level: 3
+  tool_arguments:
+    search_words:
+      query: 影響
+  facts:
+  - えいきょう
+  graders:
+  - answer_match:
+      contains:
+      - えいきょう
+  - required_tools:
+    - search_words
+- id: c39
+  tags:
+  - abstention
+  learner: joko
+  prompt: Apa arti kata qwertyzz?
+  reference_sql: SELECT count(*) AS words FROM learning.dictionary_words WHERE word_id = 'qwertyzz'
+  expected:
+  - words: 0
+  tool_arguments:
+    search_words:
+      query: qwertyzz
+  absent:
+  - word_id
+  graders:
+  - answer_match:
+      contains:
+      - tidak ada di data
+  - required_tools:
+    - search_words
+- id: c40
+  tags:
+  - abstention
+  learner: indra
+  prompt: Kapan tanggal ujian saya?
+  reference_sql: SELECT exam_date FROM learning.learners WHERE id = :learner_id
+  expected:
+  - exam_date: null
+  facts:
+  - '"exam_date": null'
+  graders:
+  - answer_match:
+      contains:
+      - tidak ada di data
+  - required_tools:
+    - get_plan
