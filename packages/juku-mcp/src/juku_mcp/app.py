@@ -15,6 +15,7 @@ from juku_common.audit_chain import JUKU_MCP_GENESIS, AuditLog
 from juku_common.delegation import Verifier, public_key_from_pem
 from juku_common.rules import Rules, load_rules
 from juku_data.engine import Databases
+from mcp.server.transport_security import TransportSecuritySettings
 from sqlalchemy.ext.asyncio import create_async_engine
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -48,7 +49,10 @@ def create_app(settings: McpSettings, rules: Rules | None = None) -> Starlette:
         rules=rules,
         words=DictionarySearch(db.dictionary),
     )
-    mcp_app = build_server(deps).streamable_http_app(streamable_http_path=MCP_PATH)
+    # Explicit, because the SDK's default only serves localhost Host headers: the gateway's calls
+    # to juku-mcp:8000 would all be refused with 421. No allowed origins: no browser calls this.
+    security = TransportSecuritySettings(allowed_hosts=settings.allowed_hosts)
+    mcp_app = build_server(deps).streamable_http_app(streamable_http_path=MCP_PATH, transport_security=security)
 
     async def healthz(_: Request) -> JSONResponse:
         return JSONResponse({"status": "ok"})
