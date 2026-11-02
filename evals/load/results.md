@@ -58,7 +58,7 @@ of these runs (155 ms), and `run.py check` judges the median of three runs.
 | Neither image could start: scripts pointed at a venv path that didn't exist | Crash | Fixed |
 | juku-mcp refused every gateway call with 421: Host `juku-mcp:8000` wasn't allowed | Crash | Fixed |
 | A report citing an all-digit word ID (72 of 7,811 words) was blocked as an invented number, so 9 of 300 learners got the facts-only report | Wrong result | Fixed |
-| Chat has no error path: a model or tool failure ends the stream with no `done` event and no message for the learner | Silent failure | Open |
+| Chat had no error path: a model or tool failure ended the stream with no `done` event and no message for the learner | Silent failure | Fixed |
 | Uvicorn closes idle connections after 5 s, so a client reusing one at that moment is dropped. Reproduced directly. A proxy reusing connections could hit the same race (suspected, not tested) | Dropped requests | Open; the load test keeps connections open for 30 s |
 | One `connection is closed` traceback per run, as Locust stopped mid-request. No request failed (suspected harmless) | Logs only | Open |
 
