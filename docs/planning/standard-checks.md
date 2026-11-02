@@ -107,7 +107,8 @@ rule.
 **Weekly, by Arthur** (a checklist in the repo, about 45 minutes):
 - [ ] Every failure from the week categorised (Phase 1, F1).
 - [ ] Categories seen 3 or more times turned into a task or fixture.
-- [ ] 20 chat answers and 5 reports hand-graded against the rubrics.
+- [ ] 20 chat answers and 5 reports hand-graded against the rubrics
+      (`evals/chat/rubric.md`, `evals/pipeline/rubric.md`).
 - [ ] Every detector flag judged a true or false positive.
 - [ ] New memory notes, and learners' corrections, looked at.
 - [ ] Spend against plan; whether the Should features or the speaking
