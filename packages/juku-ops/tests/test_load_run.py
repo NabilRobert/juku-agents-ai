@@ -15,6 +15,7 @@ RUN_PY = Path(__file__).resolve().parents[3] / "evals" / "load" / "run.py"
 
 @pytest.fixture
 def runner(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> ModuleType:
+    monkeypatch.syspath_prepend(RUN_PY.parent)  # run.py imports stack.py, beside it
     spec = importlib.util.spec_from_file_location("load_run", RUN_PY)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
