@@ -78,6 +78,12 @@ route is `send`, and three dependencies run before it:
 `delta` event for each piece of text, and one `done` event at the end with
 `is_verified`, `stopped_because` and `message_id`.
 
+If the model or a tool fails, `ask_streaming` still ends the turn: it sends
+a short apology and a `done` with `stopped_because: "model_error"`, and
+nothing is stored. Any words already shown stay on the page, labelled
+unverified. If the `done` event never arrives, because the connection
+dropped or the session ended, `ChatIsland.vue` shows its own message.
+
 ### 3. Two checks before any model call
 
 `app/src/juku_app/chat.py: ask_streaming` first calls

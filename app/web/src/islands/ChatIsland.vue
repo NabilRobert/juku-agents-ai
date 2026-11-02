@@ -12,7 +12,7 @@ interface Done {
 }
 
 const props = defineProps<{
-  copy: { placeholder: string; send: string; unverified: string; helpful: string; unhelpful: string };
+  copy: { placeholder: string; send: string; unverified: string; helpful: string; unhelpful: string; failed: string };
   csrf: string;
 }>();
 
@@ -21,6 +21,15 @@ const answer = ref("");
 const done = ref<Done | null>(null);
 const busy = ref(false);
 const rated = ref(false);
+const failed = ref(false);
+
+async function readAnswer(): Promise<void> {
+  const response = await postJson("/chat/kirim", { question: question.value }, props.csrf);
+  for await (const event of readEvents(response)) {
+    if (event.event === "delta") answer.value += event.data;
+    if (event.event === "done") done.value = JSON.parse(event.data) as Done;
+  }
+}
 
 async function send(): Promise<void> {
   if (!question.value.trim() || busy.value) return;
@@ -28,15 +37,15 @@ async function send(): Promise<void> {
   answer.value = "";
   done.value = null;
   rated.value = false;
+  failed.value = false;
   try {
-    const response = await postJson("/chat/kirim", { question: question.value }, props.csrf);
-    for await (const event of readEvents(response)) {
-      if (event.event === "delta") answer.value += event.data;
-      if (event.event === "done") done.value = JSON.parse(event.data) as Done;
-    }
-  } finally {
-    busy.value = false;
+    await readAnswer();
+  } catch {
+    // Handled below: a dropped connection looks the same as a stream with no last event.
   }
+  // The server ends every turn it can with `done`, so without one, it's the connection or the page's session.
+  failed.value = done.value === null;
+  busy.value = false;
 }
 
 async function rate(isHelpful: boolean): Promise<void> {
@@ -63,4 +72,5 @@ async function rate(isHelpful: boolean): Promise<void> {
       <button class="unhelpful underline" @click="rate(false)">{{ copy.unhelpful }}</button>
     </div>
   </article>
+  <p v-if="failed" class="mt-2 text-sm text-amber-700" role="alert">{{ copy.failed }}</p>
 </template>
