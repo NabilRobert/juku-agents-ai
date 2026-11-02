@@ -71,7 +71,7 @@ def planted_dictionary() -> Iterator[TestDatabase]:
 @pytest.fixture
 async def world_and_target(
     app_database: TestDatabase, planted_dictionary: TestDatabase, mirrored_dictionary: None, tmp_path: Path
-) -> AsyncIterator[tuple[World, Target]]:
+) -> AsyncIterator[tuple[World, Target, str]]:
     assert mirrored_dictionary is None
     key = ed25519.Ed25519PrivateKey.generate()
     db = Databases(
@@ -102,15 +102,15 @@ async def world_and_target(
     try:
         world = World(signer=Signer(key, load_rules()), learner_a=a.public_id, learner_b=b.public_id)
         async with serving(create_app(settings, direct_rules())) as base_url:
-            yield world, Target(mode="direct", url=f"{base_url}/mcp")
+            yield world, Target(mode="direct", url=f"{base_url}/mcp"), planted_dictionary.sqlalchemy_url
     finally:
         await db.app.dispose()
         await db.dictionary.dispose()
 
 
-async def test_every_attack_ends_as_predicted_directly(world_and_target: tuple[World, Target]) -> None:
-    world, target = world_and_target
-    results = await run_suite(target, world)
+async def test_every_attack_ends_as_predicted_directly(world_and_target: tuple[World, Target, str]) -> None:
+    world, target, dictionary_url = world_and_target
+    results = await run_suite(target, world, dictionary_url)
     expected = {attack_id: attack["direct"] for attack_id, attack in prediction().items()}
     actual = {attack_id: result for attack_id, result in results.items() if not attack_id.startswith("_")}
     assert actual == expected
