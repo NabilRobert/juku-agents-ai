@@ -233,6 +233,56 @@ async def _load_reading_index(connection: AsyncConnection, index: ReadingIndex) 
     )
 
 
+async def _copy_source_tables(
+    connection: AsyncConnection, rows: OpenJlptRows, supplement: list[SupplementWord]
+) -> None:
+    for table, records in (
+        ("vocab", rows.vocab),
+        ("vocab_example", rows.vocab_example),
+        ("kanji", rows.kanji),
+        ("grammar", rows.grammar),
+        ("pos", rows.pos),
+    ):
+        await _copy(connection, table, records)
+    await _copy(
+        connection,
+        "supplement_word",
+        [(word.id, word.word, word.reading, word.jmdict_id, word.meanings) for word in supplement],
+    )
+
+
+async def _record_meta(
+    connection: AsyncConnection, commit: str, source: SourceFiles, index: ReadingIndex | None
+) -> None:
+    """Which build this is; the sentence counts are unknown when the reading index was skipped."""
+    await connection.execute(
+        text(
+            "INSERT INTO meta (openjlpt_commit, sqlite_sha256, sentences_total, content_tokens, "
+            "content_tokens_mapped) VALUES (:commit, :sha, :sentences, :tokens, :mapped)"
+        ),
+        {
+            "commit": commit,
+            "sha": source.sqlite_sha256,
+            "sentences": index.sentences_total if index else None,
+            "tokens": index.content_tokens if index else None,
+            "mapped": index.content_tokens_mapped if index else None,
+        },
+    )
+
+
+async def _comment_tables(connection: AsyncConnection) -> None:
+    for table, comment in TABLE_COMMENTS.items():
+        kind = "VIEW" if table.endswith("_overview") else "TABLE"
+        await connection.execute(text(f"COMMENT ON {kind} {table} IS '{comment.replace("'", "''")}'"))
+
+
+async def _swap_staging_in(connection: AsyncConnection) -> None:
+    await connection.execute(text(f"DROP SCHEMA IF EXISTS {LIVE_SCHEMA} CASCADE"))
+    await connection.execute(text(f"ALTER SCHEMA {STAGING_SCHEMA} RENAME TO {LIVE_SCHEMA}"))
+    await connection.execute(text(f"GRANT USAGE ON SCHEMA {LIVE_SCHEMA} TO {READER_ROLE}"))
+    await connection.execute(text(f"GRANT SELECT ON ALL TABLES IN SCHEMA {LIVE_SCHEMA} TO {READER_ROLE}"))
+
+
 async def load_dictionary(
     engine: AsyncEngine, source: SourceFiles, *, commit: str = OPENJLPT_COMMIT, with_reading_index: bool = True
 ) -> LoadReport:
@@ -250,47 +300,18 @@ async def load_dictionary(
         await connection.execute(text(f"CREATE SCHEMA {STAGING_SCHEMA}"))
         await connection.execute(text(f"SET LOCAL search_path = {STAGING_SCHEMA}"))
         await _execute_script(connection, BASE_TABLES_SQL)
-        for table, records in (
-            ("vocab", rows.vocab),
-            ("vocab_example", rows.vocab_example),
-            ("kanji", rows.kanji),
-            ("grammar", rows.grammar),
-            ("pos", rows.pos),
-        ):
-            await _copy(connection, table, records)
-        await _copy(
-            connection,
-            "supplement_word",
-            [(word.id, word.word, word.reading, word.jmdict_id, word.meanings) for word in supplement],
-        )
+        await _copy_source_tables(connection, rows, supplement)
         await _load_reading_index(connection, index)
-        await connection.execute(
-            text(
-                "INSERT INTO meta (openjlpt_commit, sqlite_sha256, sentences_total, content_tokens, "
-                "content_tokens_mapped) VALUES (:commit, :sha, :sentences, :tokens, :mapped)"
-            ),
-            {
-                "commit": commit,
-                "sha": source.sqlite_sha256,
-                "sentences": index.sentences_total if with_reading_index else None,
-                "tokens": index.content_tokens if with_reading_index else None,
-                "mapped": index.content_tokens_mapped if with_reading_index else None,
-            },
-        )
+        await _record_meta(connection, commit, source, index if with_reading_index else None)
         await _execute_script(connection, KEYS_SQL)
         await _execute_script(connection, DERIVED_SQL)
         await _execute_script(connection, VIEWS_SQL)
-        for table, comment in TABLE_COMMENTS.items():
-            kind = "VIEW" if table.endswith("_overview") else "TABLE"
-            await connection.execute(text(f"COMMENT ON {kind} {table} IS '{comment.replace("'", "''")}'"))
+        await _comment_tables(connection)
         await connection.execute(text("ANALYZE"))
         row_counts = rows.counts()
         table_md5 = {table: await _table_md5(connection, table) for table in row_counts}
         disappeared = await _disappeared_ids(connection)
-        await connection.execute(text(f"DROP SCHEMA IF EXISTS {LIVE_SCHEMA} CASCADE"))
-        await connection.execute(text(f"ALTER SCHEMA {STAGING_SCHEMA} RENAME TO {LIVE_SCHEMA}"))
-        await connection.execute(text(f"GRANT USAGE ON SCHEMA {LIVE_SCHEMA} TO {READER_ROLE}"))
-        await connection.execute(text(f"GRANT SELECT ON ALL TABLES IN SCHEMA {LIVE_SCHEMA} TO {READER_ROLE}"))
+        await _swap_staging_in(connection)
     return LoadReport(
         commit=commit,
         row_counts=row_counts,
