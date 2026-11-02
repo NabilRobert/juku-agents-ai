@@ -64,12 +64,11 @@ def _log_paths(settings: OpsSettings) -> dict[str, Path | None]:
 
 async def _import_audit(settings: OpsSettings) -> list[ImportResult]:
     engine = _engine(settings.ops_database_url)
+    configured = {name: path for name, path in _log_paths(settings).items() if path is not None}
     results: list[ImportResult] = []
     try:
         async with recorded_run(engine, "import-audit"):
-            for name, path in _log_paths(settings).items():
-                if path is None:
-                    continue
+            for name, path in configured.items():
                 results.append(await import_audit_log(engine, AUDIT_SOURCES[name], path))
     finally:
         await engine.dispose()

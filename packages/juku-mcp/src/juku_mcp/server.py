@@ -30,6 +30,7 @@ from juku_data.engine import Databases, LearnerNotFoundError
 from juku_data.memory import get_memory
 from mcp.server import Server, ServerRequestContext
 from mcp.types import CallToolRequestParams, CallToolResult, ListToolsResult, PaginatedRequestParams, TextContent, Tool
+from opentelemetry.trace import Span
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
@@ -154,6 +155,47 @@ def _result(body: dict[str, Any], *, is_error: bool = False) -> CallToolResult:
     )
 
 
+async def _authorize(deps: ServerDeps, params: CallToolRequestParams, meta: dict[str, Any]) -> tuple[Grant, ToolCall]:
+    """Everything a call must pass before its handler runs. Raises RefusedError at the first failure."""
+    if params.name not in SPECS_BY_NAME:
+        raise RefusedError("unknown_tool", f"no tool called {params.name!r}")
+    token, caller = meta.get(META_KEY), meta.get(CALLER_META_KEY)
+    grant = deps.verifier.verify(
+        token if isinstance(token, str) else None,
+        params.name,
+        caller=caller if isinstance(caller, str) else None,
+    )
+    arguments = _check_arguments(params.name, params.arguments)
+    try:
+        learner = await engine.get_learner(deps.db, grant.learner)
+    except LearnerNotFoundError as exc:
+        raise RefusedError("unknown_learner", "the token's learner doesn't exist") from exc
+    return grant, ToolCall(learner=learner, chain=grant.chain, arguments=arguments, now=utc_now())
+
+
+def _record_refusal(deps: ServerDeps, span: Span, record: dict[str, Any], refusal: RefusedError) -> CallToolResult:
+    span.set_attribute("juku.decision", "refused")
+    span.set_attribute("juku.reason_category", refusal.category)
+    deps.audit.append("call", **record, decision="refused", reason_category=refusal.category, reason=str(refusal))
+    return _result({"refused": refusal.category, "message": str(refusal)}, is_error=True)
+
+
+def _record_allowed(deps: ServerDeps, span: Span, record: dict[str, Any], grant: Grant) -> None:
+    span.set_attribute("juku.decision", "allowed")
+    span.set_attribute("juku.agent", grant.agent)
+    span.set_attribute("juku.chain_length", len(grant.chain))
+    deps.audit.append(
+        "call",
+        **record,
+        decision="allowed",
+        actor_chain=[f"{AGENT_PREFIX}{agent}" for agent in grant.chain],
+        learner=grant.learner,
+        purpose=grant.purpose,
+        run=grant.run,
+        jti=grant.jti,
+    )
+
+
 def build_server(deps: ServerDeps) -> Server[Any]:
     handlers = _handlers(deps)
     listed = [Tool(name=spec.name, description=spec.description, input_schema=spec.input_schema) for spec in SPECS]
@@ -162,22 +204,6 @@ def build_server(deps: ServerDeps) -> Server[Any]:
     async def list_tools(_: ServerRequestContext[Any], __: PaginatedRequestParams | None) -> ListToolsResult:
         return ListToolsResult(tools=listed)
 
-    async def authorize(params: CallToolRequestParams, meta: dict[str, Any]) -> tuple[Grant, ToolCall]:
-        if params.name not in SPECS_BY_NAME:
-            raise RefusedError("unknown_tool", f"no tool called {params.name!r}")
-        token, caller = meta.get(META_KEY), meta.get(CALLER_META_KEY)
-        grant = deps.verifier.verify(
-            token if isinstance(token, str) else None,
-            params.name,
-            caller=caller if isinstance(caller, str) else None,
-        )
-        arguments = _check_arguments(params.name, params.arguments)
-        try:
-            learner = await engine.get_learner(deps.db, grant.learner)
-        except LearnerNotFoundError as exc:
-            raise RefusedError("unknown_learner", "the token's learner doesn't exist") from exc
-        return grant, ToolCall(learner=learner, chain=grant.chain, arguments=arguments, now=utc_now())
-
     async def call_tool(_: ServerRequestContext[Any], params: CallToolRequestParams) -> CallToolResult:
         meta: dict[str, Any] = dict(params.meta or {})
         caller = meta.get(CALLER_META_KEY)
@@ -185,27 +211,10 @@ def build_server(deps: ServerDeps) -> Server[Any]:
         with tracer.start_as_current_span(f"juku.tool_call {params.name}") as span:
             span.set_attribute("juku.tool", params.name)
             try:
-                grant, call = await authorize(params, meta)
+                grant, call = await _authorize(deps, params, meta)
             except RefusedError as refusal:
-                span.set_attribute("juku.decision", "refused")
-                span.set_attribute("juku.reason_category", refusal.category)
-                deps.audit.append(
-                    "call", **record, decision="refused", reason_category=refusal.category, reason=str(refusal)
-                )
-                return _result({"refused": refusal.category, "message": str(refusal)}, is_error=True)
-            span.set_attribute("juku.decision", "allowed")
-            span.set_attribute("juku.agent", grant.agent)
-            span.set_attribute("juku.chain_length", len(grant.chain))
-            deps.audit.append(
-                "call",
-                **record,
-                decision="allowed",
-                actor_chain=[f"{AGENT_PREFIX}{agent}" for agent in grant.chain],
-                learner=grant.learner,
-                purpose=grant.purpose,
-                run=grant.run,
-                jti=grant.jti,
-            )
+                return _record_refusal(deps, span, record, refusal)
+            _record_allowed(deps, span, record, grant)
             return _result(await handlers[params.name](call))
 
     return Server(SERVER_NAME, on_list_tools=list_tools, on_call_tool=call_tool)
