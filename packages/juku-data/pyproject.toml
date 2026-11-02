@@ -42,6 +42,7 @@ do_not_mutate = [
     "src/juku_data/dictionary/*",
     "src/juku_data/engine/__init__.py",
     "src/juku_data/engine/api.py",
+    "src/juku_data/engine/learners.py",
     "src/juku_data/engine/models.py",
     "src/juku_data/engine/plans.py",
     "src/juku_data/engine/quiz.py",
@@ -49,6 +50,7 @@ do_not_mutate = [
     "src/juku_data/engine/recompute.py",
     "src/juku_data/engine/writes.py",
     "src/juku_data/memory/__init__.py",
+    "src/juku_data/memory/consolidation.py",
     "src/juku_data/memory/models.py",
     "src/juku_data/memory/store.py",
 ]
