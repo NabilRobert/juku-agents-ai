@@ -24,8 +24,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from juku_data.engine import Databases
+from juku_data.engine.learners import lock_learner
 from juku_data.engine.reads import word_details
-from juku_data.engine.writes import lock_learner
 from juku_data.memory import evidence as rules_of
 from juku_data.memory.evidence import EvidenceRow
 from juku_data.memory.models import (

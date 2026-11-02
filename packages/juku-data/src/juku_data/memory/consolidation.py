@@ -14,8 +14,8 @@ from juku_common.rules import Rules
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from juku_data.engine.learners import lock_learner
 from juku_data.engine.recompute import rebuild_learners
-from juku_data.engine.writes import lock_learner
 from juku_data.memory import evidence as rules_of
 from juku_data.memory.evidence import EvidenceRow
 from juku_data.memory.models import ConsolidationDecision

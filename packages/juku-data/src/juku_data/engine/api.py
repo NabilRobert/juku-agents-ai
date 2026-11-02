@@ -12,7 +12,8 @@ from datetime import date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from juku_data.engine import quiz, reads, writes
+from juku_data.engine import learners, quiz, reads, writes
+from juku_data.engine.learners import LearnerNotFoundError
 from juku_data.engine.models import (
     GradedAnswer,
     KnownWords,
@@ -27,7 +28,7 @@ from juku_data.engine.models import (
     Recommendations,
 )
 from juku_data.engine.recompute import MARKED_KNOWN, UNMARKED_KNOWN, rebuild_learners, verify_learners
-from juku_data.engine.writes import LearnerNotFoundError, UnknownWordError
+from juku_data.engine.writes import UnknownWordError
 
 RECENT_ACTIVITY_DAYS = 7
 # The memory page lists this many known words, latest first; the rest are counted.
@@ -56,7 +57,7 @@ async def create_learner(  # noqa: PLR0913 (keyword-only: the learner's own fiel
 ) -> Learner:
     """A new learner, with a random public ID unless one is given (fixtures and the synthetic database)."""
     async with db.app.begin() as connection:
-        return await writes.create_learner(
+        return await learners.create_learner(
             connection,
             nickname=nickname,
             target_level=target_level,
@@ -69,17 +70,17 @@ async def create_learner(  # noqa: PLR0913 (keyword-only: the learner's own fiel
 
 async def get_learner(db: Databases, public_id: str) -> Learner:
     async with db.app.connect() as connection:
-        return await writes.find_learner(connection, public_id)
+        return await learners.find_learner(connection, public_id)
 
 
 async def set_target_level(db: Databases, learner_id: int, target_level: int) -> None:
     async with db.app.begin() as connection:
-        await writes.update_learner(connection, learner_id, target_level=target_level)
+        await learners.update_learner(connection, learner_id, target_level=target_level)
 
 
 async def set_timezone(db: Databases, learner_id: int, timezone: str) -> None:
     async with db.app.begin() as connection:
-        await writes.update_learner(connection, learner_id, timezone=timezone)
+        await learners.update_learner(connection, learner_id, timezone=timezone)
 
 
 async def mark_known(db: Databases, learner_id: int, word_id: str, at: datetime) -> None:
@@ -140,7 +141,7 @@ async def find_reading_sentences(db: Databases, learner_id: int) -> ReadingSente
 
 async def get_plan(db: Databases, learner_id: int, today: date) -> Plan:
     async with db.app.connect() as connection:
-        learner = await writes.load_learner(connection, learner_id)
+        learner = await learners.load_learner(connection, learner_id)
     return await reads.get_plan(db.app, learner, today)
 
 
@@ -156,14 +157,14 @@ async def get_recent_activity(
 
 async def make_quiz(db: Databases, learner_id: int, today: date, batch: int = 0) -> Quiz:
     async with db.app.connect() as connection:
-        learner = await writes.load_learner(connection, learner_id)
+        learner = await learners.load_learner(connection, learner_id)
     return await quiz.make_quiz(db.app, db.dictionary, learner, today, batch)
 
 
 async def rebuild_learner(db: Databases, learner_id: int) -> None:
     """Replace the learner's summaries with a recompute from their events."""
     async with db.app.begin() as connection:
-        await writes.lock_learner(connection, learner_id)
+        await learners.lock_learner(connection, learner_id)
         await rebuild_learners(connection, [learner_id])
 
 
