@@ -39,6 +39,11 @@ dev = [
     "tiktoken==0.14.0",
     "types-pyyaml==6.0.12.20250915",
 ]
+# Not installed by default (`uv sync` takes dev only): `uv run --group load ...` for FF10.
+load = [
+    # FF10: the load test (evals/load). 2.46.7, not 2.47.0: released more than two weeks before.
+    "locust==2.46.7",
+]
 
 [tool.ruff]
 line-length = 120
@@ -58,6 +63,8 @@ max-complexity = 10
 "migrations/**" = ["S608"]
 # pytest hands a test its fixtures as arguments, so a test may take more than five.
 "**/tests/**" = ["S105", "S106", "S608", "PLR0913"]
+# The load test runs fixed commands (docker, locust) with no input from outside.
+"evals/**" = ["S603", "S607"]
 # Full-width and half-width characters are the point of the normalization tests.
 "**/tests/test_japanese.py" = ["RUF001"]
 "**/tests/test_search_words.py" = ["RUF001"]

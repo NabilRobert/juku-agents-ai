@@ -215,8 +215,14 @@ fitness:
   FF10:
     title: Load test against the recorded baseline
     status: pending
-    until: the load test (Should)
+    until: a baseline from a quiet machine (one laptop's p95 swung from 98 to 288 ms on unchanged code)
     checked_by: locust
+    thresholds:
+      # evals/load/results.md: the busiest step with room left (at 400 the app is out of CPU), as
+      # the median of ten runs. Not a gate yet: `run.py check` is ready for the real baseline.
+      baseline_users: 200
+      baseline_p95_ms: 155
+      allowed_regression: 0.2
   FF11:
     title: Agent quality (the harness regression gate)
     status: pending

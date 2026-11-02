@@ -432,6 +432,11 @@ fetch-dictionary`, and update `data/about_the_data.md` and the
 **Change the frontend.** `app/web/src/`. `make frontend` runs Vitest, the
 type check, the build and the FE7 budget; `make lighthouse` runs FF12.
 
+**Run the load test.** `uv run --group load python evals/load/run.py
+setup`, then `measure`, then `down` to delete its data. It needs at least
+15 GB free. The numbers and what they mean are in
+`evals/load/results.md`; FF10's baseline is in `guardrails.yaml`.
+
 **Add a fitness function.** An entry in `guardrails.yaml`'s `fitness`
 section, and a test marked `@pytest.mark.fitness("FF<n>")`. An active
 entry with no test fails `make check`.
