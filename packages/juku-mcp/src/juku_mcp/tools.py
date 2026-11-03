@@ -58,7 +58,7 @@ SPECS = [
     ToolSpec(
         "get_progress",
         "The learner's progress: how many words they know, and their coverage of each JLPT level's words and kanji "
-        "(N5 to N1).",
+        "(N5 to N1). Not their target: for the words still needed to reach it, use get_plan.",
         NO_ARGUMENTS,
     ),
     ToolSpec(
@@ -81,8 +81,9 @@ SPECS = [
     ),
     ToolSpec(
         "get_plan",
-        "The learner's pace plan: the words a week needed to reach 80% of their target level and everything easier "
-        "by their exam date, with the formula.",
+        "The learner's target and pace plan: the words in scope (their target level and everything easier), how many "
+        "more they need to reach 80% of them, and, with an exam date, the words a week, with the formula. Use it for "
+        "any question about the target or what's left.",
         NO_ARGUMENTS,
     ),
     ToolSpec(
