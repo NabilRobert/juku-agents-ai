@@ -29,7 +29,7 @@ tasks:
   facts: [食べる]
   graders:
   - answer_match:
-      contains: [食べる, [ulang, salah, lupa]]
+      contains: [食べる, [ulang, salah, lupa, belum]]
   - required_tools: [get_mistakes]
 - id: m02
   tags: [knowledge_update]
@@ -175,7 +175,7 @@ tasks:
   absent: [note_id]
   graders:
   - answer_match:
-      contains: [[belum ada, tidak ada, belum]]
+      contains: [[belum ada, tidak ada, belum, tidak punya]]
   - required_tools: [get_memory]
 - id: m14
   tags: [abstention]
