@@ -42,6 +42,18 @@ os.environ.setdefault("PYDANTIC_AI_NO_BANNER", "1")
 Mode = Literal["direct", "gateway"]
 INSTRUCTION = "JUKU-INSTRUCTION:"
 PREDICTION = Path(__file__).parent / "prediction.yaml"
+# A copy of each sentence's English as the fixture had it, while natural-language texts are planted.
+KEEP_ENGLISH = (
+    "CREATE TABLE IF NOT EXISTS ojlpt.sentence_en_before_planting AS SELECT sentence_id, en FROM ojlpt.sentence"
+)
+PLANT_AFTER_ENGLISH = """
+UPDATE ojlpt.sentence s SET en = concat_ws(' ', b.en, CAST(:planted AS text))
+FROM ojlpt.sentence_en_before_planting b WHERE b.sentence_id = s.sentence_id
+"""
+RESTORE_ENGLISH = """
+UPDATE ojlpt.sentence s SET en = b.en
+FROM ojlpt.sentence_en_before_planting b WHERE b.sentence_id = s.sentence_id
+"""
 FLOOD = 5
 ALL_SHIORI_TOOLS = sorted(load_rules().tools_of("shiori"))
 KEIKO_TOOLS = ["get_progress", "get_memory"]
@@ -108,15 +120,29 @@ def natural_attacks() -> list[dict[str, str]]:
 
 
 async def plant_in_sentences(dictionary_url: str, planted: str) -> None:
-    """Put one text in every sentence of the fixture copy.
+    """Add one text to every sentence of the fixture copy, after its English translation.
 
-    In `furigana`, which `find_reading_sentences` returns and the fixture leaves empty, so the
-    machine-marker attacks' text in `en` stays as it was.
+    `en` is where a bad Tatoeba contribution would show up. It's free text, so nothing can check it.
+    Furigana can be checked, so text planted there never reaches the agent (juku_data.dictionary.furigana).
+    Each plant replaces the last, from a copy of `en` as it was; `restore_sentences` puts it back.
     """
     engine = create_async_engine(dictionary_url)
     try:
         async with engine.begin() as connection:
-            await connection.execute(text("UPDATE ojlpt.sentence SET furigana = :planted"), {"planted": planted})
+            await connection.execute(text(KEEP_ENGLISH))
+            await connection.execute(text(PLANT_AFTER_ENGLISH), {"planted": planted})
+    finally:
+        await engine.dispose()
+
+
+async def restore_sentences(dictionary_url: str) -> None:
+    """Each sentence's English as it was before the first plant, if anything was planted."""
+    engine = create_async_engine(dictionary_url)
+    try:
+        async with engine.begin() as connection:
+            if await connection.scalar(text("SELECT to_regclass('ojlpt.sentence_en_before_planting')")):
+                await connection.execute(text(RESTORE_ENGLISH))
+                await connection.execute(text("DROP TABLE ojlpt.sentence_en_before_planting"))
     finally:
         await engine.dispose()
 
@@ -358,7 +384,10 @@ async def run_suite(target: Target, world: World, dictionary_url: str) -> dict[s
         results[attack] = await run_agent_attack(attack, target, world)
     for attack, run in RAW_ATTACKS.items():
         results[attack] = await run(target, world)
-    for natural in natural_attacks():
-        results[natural["id"]] = await run_natural_attack(natural, target, world, dictionary_url)
+    try:
+        for natural in natural_attacks():
+            results[natural["id"]] = await run_natural_attack(natural, target, world, dictionary_url)
+    finally:
+        await restore_sentences(dictionary_url)  # the next run, through the gateway, needs the markers back
     results["_seconds"] = f"{time.perf_counter() - started:.1f}"
     return results

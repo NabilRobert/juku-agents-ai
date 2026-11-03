@@ -3,7 +3,7 @@
  "attacks": 24,
  "as_predicted": 24,
  "succeeded": 0,
- "seconds": "1.2",
+ "seconds": "1.7",
  "rows": [
   {
    "attack": "inject-cross-learner",

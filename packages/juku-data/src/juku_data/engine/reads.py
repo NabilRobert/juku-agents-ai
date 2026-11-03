@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from juku_data.dictionary.furigana import checked_furigana
 from juku_data.engine.models import (
     DayActivity,
     KnownWord,
@@ -234,7 +235,7 @@ async def find_reading_sentences(app: AsyncEngine, dictionary: AsyncEngine, lear
         ReadingSentence(
             sentence_id=row.sentence_id,
             ja=row.ja,
-            furigana=row.furigana,
+            furigana=checked_furigana(row.ja, row.furigana),
             en=row.en,
             tatoeba_id=row.tatoeba_id,
             new_word_id=row.new_word_id,
