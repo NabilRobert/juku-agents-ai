@@ -3,6 +3,7 @@ name = "juku-common"
 version = "0.0.0"
 description = "What every Juku service shares: the rule file, the audit log and the delegation tokens"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
 dependencies = [
     "cryptography==50.0.2",
     "opentelemetry-api==1.45.1",
