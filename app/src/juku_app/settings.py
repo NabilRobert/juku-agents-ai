@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -28,6 +29,8 @@ class AppSettings(BaseSettings):
     model_base_url: str = "https://ai.sumopod.com/v1"
     model_api_key: str | None = None
     model_name: str = "gpt-5-mini"
+    # Unset, the model uses its own default. Slice 7 compares efforts before fixing one here.
+    model_reasoning_effort: Literal["minimal", "low", "medium", "high"] | None = None
     # Indonesia's official mental-health line, checked by Arthur before launch (AG6).
     crisis_line: str = "(nomor belum diisi: lihat JUKU_CRISIS_LINE)"
     secure_cookies: bool = True

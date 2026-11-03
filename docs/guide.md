@@ -346,7 +346,7 @@ the internal numeric `id` never leaves the database.
 **Rule file.** `guardrails.yaml`: every limit in one reviewed file,
 loaded by `juku_common/rules.py: load_rules`.
 
-**SAF1 (the attack suite).** Fifteen attacks on Juku's own surfaces,
+**SAF1 (the attack suite).** Twenty-four attacks on Juku's own surfaces,
 with a committed prediction of which succeed directly and which the
 gateway stops (`packages/juku-mcp/attacks/`).
 
@@ -398,7 +398,9 @@ does; change it in the same commit if the behaviour changes.
 
 **Change what Shiori is told.** `shiori.py: INSTRUCTIONS`.
 
-**Change the chat model.** The `JUKU_MODEL_*` settings
+**Change the chat model.** `JUKU_MODEL_REASONING_EFFORT` sets its effort
+(`minimal`, `low`, `medium` or `high`); unset, the model uses its own
+default. The `JUKU_MODEL_*` settings
 (`app/src/juku_app/settings.py`); `cli.py: chat_model` builds it.
 
 **Choose the moderation checker.** Write a class with an async
@@ -442,6 +444,13 @@ type check, the build and the FE7 budget; `make lighthouse` runs FF12.
 setup`, then `measure`, then `down` to delete its data. It needs at least
 15 GB free. The numbers and what they mean are in
 `evals/load/results.md`; FF10's baseline is in `guardrails.yaml`.
+
+**Run the evals.** `uv run python evals/run_suite.py chat --run-id try-1`
+runs the chat suite with a scripted model, at $0, and proves the plumbing
+only. `memory` runs the memory suite. Then `uv run agent-eval report
+build/evals/try-1` writes the report, and `agent-eval compare <old> <new>`
+is the regression gate. A real run spends money: it needs `--real`,
+`--budget` and `--purpose`, and Arthur's OK (ADR-028).
 
 **Add an eval task.** Add it to `evals/chat/suite.yaml` or
 `evals/memory/suite.yaml`, with its gold answer from `reference_sql`.

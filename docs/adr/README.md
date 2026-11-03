@@ -33,6 +33,7 @@ there gives the decision, why, and the options considered. This page is the inde
 | [ADR-025](phase-5-architecture-decisions.md#adr-025-a-framework-for-every-component-the-folders-frameworks-over-plain-code-rule) | A framework for every component (the folder's "frameworks over plain code" rule) | accepted |
 | [ADR-026](phase-5-architecture-decisions.md#adr-026-the-dictionarys-index-is-mirrored-into-the-app-database-the-load-is-python-over-copy-track-a-2026-10-28) | The dictionary's index is mirrored into the app database; the load is Python over COPY | accepted (built, 2026-10-28) |
 | [ADR-027](phase-5-architecture-decisions.md#adr-027-what-building-jukus-mcp-server-settled-track-b-2026-10-28) | What building Juku's MCP server settled | accepted (built, 2026-10-28) |
+| [ADR-028](phase-5-architecture-decisions.md#adr-028-evals-run-on-shioris-real-code-path-graded-by-the-harness-2026-11-02) | Evals run on Shiori's real code path, graded by the harness |
 
 Also in that file: [the reuse map](phase-5-architecture-decisions.md#reuse-map-the-folders-reuse-before-building-rule)
 and [what was settled with Arthur](phase-5-architecture-decisions.md#settled-with-arthur-2026-10-27-go-with-your-recommendations-rush).

@@ -22,7 +22,7 @@ browser ─► Juku app ─┤                                                  
 | Data | **OpenJLPT** (ADR-003); its PyPI package for search | The load script only |
 | Dictionary access | **MCP-backbone** (Arthur's) | — |
 | Auth, allow-lists, audit, injection detection | **mcp-security-gateway** (Arthur's) | The per-agent policy file |
-| Offline evals and the regression gate | **agent-eval-harness** (Arthur's) | The Juku task sets |
+| Offline evals and the regression gate | **agent-eval-harness** (Arthur's) | The Juku task sets, and the runner in ADR-028 |
 | Traces | **agent-observability** (Arthur's, Project 6), OpenTelemetry | — |
 | The critic pattern | **Pitstop** (Arthur's), ported from TypeScript (ADR-007) | The Python port |
 | Dashboards and alerts | **Grafana OSS** (ADR-009) | Provisioned dashboards and alert rules |
@@ -866,7 +866,7 @@ new to his stack were proposed and **approved by Arthur on 2026-10-28**
 | **CLI** (load, export, delete, runs) | Typer | Stack | argparse | stack |
 | **Tests** | pytest (+ mutmut), Vitest, Lighthouse CI, Locust | Stack, plus the tools the fitness functions name | — | stack |
 | **Token counts** (FF6) | **tiktoken**, with `o200k_base` (gpt-5-mini's encoding) | Counts each fixture prompt's input tokens offline and at $0, the way the provider counts them, so a prompt that grows past its ceiling fails the build | Characters divided by 4: drifts from what is billed; the provider's token-counting endpoint: a paid round trip per prompt | **approved 2026-10-29** |
-| **Evals** | Inspect AI, via agent-eval-harness | Stack | — | stack |
+| **Evals** | agent-eval-harness's graders and gate, on Shiori's own loop (ADR-028) | Stack | — | stack |
 | **Tracing** | The OpenTelemetry SDK (PydanticAI's instrumentation emits spans into it) | Stack | — | stack |
 
 **Plain code, on purpose (each smaller than a framework):** the learning
@@ -956,3 +956,23 @@ query: 231 ms at p95). Both are checked on every commit (FF1, FF13).
 | 3 | Grafana or cron-only monitoring (ADR-009) | **Grafana, capped at 384 MB** (Arthur, 2026-10-28, after spike 3 measured 217–249 MB idle) |
 | 4 | The gateway's per-key rate limit and actor check (ADR-012, ADR-018) | Both built in the gateway repo before launch, as gateway work |
 | 5 | Time budget and launch timing | As fast as possible: about 3–4 weeks of building in parallel tracks, once the gates are cleared. Launch as soon as the launch gate passes, with the counted window starting at launch even if it spans the December exam (Phase 2, Time budget) |
+
+### ADR-028: Evals run on Shiori's real code path, graded by the harness (2026-11-02)
+
+**Decision:** `evals/run_suite.py` calls the real `juku_app.chat.ask` for each task and epoch, on a
+fresh copy of the task's fixture learner, and reads the tools and tokens from Juku's own records.
+It grades with the harness's `grade_one` and writes the harness's run files, so `agent-eval report`
+and `compare`, the regression gate, work unchanged. A real run needs `--real`, a `--budget` and a
+`--purpose`, and stops before a trial could cross the budget.
+
+**Why:** `agent-eval run` drives Inspect's agent over a fixed MCP server. Juku needs a fresh token
+per tool call, a different learner per task, and Shiori's own loop. A pass should describe what
+learners get, and Q1 and MEM1 are launch gates.
+
+**Rejected:** *an adapter MCP server for the harness.* It keeps Inspect's loop, but it tests a copy
+of Shiori, so PydanticAI's token hook and run limits would go unmeasured, and it needs changes in
+the harness.
+
+**The cost:** repeats and the budget stop are written here, not reused from Inspect, and Inspect's
+per-model-call logs are lost. Records show tools and token totals per turn. The harness's exact
+`openai` pin is overridden in `pyproject.toml`, so an eval tool can't move what the app ships.
