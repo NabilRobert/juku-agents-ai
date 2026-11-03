@@ -125,8 +125,11 @@ async def run_trial(stack: Stack, task: dict[str, Any], attempt: int, model: Mod
         error = type(failure).__name__
     tools, input_tokens, output_tokens, cost = await recorded_usage(stack, loaded.learner.id)
     graders = grade(task, final_answer, tools)
-    strict = not error and all(grader["strict"] for grader in graders)
-    lenient = not error and all(grader["lenient"] for grader in graders)
+    # A turn the run limit or the budget stopped isn't a finished answer, so it can't pass, as in the
+    # harness's own compare (agent_eval/compare/comparison.py). Reported by Project 10.
+    finished = not error and not stopped
+    strict = finished and all(grader["strict"] for grader in graders)
+    lenient = finished and all(grader["lenient"] for grader in graders)
     return {
         "task_id": str(task["id"]),
         "task_hash": task_hash(task),

@@ -538,7 +538,16 @@ tasks:
   graders:
   - answer_match:
       contains:
-      - 一日
+      - - 一日
+        - 一つ
+        - 一
+        - 大きな
+        - 大きい
+        - 年
+        - 物
+        - 毎年
+        - 今日
+        - 今
   - required_tools:
     - recommend_words
 - id: c31
