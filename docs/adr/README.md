@@ -6,7 +6,7 @@ there gives the decision, why, and the options considered. This page is the inde
 
 | ADR | Decision | Status |
 |---|---|---|
-| [ADR-001](phase-5-architecture-decisions.md#adr-001-the-users-are-indonesian-jlpt-learners-in-a-study-group-settled) | The users are Indonesian JLPT learners in a study group | settled |
+| [ADR-001](phase-5-architecture-decisions.md#adr-001-the-users-are-indonesian-jlpt-learners-in-a-study-group-settled) | The users are Indonesian JLPT learners in a study group | settled; narrowed by ADR-029 |
 | [ADR-002](phase-5-architecture-decisions.md#adr-002-pitstops-pattern-applied-to-learning-settled) | Pitstop's pattern, applied to learning | settled |
 | [ADR-003](phase-5-architecture-decisions.md#adr-003-openjlpt-as-the-data-in-postgres-served-by-mcp-backbone-settled-revised-2026-10-28) | OpenJLPT as the data, in Postgres, served by MCP-backbone | settled; revised 2026-10-28 |
 | [ADR-004](phase-5-architecture-decisions.md#adr-004-a-web-page-first-whatsapp-later-settled) | A web page first, WhatsApp later | settled |
@@ -34,6 +34,7 @@ there gives the decision, why, and the options considered. This page is the inde
 | [ADR-026](phase-5-architecture-decisions.md#adr-026-the-dictionarys-index-is-mirrored-into-the-app-database-the-load-is-python-over-copy-track-a-2026-10-28) | The dictionary's index is mirrored into the app database; the load is Python over COPY | accepted (built, 2026-10-28) |
 | [ADR-027](phase-5-architecture-decisions.md#adr-027-what-building-jukus-mcp-server-settled-track-b-2026-10-28) | What building Juku's MCP server settled | accepted (built, 2026-10-28) |
 | [ADR-028](phase-5-architecture-decisions.md#adr-028-evals-run-on-shioris-real-code-path-graded-by-the-harness-2026-11-02) | Evals run on Shiori's real code path, graded by the harness |
+| [ADR-029](phase-5-architecture-decisions.md#adr-029-built-for-many-used-by-me-arthurs-tutor-with-an-owner-role-2026-11-03) | Built for many, used by me: Arthur's tutor, with an owner role | accepted |
 
 Also in that file: [the reuse map](phase-5-architecture-decisions.md#reuse-map-the-folders-reuse-before-building-rule)
 and [what was settled with Arthur](phase-5-architecture-decisions.md#settled-with-arthur-2026-10-27-go-with-your-recommendations-rush).
