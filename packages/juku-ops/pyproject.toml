@@ -3,6 +3,7 @@ name = "juku-ops"
 version = "0.0.0"
 description = "Juku's operations jobs: the audit-log importer, the heartbeat and job-run records"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
 dependencies = [
     "juku-common",
     "juku-data",

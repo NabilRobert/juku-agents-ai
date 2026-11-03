@@ -3,6 +3,7 @@ name = "juku-mcp"
 version = "0.0.0"
 description = "Juku's MCP server: the learner's data, scoped by a verified delegation token, read-only"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
 dependencies = [
     "juku-common",
     "juku-data",

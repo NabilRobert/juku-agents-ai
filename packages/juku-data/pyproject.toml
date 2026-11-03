@@ -3,6 +3,7 @@ name = "juku-data"
 version = "0.0.0"
 description = "Juku's data and learning engine: the OpenJLPT load, learner state, and the deterministic engine (LE1-LE6)"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
 dependencies = [
     "juku-common",
     "asyncpg==0.32.0",

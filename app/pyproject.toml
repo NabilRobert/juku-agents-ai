@@ -3,6 +3,7 @@ name = "juku-app"
 version = "0.0.0"
 description = "Juku's web app: the pages, consent and privacy, the budget guard, and Shiori the chat agent"
 requires-python = ">=3.12,<3.13"
+license = "MIT"
 dependencies = [
     "juku-common",
     "juku-data",

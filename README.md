@@ -123,3 +123,10 @@ things" are in [the guide](docs/guide.md).
 - **[The guide](docs/guide.md):** how one request flows through the code,
   a glossary, and where to change things.
 - **[JOURNEY](JOURNEY.md):** what broke, what was wrong, and what changed.
+
+## Licence
+
+Juku's code is under the [MIT licence](LICENSE). The Japanese data isn't: it keeps its own
+licences, listed in `packages/juku-data/src/juku_data/data/about_the_data.md`. That covers OpenJLPT
+(CC BY-SA 4.0), which Juku fetches rather than commits. The ten words in `supplement_words.csv` are
+keyed to JMdict entries, so they're treated as JMdict's (CC BY-SA 4.0, EDRDG), not as MIT code.
