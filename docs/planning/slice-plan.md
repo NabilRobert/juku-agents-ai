@@ -60,6 +60,13 @@ Slice 1 creates the guide.
 
 From then on, a red fitness function blocks the merge.
 
+**Rescoped 2026-11-03 (ADR-029):** Juku is Arthur's own tutor, built for many and used by him.
+- Slice 8 deploys privately, behind the login.
+- Slice 9 is paused.
+- Slice 10's claims are what was built and measured.
+- The owner role is a new small slice, waiting for Arthur's go.
+- The group digest (X1) is dropped while there is one learner.
+
 | Slice | Delivers | Done when | Model cost |
 |---|---|---|---|
 | **1. Data** | The OpenJLPT load script, with a pinned release and checksum; the update policy (stable IDs, report any that disappeared); the "about the data" page with licences; views and schema comments; row counts committed; CI with FF4 and FF5 | One command rebuilds the dictionary database; licences checked | $0 |
@@ -72,6 +79,7 @@ From then on, a red fitness function blocks the merge.
 | **8. Deploy and dogfood** | Compose on the server (through Arthur); the gateway in front of both MCP servers; Arthur uses it for 4–5 days, with the weekly pipeline triggered on demand twice | Alert delivery tested on the server; one end-to-end trace seen; dogfood issues fixed | ~$0.40 |
 | **9. Launch and window** | Arthur posts the invitation and hands out codes; 4 counted weeks; the weekly review: failures become tasks, then fixes, then reruns | The window closes on its date, whatever the numbers | the pools below, plus ~$0.60 of reruns |
 | **10. Evidence and write-up** | Evidence SQL and outputs; the privacy check; the case study, JOURNEY and a portfolio entry (EN, JA, ID); text deletion scheduled for 60 days later | Every number traces to a file; the privacy check passes | $0 |
+| **Owner role** (ADR-029, waiting for Arthur's go) | A `role` on each learner; an owner-only page to issue codes and remove learners; an audit row for each; Arthur as owner | Tests that a learner can't reach any owner action or make themselves owner | $0 |
 | **Should** | The load test (Locust, 5,000 synthetic learners, scripted model) and its FF10 baseline | Numbers published, labelled as a measurement of the design | $0 |
 | **Should** | Reading practice, the pace planner, the mistakes queue, the feedback job | Built before launch if they fit; otherwise during the window behind a flag, with the switch-on date recorded so metrics aren't mixed silently | $0, except the feedback job (~$0.01 a week, from the reserve) |
 

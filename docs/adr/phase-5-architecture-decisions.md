@@ -35,6 +35,9 @@ browser ─► Juku app ─┤                                                  
 
 ### ADR-001: The users are Indonesian JLPT learners in a study group (settled)
 
+> **Narrowed by ADR-029 (2026-11-03):** Juku is Arthur's own tutor, built so it can serve more
+> learners. The study-group launch is paused.
+
 **Decision:** adults preparing for N5–N2, recruited from a study group
 Arthur joins as a member. He is studying Japanese himself; his use is
 recorded separately.
@@ -976,3 +979,58 @@ the harness.
 **The cost:** repeats and the budget stop are written here, not reused from Inspect, and Inspect's
 per-model-call logs are lost. Records show tools and token totals per turn. The harness's exact
 `openai` pin is overridden in `pyproject.toml`, so an eval tool can't move what the app ships.
+
+### ADR-029: Built for many, used by me: Arthur's tutor, with an owner role (2026-11-03)
+
+**Decision:** Juku is Arthur's personal Japanese tutor, built so it can serve more learners. It is
+described as "built for many, used by me", with no claim that anyone else uses it. Arthur is the
+**owner** and also an ordinary learner. Only the owner adds or removes learners, by hand. There is no
+self-signup and no public registration.
+
+**Why:** realistically Arthur is the only user ("realistically I would be the only person using
+it"). Building for a study group's launch, outreach and four counted weeks would be work for users
+who don't exist. Keeping the multi-learner design means a learner he wants to add later costs a
+command, not a rebuild.
+
+**What stays, unchanged:** everything built. The multi-learner data design (`cohort_id`, timezones,
+per-learner isolation and delegation), the load test at 5,000 synthetic learners, the attack suite,
+the eval gates and the fitness functions. Nothing is deleted.
+
+**The owner role: what exists, and what a small slice adds.**
+
+| Need | Today | The slice would add |
+|---|---|---|
+| Only the owner adds learners | Learners join only with an invite code, and only `juku issue-codes`, run on the server, makes them (ADR-013) | The same, from an owner-only page |
+| Only the owner removes learners | `juku delete-learner <public_id>`, on the server | The same, from that page |
+| Who the owner is | `JUKU_ADMIN_PUBLIC_IDS`, which guards the Run Inspector only | A `role` on each learner (`owner` or `learner`), set by migration for Arthur, replacing the setting |
+| Who added whom | A code records the learner who used it, not who issued it | An audit row per action: who, which learner, what, when |
+| A learner can't reach owner actions | The Run Inspector checks the admin list | Tests that every owner action refuses a learner, and that a learner can't make themselves owner |
+
+The slice is small: one migration, one page, one table, and tests. It waits for Arthur's go.
+
+**Dropped or paused:** work aimed only at other users.
+- **Slice 9 (launch and window):** paused. No invitation, no outreach and no counted weeks.
+- **The group digest (X1):** dropped while there is one learner. A digest of one isn't one.
+- **Consent for other people:** the consent page stays, as built, and Arthur accepts it like anyone.
+  Its wording for other people, and the digest consent, are reviewed again before he adds anyone.
+- **Slice 10 (evidence and write-up):** kept, with its claims changed to what was built and measured,
+  and how Arthur uses it.
+
+**Deploy (slice 8):** private. Behind the login, with nothing public beyond what the owner needs:
+the login page, and the pages a signed-in learner uses. It still waits for the server's backup fix.
+Dogfooding becomes simply using it.
+
+**Gates:** they stay.
+- **Q1 and MEM1** are offline task sets, so one learner changes nothing. Both are still below 90%
+  (`evals/paid-run-results.md`).
+- **FF1 and FF10** measure the design at 5,000 learners. That claim is what lets Juku grow, so the
+  thresholds stay.
+- **Q3 (20 answers a week, hand-graded) and P4 (5 reports a week):** one learner can't give five
+  reports a week. P4 becomes one report a week, judged on the last five. Q3 grades every answer that
+  week, up to 20. The pass rates (85%, and 4 of 5) don't change.
+- **The budget:** the pools were sized for about ten learners, so one learner has room. The caps
+  stay, so a later learner can't drain them.
+
+**Rejected:** *cutting Juku down to a single-user app.* It would delete tested work, and adding a
+second learner would then mean a rebuild. *Keeping the launch plan:* it plans for users who don't
+exist.

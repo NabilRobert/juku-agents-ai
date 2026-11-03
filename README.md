@@ -4,7 +4,9 @@
 exam.
 
 An agentic learning platform for Indonesian adults studying for the JLPT,
-levels N5 to N2. Its staff is a small crew of agents, each named with a
+levels N5 to N2. **Built for many, used by me:** it's Arthur's own tutor, designed and
+tested to serve many learners, with no claim that anyone else uses it
+([ADR-029](docs/adr/phase-5-architecture-decisions.md#adr-029-built-for-many-used-by-me-arthurs-tutor-with-an-owner-role-2026-11-03)). Its staff is a small crew of agents, each named with a
 pun on its job:
 - **Shiori** (栞, a bookmark: it keeps your place): the lead, and the
   keeper of each learner's memory;
@@ -58,8 +60,9 @@ and guardrails), track C (the thin app, with chat on a scripted model)
 slice 4 (memory: evidence-checked notes the learner can correct) and
 slice 6's pipeline half (Keiko, Nikki and Tadashi on scripted models, with
 code's own checks) are in; evals with real models, then deploying, follow
-([slice plan](docs/planning/slice-plan.md)). Nothing is deployed and no
-model has been called.
+([slice plan](docs/planning/slice-plan.md)). Nothing is deployed. Slice 7's
+one paid run is done, and both launch gates are below 90%
+([results](evals/paid-run-results.md)).
 
 ## Run it
 
