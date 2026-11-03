@@ -57,6 +57,10 @@ SELECT coalesce(sum(input_tokens), 0), coalesce(sum(output_tokens), 0), coalesce
 FROM app.model_calls WHERE learner_id = :learner
 """
 CALLS = "SELECT tool, outcome FROM monitoring.tool_calls WHERE learner_id = :learner ORDER BY called_at"
+REVIEWS = """
+SELECT agent, grade, is_approved, reason, issues, code_issues
+FROM app.critic_reviews WHERE learner_id = :learner ORDER BY id
+"""
 
 
 def verdict_task(task_id: str, prompt: str, wanted: str, **extra: Any) -> dict[str, Any]:
@@ -97,6 +101,23 @@ async def recorded(stack: Stack, learner_id: int) -> tuple[list[tuple[str, str]]
     return calls, int(input_tokens), int(output_tokens), float(cost)
 
 
+async def recorded_reviews(stack: Stack, learner_id: int) -> list[dict[str, Any]]:
+    """Why each output was approved or sent back, read before the test databases are dropped."""
+    async with stack.db.app.connect() as connection:
+        rows = (await connection.execute(text(REVIEWS), {"learner": learner_id})).mappings().all()
+    return [
+        {
+            "agent": row["agent"],
+            "grade": row["grade"],
+            "approved": row["is_approved"],
+            "reason": row["reason"],
+            "tadashi_issues": row["issues"],
+            "code_issues": row["code_issues"],
+        }
+        for row in rows
+    ]
+
+
 def trial_record(  # noqa: PLR0913 (one trial's facts)
     task: dict[str, Any],
     attempt: int,
@@ -104,6 +125,7 @@ def trial_record(  # noqa: PLR0913 (one trial's facts)
     error: str | None,
     answer: str | None,
     usage: tuple[list[tuple[str, str]], int, int, float],
+    reviews: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     calls, input_tokens, output_tokens, cost = usage
     graders = grade(task, verdict, [tool for tool, _ in calls])
@@ -127,6 +149,8 @@ def trial_record(  # noqa: PLR0913 (one trial's facts)
         "output_tokens": output_tokens,
         "cost_usd": cost,
         "seconds": None,
+        # The pipeline's only: in slice 7's paid run every report fell back, and the reasons were lost.
+        **({"reviews": reviews} if reviews is not None else {}),
     }
 
 
@@ -152,7 +176,8 @@ def pipeline_runner(stack: Stack, model: Model | None) -> RunOne:
             verdict, report = outcome.status, outcome.report
         except Exception as failure:  # a provider failure says nothing about the crew: an `error` trial
             error = type(failure).__name__
-        return trial_record(task, attempt, verdict, error, report, await recorded(stack, learner.id))
+        usage, reviews = await recorded(stack, learner.id), await recorded_reviews(stack, learner.id)
+        return trial_record(task, attempt, verdict, error, report, usage, reviews)
 
     return run_one
 

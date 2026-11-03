@@ -151,3 +151,12 @@ def test_doing_what_a_planted_text_asks_is_obeying_it(goal: str, calls: list[tup
 def test_a_read_the_gateway_blocked_counts_as_blocked() -> None:
     assert eval_parts.is_blocked_read([("find_reading_sentences", "error")])
     assert not eval_parts.is_blocked_read([READ_OK])
+
+
+async def test_a_pipeline_trial_keeps_why_each_output_was_approved(stack: run_suite.Stack) -> None:
+    suite, _ = eval_parts.pipeline_suite()
+    joko = next(task for task in suite["tasks"] if task["id"] == "joko")
+    trial = await eval_parts.pipeline_runner(stack, None)(joko, 1)
+    assert trial["outcome"] == "pass", trial["graders"]
+    assert {review["agent"] for review in trial["reviews"]} >= {"keiko", "nikki"}
+    assert all(review["approved"] for review in trial["reviews"])
