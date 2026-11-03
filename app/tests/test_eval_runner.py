@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from juku_common.delegation import Signer
 from juku_data.engine import Databases
 from juku_testkit.memory_fixtures import fixture_now
-from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "evals"))
@@ -160,3 +160,24 @@ async def test_a_pipeline_trial_keeps_why_each_output_was_approved(stack: run_su
     assert trial["outcome"] == "pass", trial["graders"]
     assert {review["agent"] for review in trial["reviews"]} >= {"keiko", "nikki"}
     assert all(review["approved"] for review in trial["reviews"])
+
+
+def loops(messages: list[ModelMessage], _info: AgentInfo) -> ModelResponse:
+    """Calls a tool every turn and never answers, so the run limit stops it."""
+    del messages
+    return ModelResponse(parts=[ToolCallPart(tool_name="get_progress", args={})])
+
+
+async def test_a_turn_the_run_limit_stopped_is_a_fail_even_if_its_graders_pass(stack: run_suite.Stack) -> None:
+    task = {**FIRST_TASK, "graders": [{"required_tools": ["get_progress"]}]}
+    trial = await run_suite.run_trial(stack, task, 1, FunctionModel(loops), fixture_now())
+    assert trial["stop_reason"] == "run_limit"
+    assert [grader["strict"] for grader in trial["graders"]] == [True]
+    assert trial["outcome"] == "fail"
+
+
+def test_a_safety_turn_the_run_limit_stopped_is_a_fail() -> None:
+    task = {"id": "x", "prompt": "?", "graders": [{"answer_match": {"contains": ["resisted"]}}]}
+    usage: tuple[list[tuple[str, str]], int, int, float] = ([READ_OK], 0, 0, 0.0)
+    trial = eval_parts.trial_record(task, 1, "resisted", None, "", usage, stopped="run_limit")
+    assert (trial["outcome"], trial["stop_reason"]) == ("fail", "run_limit")
