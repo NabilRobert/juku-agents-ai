@@ -1000,13 +1000,17 @@ the eval gates and the fitness functions. Nothing is deleted.
 
 | Need | Today | The slice would add |
 |---|---|---|
-| Only the owner adds learners | Learners join only with an invite code, and only `juku issue-codes`, run on the server, makes them (ADR-013) | The same, from an owner-only page |
+| Only the owner adds learners | Learners join only with an invite code, and only `juku invite`, run on the server, makes them (ADR-013) | The same, from an owner-only page |
 | Only the owner removes learners | `juku delete-learner <public_id>`, on the server | The same, from that page |
-| Who the owner is | `JUKU_ADMIN_PUBLIC_IDS`, which guards the Run Inspector only | A `role` on each learner (`owner` or `learner`), set by migration for Arthur, replacing the setting |
+| Who the owner is | `JUKU_ADMIN_PUBLIC_IDS`, which guards the Run Inspector only | A `role` on each learner (`owner` or `learner`), replacing the setting. Set with `juku set-role` on the server, not by migration: Arthur's row doesn't exist until he signs up, and a public repo can't hold his ID |
 | Who added whom | A code records the learner who used it, not who issued it | An audit row per action: who, which learner, what, when |
 | A learner can't reach owner actions | The Run Inspector checks the admin list | Tests that every owner action refuses a learner, and that a learner can't make themselves owner |
 
-The slice is small: one migration, one page, one table, and tests. It waits for Arthur's go.
+The slice is small: one migration, one page, one table, and tests.
+
+> **Built 2026-11-03** (`feat/owner-role`): `app/src/juku_app/owner.py`, the page at `/admin/learners`,
+> migration `0004_app`, and `app/tests/test_owner_role.py`. An owner can't be removed until made a
+> learner again, and the app's database role can only read and add audit rows.
 
 **Dropped or paused:** work aimed only at other users.
 - **Slice 9 (launch and window):** paused. No invitation, no outreach and no counted weeks.
