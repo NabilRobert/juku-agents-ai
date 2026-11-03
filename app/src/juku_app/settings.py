@@ -36,8 +36,6 @@ class AppSettings(BaseSettings):
     secure_cookies: bool = True
     # The jobs' role, so the pipeline's cron commands record their runs for the "missed run" alert.
     ops_database_url: str | None = None
-    # Arthur's public ID (comma-separated if more): who may open the Run Inspector (AG3).
-    admin_public_ids: str = ""
 
     @property
     def juku_mcp_url(self) -> str:

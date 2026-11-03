@@ -97,8 +97,6 @@ services:
       JUKU_JUKU_MCP_AUDIT_LOG: /audit/juku-mcp/audit.jsonl
       JUKU_OPENJLPT_DIR: /data/openjlpt
       JUKU_CRISIS_LINE: ${JUKU_CRISIS_LINE:?set JUKU_CRISIS_LINE in ops/.env after checking the number}
-      # Who may open the Run Inspector: Arthur's public ID (AG3).
-      JUKU_ADMIN_PUBLIC_IDS: ${JUKU_ADMIN_PUBLIC_IDS:-}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${JUKU_OTLP_ENDPOINT:-}
     secrets:
       - juku_app_database_url

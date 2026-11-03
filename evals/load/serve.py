@@ -15,7 +15,7 @@ from typing import Any
 
 import uvicorn
 from juku_app.citations import NOT_IN_DATA
-from juku_app.cli import admin_ids, databases, settings, signing_key
+from juku_app.cli import databases, settings, signing_key
 from juku_app.logs import configure_logging
 from juku_app.moderation import PendingModerator
 from juku_app.web import WebDeps, create_web_app
@@ -77,7 +77,6 @@ def main() -> None:
         moderator=PendingModerator(),
         crisis_line=config.crisis_line,
         secure_cookies=config.secure_cookies,
-        admin_public_ids=admin_ids(config),
     )
     uvicorn.run(
         create_web_app(deps),
