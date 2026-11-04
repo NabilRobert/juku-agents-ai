@@ -38,8 +38,11 @@ from juku_data.memory.models import (
 
 # A refused proposal keeps only this much of its category, so a "category" that is really a sentence isn't stored.
 MAX_STORED_CATEGORY_CHARS = 40
-NO_NOTES = "Shiori has no notes about how this learner learns. Nothing else about them is remembered."
-SOME_NOTES = "These notes are all Shiori remembers about how this learner learns, each with its evidence."
+# Only active notes are shown, so a note the learner asks about may be missing because it lapsed (MEM4). Saying so
+# here lets Shiori answer "does that note still hold?" with "no" rather than talk about something else.
+NOT_LISTED = "A note that isn't listed doesn't hold now: it lapsed after newer activity, or the learner removed it."
+NO_NOTES = f"Shiori has no notes about how this learner learns. Nothing else about them is remembered. {NOT_LISTED}"
+SOME_NOTES = f"These notes are all Shiori remembers about how this learner learns, each with its evidence. {NOT_LISTED}"
 
 EVIDENCE_ROWS = """
 SELECT e.id, e.learner_id, t.name, e.item_id, w.level, e.result, e.occurred_at

@@ -64,7 +64,8 @@ SPECS = [
     ToolSpec(
         "get_mistakes",
         "The learner's mistakes queue (Leitner boxes 1-5): words they answered wrongly, with when each is due for "
-        "review.",
+        "review. A word marked known comes back here when answered wrongly, so use it for whether they still know a "
+        "word. It doesn't say when a word was last answered wrongly: get_memory's notes carry those dates.",
         NO_ARGUMENTS,
     ),
     ToolSpec(
@@ -94,7 +95,8 @@ SPECS = [
     ),
     ToolSpec(
         "get_memory",
-        "What Shiori remembers about how this learner learns: notes with their evidence. Read-only.",
+        "What Shiori remembers about how this learner learns: notes (such as a word they keep getting wrong), each "
+        "with its evidence, the dated answers behind it. Only notes that still hold are listed. Read-only.",
         NO_ARGUMENTS,
     ),
     ToolSpec(
