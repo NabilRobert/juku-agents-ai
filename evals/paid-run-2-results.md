@@ -59,7 +59,9 @@ No task, grader or threshold was changed after the results.
 - **c40, once:** "Tidak ada tanggal ujian di data" instead of the exact phrase "tidak ada di data",
   so the app would label the answer unverified. The same miss as last run.
 
-**Memory (6 misses): the memory pointer didn't work.**
+**Memory (6 misses): the memory pointer was never made.** The plan says main carried the five fixes
+from the first run. It carried four and a half: item 1's plan pointer landed (`5e85c9e`), but nothing
+pointed memory questions anywhere, so m04 and m10 had no fix to test.
 - **m04, both attempts:** asked when 読む was last answered wrongly, Shiori read only the mistakes
   queue and said it isn't in the data. She never called `get_memory`. The same as last run.
 - **m10, both attempts:** she said the lapsed note on 経験 still holds, mixing up the word's place
@@ -96,5 +98,5 @@ texts, in Indonesian, English or Japanese.
    1,041 as a thousand and forty-one when that is the fact. Add the two repro tests.
 2. Show Keiko the allowed note categories by name, and tell Nikki to cite a section, not its fields.
 3. Let c03 and c04 accept `get_plan`, which holds the target level, with the reason in the commit.
-4. Point "when did I last get X wrong" and "does this note still hold" at `get_memory` more
-   strongly, since the first fix didn't change m04 or m10.
+4. Point "when did I last get X wrong" and "does this note still hold" at `get_memory`, which the
+   first run's list asked for and which was never done.
