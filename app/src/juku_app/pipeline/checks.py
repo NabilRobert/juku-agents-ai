@@ -4,8 +4,10 @@ Tadashi checks too, but a model can miss a wrong number, and that is the
 cheap thing to check in code. So whatever Tadashi says, an output is
 blocked if:
 - a number in it isn't in the facts (the week's dates, and digits stuck
-  to letters such as "N5", aren't claims);
-- it cites nothing, or cites something not in the facts;
+  to letters such as "N5", aren't claims; "1.041" and "1,041" both
+  count as 1,041, since Indonesian groups thousands with dots);
+- it cites nothing, or cites something not in the facts (the facts'
+  own fields, such as target_level, and the IDs of words and notes);
 - it cites a note or a mistake that newer activity has since removed, or
   a note the learner removed, marked wrong, or saw lapse before the run
   (`retired`: never shown to agents, so a citation to one is stale memory,
@@ -28,11 +30,13 @@ from juku_common.rules import Rules
 from juku_app.pipeline.facts import WeekFacts
 from juku_app.pipeline.outputs import Issue, KeikoPlan
 
-# A number on its own: not part of a word ("N5", "2x") or of a longer number.
-NUMBER = re.compile(r"(?<![\w.,])\d+(?:[.,]\d+)?(?![\w]|[.,]\d)")
+# A number on its own, not part of a word ("N5", "2x"), with all its separators: "1.304.000" is one
+# number, so it's checked whole rather than skipped.
+NUMBER = re.compile(r"(?<![\w.,])\d+(?:[.,]\d+)*(?![\w]|[.,]\d)")
+SEPARATOR = re.compile(r"[.,]")
+DIGITS_PER_THOUSANDS_GROUP = 3
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 CITATION = re.compile(r"\[ref:([^\]\s]+)\]")
-SECTIONS = ("progress", "activity", "mistakes", "candidates", "plan", "memory")
 PERCENT = 100
 
 
@@ -41,8 +45,10 @@ def _issue(kind: str, reason: str, quote: str = "") -> Issue:
 
 
 def fact_ids(facts: WeekFacts) -> set[str]:
-    """Everything a citation may name: the sections, the words and the notes."""
-    ids = set(SECTIONS)
+    """Everything a citation may name: the facts' own fields, the words and the notes."""
+    # Agents see every top-level field (the sections, target_level, the week's dates), so each is
+    # citable. Fields inside a section are not.
+    ids = set(WeekFacts.model_fields)
     ids |= {word.word_id for word in facts.candidates.words}
     ids |= {item.word_id for item in facts.mistakes.items}
     ids |= {note.note_id for note in facts.memory.notes}
@@ -78,6 +84,26 @@ def fact_dates(facts: WeekFacts) -> set[str]:
     }
 
 
+def number_readings(written: str) -> set[float]:
+    """What a written number can mean. Indonesian groups thousands with dots, English with commas.
+
+    So "1.041" reads as both 1,041 and 1.041, "1.234,5" only as 1234.5, and "1.3.4" as nothing,
+    which is never in the facts.
+    """
+    groups = SEPARATOR.split(written)
+    separators = SEPARATOR.findall(written)
+    if not separators:
+        return {float(written)}
+    readings: set[float] = set()
+    is_grouped = len(set(separators)) == 1 and not groups[0].startswith("0")
+    if is_grouped and all(len(group) == DIGITS_PER_THOUSANDS_GROUP for group in groups[1:]):
+        readings.add(float("".join(groups)))
+    if separators.count(separators[-1]) == 1:
+        # The last separator appears once, so it can be the decimal mark, with any before it grouping thousands.
+        readings.add(float("".join(groups[:-1]) + "." + groups[-1]))
+    return readings
+
+
 def _number_issues(text: str, facts: WeekFacts) -> list[Issue]:
     dates = fact_dates(facts)
     # A citation is an ID, not a claim, and an ID can be all digits; _citation_issues checks it against the facts.
@@ -87,7 +113,7 @@ def _number_issues(text: str, facts: WeekFacts) -> list[Issue]:
     return [
         _issue("number_not_in_facts", f"{number} isn't in the facts", number)
         for number in NUMBER.findall(without_dates)
-        if float(number.replace(",", ".")) not in allowed
+        if not number_readings(number) & allowed
     ]
 
 
