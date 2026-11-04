@@ -243,6 +243,20 @@ async def test_consolidation_lapses_a_stale_note_and_records_why(
     assert [tuple(row) for row in recorded] == [("lapsed", "evidence_too_old")]
 
 
+async def test_after_a_note_lapses_memory_says_an_unlisted_note_no_longer_holds(
+    engine_databases: Databases, rules: Rules, learner: Learner, word: str
+) -> None:
+    # The second paid run: asked whether a lapsed note still held, Shiori saw "no notes" and answered about
+    # the mistakes queue instead. The result itself must say what a missing note means.
+    evidence = await three_misses(engine_databases, learner, word)
+    await propose_note(engine_databases, learner.id, confusion(evidence), proposed_by="keiko", rules=rules, now=NOW)
+    later = NOW + timedelta(days=rules.memory.evidence_max_age_days + 1)
+    await consolidate(engine_databases.app, learner.id, rules, later)
+    memory = await get_memory(engine_databases, learner.id, later)
+    assert memory.notes == [] and "isn't listed doesn't hold now" in memory.note
+    assert "isn't listed doesn't hold now" in (await get_memory(engine_databases, learner.id, NOW)).note
+
+
 async def test_consolidation_keeps_a_note_that_recurred_and_moves_its_evidence_date(
     engine_databases: Databases, rules: Rules, learner: Learner, word: str
 ) -> None:
