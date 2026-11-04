@@ -200,6 +200,47 @@ def test_the_weeks_dates_and_word_levels_are_not_counted_as_claims(rules: Rules)
     assert check_report(report, facts, facts, rules) == []
 
 
+# --- from the second paid run: true reports were blocked, so every learner got the fallback ---
+
+
+def with_plan_of(base: WeekFacts, words_in_scope: int, words_needed: int) -> WeekFacts:
+    """The facts with a real fixture learner's plan: hana's is 1,304 words in scope, 1,043 to go."""
+    plan_numbers = {"words_in_scope": words_in_scope, "words_needed": words_needed}
+    return base.model_copy(update={"plan": base.plan.model_copy(update=plan_numbers)})
+
+
+@pytest.mark.parametrize("field", ["target_level", "week_start", "week_end"])
+def test_the_target_level_and_the_weeks_dates_can_be_cited(rules: Rules, field: str) -> None:
+    # Agents are shown these three beside the sections; the run's agents cited them 150 times.
+    facts = sample_facts()
+    assert check_report(f"{GOOD_REPORT} Targetmu N5 [ref:{field}].", facts, facts, rules) == []
+
+
+@pytest.mark.parametrize("written", ["1.304", "1,304", "1304", "1.043"])
+def test_a_thousand_written_the_indonesian_or_english_way_is_in_the_facts(rules: Rules, written: str) -> None:
+    facts = with_plan_of(sample_facts(), words_in_scope=1304, words_needed=1043)
+    report = f"Masih {written} kata lagi [ref:plan]."
+    assert check_report(report, facts, facts, rules) == []
+
+
+@pytest.mark.parametrize("written", ["1.305", "1,305", "1.304.000", "1.304,5", "1.3.4"])
+def test_an_invented_number_is_still_blocked_however_it_is_written(rules: Rules, written: str) -> None:
+    facts = with_plan_of(sample_facts(), words_in_scope=1304, words_needed=1043)
+    report = f"Masih {written} kata lagi [ref:plan]."
+    assert kinds(check_report(report, facts, facts, rules)) == {"number_not_in_facts"}
+
+
+def test_a_decimal_comma_still_reads_as_a_decimal(rules: Rules) -> None:
+    facts = sample_facts()
+    assert check_report("Targetmu 0,8 dari kata N5 [ref:plan].", facts, facts, rules) == []
+
+
+def test_a_field_inside_a_section_is_still_not_citable(rules: Rules) -> None:
+    facts = sample_facts()
+    report = "Minggu ini kamu menjawab 12 kuis [ref:quiz_answers]."
+    assert kinds(check_report(report, facts, facts, rules)) == {"unknown_citation"}
+
+
 def test_a_report_without_a_citation_is_blocked(rules: Rules) -> None:
     facts = sample_facts()
     assert kinds(check_report("Minggu ini kamu menjawab 12 kuis.", facts, facts, rules)) == {"missing_citation"}
