@@ -63,21 +63,26 @@ async def _learner_tables(connection: AsyncConnection) -> list[str]:
     return [f"{quote(schema)}.{quote(table)}" for schema, table in rows]
 
 
+async def delete_learner_rows(connection: AsyncConnection, learner_id: int) -> dict[str, int]:
+    """Delete everything about the learner in the caller's transaction; return each table's count."""
+    counts: dict[str, int] = {}
+    for table in await _learner_tables(connection):
+        count = int(await connection.scalar(text(_count_rows(table)), {"id": learner_id}) or 0)
+        if count:
+            counts[table] = count
+    for table in KEEP_ANONYMOUS:
+        await connection.execute(
+            text(_remove_learner(table)),
+            {"id": learner_id},
+        )
+    await connection.execute(text("DELETE FROM learning.learners WHERE id = :id"), {"id": learner_id})
+    return counts
+
+
 async def delete_learner(engine: AsyncEngine, learner_id: int) -> dict[str, int]:
     """Delete everything about the learner; return how many rows each table lost or anonymised."""
-    counts: dict[str, int] = {}
     async with engine.begin() as connection:
-        for table in await _learner_tables(connection):
-            count = int(await connection.scalar(text(_count_rows(table)), {"id": learner_id}) or 0)
-            if count:
-                counts[table] = count
-        for table in KEEP_ANONYMOUS:
-            await connection.execute(
-                text(_remove_learner(table)),
-                {"id": learner_id},
-            )
-        await connection.execute(text("DELETE FROM learning.learners WHERE id = :id"), {"id": learner_id})
-    return counts
+        return await delete_learner_rows(connection, learner_id)
 
 
 def _plain(value: Any) -> Any:

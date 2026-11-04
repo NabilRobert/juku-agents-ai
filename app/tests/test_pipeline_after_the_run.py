@@ -4,6 +4,7 @@ import json
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ed25519
+from juku_app import owner
 from juku_app.invites import issue_codes
 from juku_app.pipeline.crew import CrewModels, build_crew, keiko_toolset
 from juku_app.pipeline.feedback import draft_feedback
@@ -127,7 +128,8 @@ async def test_the_run_inspector_is_for_arthur_only(engine_databases: Databases,
     async with client_for(deps(engine_databases)) as first_visit:
         await sign_up(first_visit, arthur_code, nickname="Arthur")
     arthur_id = str(await scalar(engine_databases, "SELECT public_id FROM learning.learners WHERE nickname = 'Arthur'"))
-    async with client_for(deps(engine_databases, admin_public_ids=frozenset({arthur_id}))) as arthur:
+    await owner.set_role(engine_databases.app, owner.COMMAND_LINE, arthur_id, "owner")
+    async with client_for(deps(engine_databases)) as arthur:
         page = await arthur.get("/masuk")
         await arthur.post("/masuk", data={"code": arthur_code, "csrf": csrf_of(page)})
         runs = await arthur.get("/admin/runs")

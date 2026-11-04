@@ -330,6 +330,12 @@ ensure-partitions` makes the next few months' ahead of time.
 test fail. If none fails, the tests miss something. `make mutation` runs
 mutmut; database code was broken by hand. Results are in JOURNEY.md.
 
+**Owner.** The learner who manages the others: Arthur, who is also an
+ordinary learner. `learning.learners.role` says who; only `juku
+set-role` changes it. The owner page (`/admin/learners`) issues invite
+codes and removes learners, and each action adds a row to
+`app.owner_actions` (`app/src/juku_app/owner.py`, ADR-029).
+
 **Per-call record.** One row in `monitoring.tool_calls` for each tool
 call: who, which tool, how long, the outcome. Never the content.
 
@@ -395,6 +401,14 @@ does; change it in the same commit if the behaviour changes.
    (`test_every_phrase_in_the_templates_has_an_indonesian_translation`
    fails until it's there).
 4. A test in `app/tests/test_web.py`.
+
+**Add or remove a learner.** As the owner, on `/admin/learners`, or on
+the server with `juku invite --count N` and `juku delete-learner
+PUBLIC_ID`. Both go through `owner.py`, so each is audited. To make
+someone owner (or undo it), `juku set-role PUBLIC_ID owner` (or
+`learner`); there's no page for that on purpose. A new owner-only page
+depends on `admin` (`routes/common.py`), and
+`test_every_owner_route_refuses_a_learner` covers it automatically.
 
 **Change what Shiori is told.** `shiori.py: INSTRUCTIONS`.
 

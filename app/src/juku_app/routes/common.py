@@ -26,7 +26,7 @@ from juku_data.engine import Databases, LearnerNotFoundError
 from juku_data.engine.models import Learner
 from sqlalchemy import text
 
-from juku_app import assets, i18n
+from juku_app import assets, i18n, owner
 from juku_app.chat import ChatServices
 from juku_app.consent import has_current_consent
 from juku_app.ruby import furigana_to_ruby
@@ -44,7 +44,6 @@ class WebContext:
     rules: Rules
     chat: ChatServices
     views: Jinja2Templates
-    admin_public_ids: frozenset[str]
 
 
 @dataclass
@@ -133,7 +132,7 @@ async def page(request: Request, learner: Learner = Depends(signed_in)) -> Page:
 
 
 async def admin(request: Request, learner: Learner = Depends(signed_in)) -> Learner:  # noqa: B008
-    """Arthur only: anyone else gets the same 404 as a page that doesn't exist."""
-    if learner.public_id not in web(request).admin_public_ids:
+    """The owner only (ADR-029): anyone else gets the same 404 as a page that doesn't exist."""
+    if not await owner.is_owner(web(request).db.app, learner.id):
         raise HTTPException(status_code=404)
     return learner

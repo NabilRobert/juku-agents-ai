@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 # 6 bytes of lookup and 15 of secret: short enough to type, 120 bits that can't be guessed.
 LOOKUP_BYTES = 6
@@ -32,18 +32,23 @@ class Invite:
     learner_id: int | None
 
 
+async def insert_codes(connection: AsyncConnection, count: int) -> list[str]:
+    """Make `count` codes in the caller's transaction; return them once. Only their hashes are stored."""
+    codes: list[str] = []
+    for _ in range(count):
+        lookup, secret = secrets.token_urlsafe(LOOKUP_BYTES), secrets.token_urlsafe(SECRET_BYTES)
+        await connection.execute(
+            text("INSERT INTO app.invite_codes (lookup, secret_hash) VALUES (:lookup, :hash)"),
+            {"lookup": lookup, "hash": hasher.hash(secret)},
+        )
+        codes.append(f"{lookup}.{secret}")
+    return codes
+
+
 async def issue_codes(engine: AsyncEngine, count: int) -> list[str]:
     """Make `count` codes; return them once. Only their hashes are stored."""
-    codes: list[str] = []
     async with engine.begin() as connection:
-        for _ in range(count):
-            lookup, secret = secrets.token_urlsafe(LOOKUP_BYTES), secrets.token_urlsafe(SECRET_BYTES)
-            await connection.execute(
-                text("INSERT INTO app.invite_codes (lookup, secret_hash) VALUES (:lookup, :hash)"),
-                {"lookup": lookup, "hash": hasher.hash(secret)},
-            )
-            codes.append(f"{lookup}.{secret}")
-    return codes
+        return await insert_codes(connection, count)
 
 
 async def redeem(engine: AsyncEngine, code: str) -> Invite:

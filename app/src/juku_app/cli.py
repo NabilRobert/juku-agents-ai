@@ -3,6 +3,7 @@
     juku serve                     the web app (in its container)
     juku invite --count 10         make invite codes; they're shown once, and only their hashes are kept
     juku delete-learner PUBLIC_ID  "Hapus data saya" for someone who has lost their code
+    juku set-role PUBLIC_ID owner  make a learner the owner (ADR-029); `learner` undoes it
     juku render-previews           static copies of the pages, for Lighthouse CI (FF12)
 
 The weekly pipeline (`juku run-weekly`) and memory consolidation
@@ -13,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import Counter
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -24,8 +25,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from fastapi import FastAPI
 from juku_common.delegation import NotEd25519KeyError, Signer, private_key_from_pem
 from juku_common.rules import Rules, load_rules
-from juku_data import engine
-from juku_data.engine import Databases
+from juku_data.engine import Databases, LearnerNotFoundError
 from juku_ops.jobs import recorded_run
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models import Model
@@ -34,7 +34,7 @@ from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
-from juku_app import invites, privacy
+from juku_app import owner
 from juku_app.budget import BudgetGuard
 from juku_app.connections import command_engine
 from juku_app.logs import configure_logging
@@ -105,10 +105,6 @@ def signing_key(config: AppSettings) -> ed25519.Ed25519PrivateKey:
         raise SystemExit(str(wrong)) from None
 
 
-def admin_ids(config: AppSettings) -> frozenset[str]:
-    return frozenset(part.strip() for part in config.admin_public_ids.split(",") if part.strip())
-
-
 def build_app(config: AppSettings) -> FastAPI:
     rules = load_rules()
     return create_web_app(
@@ -123,7 +119,6 @@ def build_app(config: AppSettings) -> FastAPI:
             moderator=PendingModerator(),
             crisis_line=config.crisis_line,
             secure_cookies=config.secure_cookies,
-            admin_public_ids=admin_ids(config),
         )
     )
 
@@ -207,39 +202,45 @@ def serve(
     uvicorn.run(build_app(settings()), host=host, port=port, log_level="warning")
 
 
-@app.command()
-def invite(count: Annotated[int, typer.Option(min=1, max=100, help="How many codes.")] = 1) -> None:
-    """Make invite codes. They're printed once; only their hashes are stored."""
+def run_owner_action[Result](action: Callable[[AsyncEngine], Awaitable[Result]]) -> Result:
+    """One owner action from the server's command line, audited as such; a refusal is printed, not a traceback."""
     config = settings()
 
-    async def run() -> list[str]:
+    async def run() -> Result:
         db = command_databases(config, load_rules())
         try:
-            return await invites.issue_codes(db.app, count)
+            return await action(db.app)
         finally:
             await db.app.dispose()
             await db.dictionary.dispose()
 
-    for code in asyncio.run(run()):
+    try:
+        return asyncio.run(run())
+    except (owner.OwnerActionRefusedError, LearnerNotFoundError) as refused:
+        raise SystemExit(str(refused)) from None
+
+
+@app.command()
+def invite(
+    count: Annotated[int, typer.Option(min=1, max=owner.MAX_CODES_AT_ONCE, help="How many codes.")] = 1,
+) -> None:
+    """Make invite codes. They're printed once; only their hashes are stored."""
+    for code in run_owner_action(lambda app_engine: owner.issue_codes(app_engine, owner.COMMAND_LINE, count)):
         typer.echo(code)
 
 
 @app.command("delete-learner")
 def delete_learner(public_id: str) -> None:
     """Delete everything about one learner, on their request."""
-    config = settings()
-
-    async def run() -> dict[str, int]:
-        db = command_databases(config, load_rules())
-        try:
-            learner = await engine.get_learner(db, public_id)
-            return await privacy.delete_learner(db.app, learner.id)
-        finally:
-            await db.app.dispose()
-            await db.dictionary.dispose()
-
-    removed = asyncio.run(run())
+    removed = run_owner_action(lambda app_engine: owner.remove_learner(app_engine, owner.COMMAND_LINE, public_id))
     typer.echo("deleted: " + ", ".join(f"{table} {count}" for table, count in removed.items()))
+
+
+@app.command("set-role")
+def set_role(public_id: str, role: Annotated[owner.Role, typer.Argument(help="owner or learner.")]) -> None:
+    """Make a learner the owner, or a learner again. The only way to make an owner: there's no page for it."""
+    run_owner_action(lambda app_engine: owner.set_role(app_engine, owner.COMMAND_LINE, public_id, role))
+    typer.echo(f"{public_id} is now {role}")
 
 
 @app.command("render-previews")

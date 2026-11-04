@@ -33,12 +33,12 @@ from juku_app import assets
 from juku_app.budget import BudgetGuard
 from juku_app.chat import ChatServices
 from juku_app.moderation import Moderator
-from juku_app.routes import account, admin, chat, learning, memory, reports, settings, site
+from juku_app.routes import account, admin, chat, learning, memory, owner, reports, settings, site
 from juku_app.routes.common import Redirect, WebContext, templates
 from juku_app.shiori import build_shiori, juku_toolset
 
 SESSION_DAYS = 30
-ROUTERS = (account, settings, learning, chat, memory, reports, admin, site)
+ROUTERS = (account, settings, learning, chat, memory, reports, admin, owner, site)
 
 
 @dataclass(frozen=True)
@@ -53,8 +53,6 @@ class WebDeps:
     moderator: Moderator
     crisis_line: str
     secure_cookies: bool = True
-    # Who may open the Run Inspector (AG3): Arthur's own public ID, from the settings.
-    admin_public_ids: frozenset[str] = frozenset()
 
 
 def _context(deps: WebDeps, guard: BudgetGuard) -> WebContext:
@@ -66,9 +64,7 @@ def _context(deps: WebDeps, guard: BudgetGuard) -> WebContext:
         app=deps.db.app,
         crisis_line=deps.crisis_line,
     )
-    return WebContext(
-        db=deps.db, rules=deps.rules, chat=chat_services, views=templates(), admin_public_ids=deps.admin_public_ids
-    )
+    return WebContext(db=deps.db, rules=deps.rules, chat=chat_services, views=templates())
 
 
 async def redirect(_: Request, exception: Exception) -> Response:

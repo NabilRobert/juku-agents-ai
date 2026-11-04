@@ -13,6 +13,59 @@
   "methods": [
    "GET"
   ],
+  "path": "/admin/learners",
+  "name": "learners_page",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "admin",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/admin/learners/codes",
+  "name": "issue_codes",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf",
+   [
+    "admin",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/admin/learners/remove",
+  "name": "remove_learner",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf",
+   [
+    "admin",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
   "path": "/admin/runs",
   "name": "admin_runs",
   "response_class": "JSONResponse",
