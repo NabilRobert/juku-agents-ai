@@ -440,6 +440,15 @@ does; change it in the same commit if the behaviour changes.
    fails until it's there).
 5. A test in `app/tests/test_web.py`; `page_props` reads what the page shows.
 
+**Change the language.** The pages' phrases are written in English and
+translated in `app/src/juku_app/locale/id/LC_MESSAGES/messages.po`. The
+ID | EN switch in the header (`components/LanguageSwitch.vue`) posts to
+`/bahasa` (`routes/site.py`), which keeps the choice in the session;
+`render` sets it per request (`i18n.use_language`). Still Indonesian in
+English mode: the consent notice (versioned legal text), the data notice,
+the engine's own sentences (a recommendation's reason, the plan's
+formula) and Shiori's answers.
+
 **Change the colours.** They are the tokens in `app/web/src/styles.css`'s
 `@theme` (ink, gold, amber, orange, lemon, cream). Keep text on the yellows
 and the orange ink-coloured: white on them is too faint to read.
