@@ -12,6 +12,10 @@
 #   container (asked of Project 4, 2026-11-04).
 # - The model is unreachable on purpose: no key, and an address that
 #   refuses connections, so a rehearsal can never spend.
+# - The session cookie without the Secure flag: the laptop serves plain
+#   http, and Safari drops a Secure cookie there (Chrome makes an exception
+#   for 127.0.0.1), so every form failed its CSRF check as "Formulir
+#   kedaluwarsa" (found 2026-11-05). The server serves https and keeps it.
 name: juku-rehearsal
 
 networks:
@@ -56,6 +60,7 @@ services:
       db: {condition: service_healthy}
     environment:
       JUKU_MODEL_BASE_URL: http://127.0.0.1:9/v1
+      JUKU_SECURE_COOKIES: "false"
 
   juku-mcp:
     depends_on:

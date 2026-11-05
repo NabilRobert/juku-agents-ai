@@ -32,6 +32,12 @@ def test_the_model_is_unreachable_in_a_rehearsal() -> None:
     assert url.hostname == "127.0.0.1"
 
 
+def test_only_the_rehearsal_drops_the_secure_cookie_flag() -> None:
+    # Safari won't keep a Secure cookie over the laptop's plain http; the server, on https, must keep the default.
+    assert rehearsal()["services"]["app"]["environment"]["JUKU_SECURE_COOKIES"] == "false"
+    assert "JUKU_SECURE_COOKIES" not in (OPS / "compose.yaml").read_text(encoding="utf-8")
+
+
 def test_the_rehearsal_empties_the_model_key() -> None:
     script = (OPS / "rehearse.sh").read_text(encoding="utf-8")
     assert re.search(r"^\s*: >juku_model_api_key$", script, re.MULTILINE)
