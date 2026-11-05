@@ -61,6 +61,21 @@ async def mark_known(
     return RedirectResponse(f"/kata/{word_id}" if back_to == "word" else "/beranda", status_code=303)
 
 
+@router.post("/rekomendasi/{word_id}/dikuasai", dependencies=[Depends(header_csrf)])
+async def mark_recommended_known(request: Request, word_id: str, current: Page = Depends(page)) -> JSONResponse:  # noqa: B008
+    """The home page's "I know this word", without a reload: the new count and the next recommendations."""
+    db = web(request).db
+    try:
+        await engine.mark_known(db, current.learner.id, word_id, datetime.now(UTC))
+    except UnknownWordError:
+        return JSONResponse({"error": "unknown_word"}, status_code=404)
+    progress = await engine.get_progress(db, current.learner.id)
+    recommendations = await engine.recommend_words(db, current.learner.id)
+    return JSONResponse(
+        {"known_words": progress.known_words, "words": [word.model_dump(mode="json") for word in recommendations.words]}
+    )
+
+
 @router.get("/kuis")
 async def quiz(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008
     made = await engine.make_quiz(web(request).db, current.learner.id, current.today)
