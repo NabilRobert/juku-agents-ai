@@ -374,6 +374,9 @@ rewrite a big table (FF4, `make migrations-lint`).
 **Summaries.** The tables the engine reads instead of recounting events:
 `learner_state`, `learner_coverage`, `learner_daily_activity`.
 
+**Rehearsal.** The server's compose stack run on a laptop at $0, to find
+deploy problems before the server step (`ops/rehearse.sh`, slice 8).
+
 ## Where to change things
 
 **Add an MCP tool.**
@@ -408,8 +411,13 @@ PUBLIC_ID`. Both go through `owner.py`, so each is audited. To make
 someone owner (or undo it), `juku set-role PUBLIC_ID owner` (or
 `learner`); there's no page for that on purpose. `juku learners` lists
 every learner's public ID and role, which is how the first owner finds
-their own. A new owner-only page
-depends on `admin` (`routes/common.py`), and
+their own. On the server each runs in its own container, from `/srv/juku`:
+`docker compose -f ops/compose.yaml run --rm --no-deps -T app juku invite --count 1`.
+Not with `exec` inside the running app's container: the `juku` command
+loads the whole app (about 140 MiB), and with the web app beside it that
+passes the container's 256 MB cap, so the kernel kills both. The two
+weekly jobs in `ops/crontab` run the same way, for the same reason. A new
+owner-only page depends on `admin` (`routes/common.py`), and
 `test_every_owner_route_refuses_a_learner` covers it automatically.
 
 **Change what Shiori is told.** `shiori.py: INSTRUCTIONS`.
@@ -427,6 +435,21 @@ default. The `JUKU_MODEL_*` settings
 `ops/.env`, run `ops/make-secrets.sh`, then `ops/db/setup.sh` with the
 provider's admin login (`PGHOST=... PGUSER=... ops/db/setup.sh`). Then
 the migrations, as `juku_migrator`, and the dictionary load.
+
+**Rehearse the server's stack on a laptop.** `ops/rehearse.sh up`, then
+`check`, then `down`. It runs `ops/compose.yaml` with
+`ops/rehearsal/compose.yaml` on top: a local Postgres with TLS instead of
+the managed one, no model key, and the gateway's networks made locally.
+`check` checks Grafana's data source and that the heartbeat alert fires,
+runs every line of `ops/crontab` once exactly as cron would, runs the
+owner's commands, and fails if any of that made the web app restart (a
+sign of its memory cap). `down` deletes its volumes and the secrets it
+made. To add a check, add it to `check` in the script.
+`test_rehearsal.py` keeps the rehearsal from spending, and from changing
+anything the server runs. Its first runs found four deploy bugs: the
+dictionary sync needed a grant the app's role doesn't have, the audit
+import crashed before the gateway's first call, and the weekly jobs and
+the owner's commands killed the web app by passing its memory cap.
 
 **Give a service more connections.** Change its share in
 guardrails.yaml's `database` section and the matching `CONNECTION
