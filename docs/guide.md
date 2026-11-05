@@ -360,7 +360,11 @@ mutmut; database code was broken by hand. Results are in JOURNEY.md.
 ordinary learner. `learning.learners.role` says who; only `juku
 set-role` changes it. The owner page (`/admin/learners`) issues invite
 codes and removes learners, and each action adds a row to
-`app.owner_actions` (`app/src/juku_app/owner.py`, ADR-029).
+`app.owner_actions` (`app/src/juku_app/owner.py`, ADR-029). The owner
+sees links to the owner pages in the menu and on the home page
+(`Page.is_owner`); they're only links: each owner page checks the role
+in the database itself (`routes/common.py: admin`), and anyone else gets
+a 404.
 
 **Per-call record.** One row in `monitoring.tool_calls` for each tool
 call: who, which tool, how long, the outcome. Never the content.

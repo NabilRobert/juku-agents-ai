@@ -15,7 +15,7 @@ from pipeline_helpers import scalar
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 from test_route_table import api_routes, dependency_names
-from web_helpers import client_for, csrf_of, deps, page_props, sign_up
+from web_helpers import client_for, csrf_of, deps, page_props, shell_props, sign_up
 
 # The learner a code signed up: the tests share one database, so nicknames may repeat.
 LEARNER_OF_CODE = """
@@ -98,6 +98,26 @@ async def test_the_owner_is_also_a_learner(engine_databases: Databases) -> None:
     async with aclosing(client):
         assert (await client.get("/beranda")).status_code == 200
         assert (await client.get("/kuis")).status_code == 200
+
+
+async def test_the_owner_sees_the_owner_pages_in_the_menu_and_on_the_home_page(engine_databases: Databases) -> None:
+    client, public_id = await signed_up(engine_databases, "Penjaga")
+    await owner.set_role(engine_databases.app, owner.COMMAND_LINE, public_id, "owner")
+    async with aclosing(client):
+        home, quiz, learners = [await client.get(path) for path in ("/beranda", "/kuis", "/admin/learners")]
+    for page in (home, quiz, learners):
+        assert [link["href"] for link in shell_props(page)["ownerLinks"]] == ["/admin/learners", "/admin/runs"]
+    assert page_props(home)["isOwner"] is True
+
+
+async def test_a_learner_sees_no_owner_pages_anywhere(engine_databases: Databases) -> None:
+    client, _ = await signed_up(engine_databases, "Murid")
+    async with aclosing(client):
+        home, quiz = [await client.get(path) for path in ("/beranda", "/kuis")]
+    for page in (home, quiz):
+        assert shell_props(page)["ownerLinks"] == []
+        assert "/admin/" not in page.text
+    assert page_props(home)["isOwner"] is False
 
 
 async def test_a_new_learner_can_find_their_public_id_to_become_owner(engine_databases: Databases) -> None:

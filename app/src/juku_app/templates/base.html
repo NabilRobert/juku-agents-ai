@@ -12,6 +12,7 @@
 </head>
 <body class="min-h-screen bg-cream text-ink antialiased" data-page="{{ page_name | default('') }}">
   <div id="app"><noscript>{{ _("Juku needs JavaScript.") }}</noscript></div>
+  {# ownerLinks: only for the owner. The owner pages refuse anyone else themselves (routes/common.py: admin). #}
   {{ json_script("shell-data", {
     "csrf": csrf | default(""),
     "signedIn": page is defined and page is not none,
@@ -24,6 +25,9 @@
       {"slug": "ingat", "label": _("Shiori remembers")}, {"slug": "pengaturan", "label": _("Settings")},
     ],
     "aboutData": _("About the data"),
+    "ownerLinks": [
+      {"href": "/admin/learners", "label": _("Learners")}, {"href": "/admin/runs", "label": _("Run Inspector")},
+    ] if page is defined and page and page.is_owner else [],
     "study": {
       "explain": _("Explain"), "hide": _("Hide"), "words": _("Words in this sentence"),
       "grammar": _("Grammar this sentence may use"), "grammarNote": _("Found by pattern, so a few may not apply."),

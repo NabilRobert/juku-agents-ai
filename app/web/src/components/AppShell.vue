@@ -3,6 +3,10 @@
 import type { Shell } from "../lib/types";
 
 defineProps<{ shell: Shell }>();
+
+function isCurrent(href: string): boolean {
+  return window.location.pathname.startsWith(href);
+}
 </script>
 
 <template>
@@ -25,6 +29,14 @@ defineProps<{ shell: Shell }>();
               : 'text-white/80 hover:bg-white/10 hover:text-lemon'
           "
           >{{ section.label }}</a
+        >
+        <a
+          v-for="link in shell.ownerLinks"
+          :key="link.href"
+          :href="link.href"
+          class="owner-link shrink-0 rounded-full border border-orange/70 px-3 py-1.5 font-medium text-orange no-underline transition hover:bg-orange hover:text-ink"
+          :class="{ 'bg-orange text-ink': isCurrent(link.href) }"
+          >{{ link.label }}</a
         >
       </nav>
     </div>

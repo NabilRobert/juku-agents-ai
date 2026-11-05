@@ -54,11 +54,15 @@ class Redirect(Exception):
 
 @dataclass(frozen=True)
 class Page:
-    """What every learner page gets: the learner, their nickname, and their local date."""
+    """What every learner page gets: the learner, their nickname, their local date, and whether they're the owner.
+
+    `is_owner` only decides which links the page shows; the owner pages check for themselves (`admin`).
+    """
 
     learner: Learner
     nickname: str
     today: date = field(default_factory=date.today)
+    is_owner: bool = False
 
 
 def web(request: Request) -> WebContext:
@@ -132,11 +136,15 @@ async def page(request: Request, learner: Learner = Depends(signed_in)) -> Page:
     if not await has_current_consent(web(request).db.app, learner.id):
         raise Redirect("/persetujuan")
     today = datetime.now(UTC).astimezone(ZoneInfo(learner.timezone)).date()
-    return Page(learner=learner, nickname=await nickname_of(request, learner), today=today)
+    is_owner = await owner.is_owner(web(request).db.app, learner.id)
+    return Page(learner=learner, nickname=await nickname_of(request, learner), today=today, is_owner=is_owner)
 
 
-async def admin(request: Request, learner: Learner = Depends(signed_in)) -> Learner:  # noqa: B008
-    """The owner only (ADR-029): anyone else gets the same 404 as a page that doesn't exist."""
-    if not await owner.is_owner(web(request).db.app, learner.id):
+async def admin(current: Page = Depends(page)) -> Page:  # noqa: B008
+    """The owner only (ADR-029): anyone else gets the same 404 as a page that doesn't exist.
+
+    It reads the role from the database on every request (in `page`), never from a hidden link or the session.
+    """
+    if not current.is_owner:
         raise HTTPException(status_code=404)
-    return learner
+    return current
