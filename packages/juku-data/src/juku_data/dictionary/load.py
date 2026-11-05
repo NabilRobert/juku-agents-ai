@@ -176,6 +176,11 @@ async def _load_breakdowns(connection: AsyncConnection, breakdowns: list[Breakdo
     await _copy(connection, "sentence_breakdown", records)
 
 
+async def _load_grammar_order(connection: AsyncConnection, rows: OpenJlptRows) -> None:
+    positions = [(grammar_id, position) for position, grammar_id in enumerate(rows.grammar_order, start=1)]
+    await _copy(connection, "grammar_position", positions)
+
+
 async def _copy_source_tables(
     connection: AsyncConnection, rows: OpenJlptRows, supplement: list[SupplementWord]
 ) -> None:
@@ -246,6 +251,7 @@ async def load_dictionary(
         await _copy_source_tables(connection, rows, supplement)
         await _load_reading_index(connection, index)
         await _load_breakdowns(connection, sentence_data.breakdowns)
+        await _load_grammar_order(connection, rows)
         await _record_meta(connection, commit, source, index if with_reading_index else None)
         await _execute_script(connection, KEYS_SQL)
         await _execute_script(connection, DERIVED_SQL)

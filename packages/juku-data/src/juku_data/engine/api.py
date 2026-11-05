@@ -12,10 +12,13 @@ from datetime import date, datetime
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from juku_data.engine import learners, quiz, reads, writes
+from juku_data.engine import learners, quiz, reads, study, writes
 from juku_data.engine.learners import LearnerNotFoundError
 from juku_data.engine.models import (
     GradedAnswer,
+    GrammarPoint,
+    GrammarSummary,
+    KanjiEntry,
     KnownWords,
     Learner,
     Mistakes,
@@ -26,6 +29,8 @@ from juku_data.engine.models import (
     ReadingSentences,
     RecentActivity,
     Recommendations,
+    SentenceBreakdown,
+    WordEntry,
 )
 from juku_data.engine.recompute import MARKED_KNOWN, UNMARKED_KNOWN, rebuild_learners, verify_learners
 from juku_data.engine.writes import UnknownWordError
@@ -137,6 +142,26 @@ async def recommend_words(db: Databases, learner_id: int) -> Recommendations:
 
 async def find_reading_sentences(db: Databases, learner_id: int) -> ReadingSentences:
     return await reads.find_reading_sentences(db.app, db.dictionary, learner_id)
+
+
+async def get_word(db: Databases, learner_id: int, word_id: str) -> WordEntry | None:
+    return await study.word_entry(db.app, db.dictionary, learner_id, word_id)
+
+
+async def get_grammar_at_level(db: Databases, level: int) -> list[GrammarSummary]:
+    return await study.grammar_at_level(db.dictionary, level)
+
+
+async def get_grammar_point(db: Databases, grammar_id: str) -> GrammarPoint | None:
+    return await study.grammar_point(db.dictionary, grammar_id)
+
+
+async def explain_sentences(db: Databases, learner_id: int, sentences: list[str]) -> dict[str, SentenceBreakdown]:
+    return await study.explain_sentences(db.app, db.dictionary, learner_id, sentences)
+
+
+async def get_kanji(db: Databases, learner_id: int, kanji: str) -> KanjiEntry | None:
+    return await study.kanji_entry(db.app, db.dictionary, learner_id, kanji)
 
 
 async def get_plan(db: Databases, learner_id: int, today: date) -> Plan:

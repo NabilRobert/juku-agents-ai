@@ -22,6 +22,7 @@ CREATE TABLE sentence (
     content_words smallint NOT NULL);
 CREATE TABLE sentence_word (sentence_id integer NOT NULL, word_id text NOT NULL);
 CREATE TABLE sentence_breakdown (ja text NOT NULL, tokens jsonb NOT NULL, grammar_ids jsonb NOT NULL);
+CREATE TABLE grammar_position (id text NOT NULL, position smallint NOT NULL);
 CREATE TABLE meta (
     openjlpt_commit text NOT NULL, sqlite_sha256 text NOT NULL, loaded_at timestamptz NOT NULL DEFAULT now(),
     sentences_total integer, content_tokens integer, content_tokens_mapped integer);
@@ -38,6 +39,8 @@ ALTER TABLE supplement_word ADD PRIMARY KEY (id);
 ALTER TABLE sentence ADD PRIMARY KEY (sentence_id);
 ALTER TABLE sentence_word ADD PRIMARY KEY (sentence_id, word_id);
 ALTER TABLE sentence_breakdown ADD PRIMARY KEY (ja);
+ALTER TABLE grammar_position ADD PRIMARY KEY (id);
+ALTER TABLE grammar_position ADD FOREIGN KEY (id) REFERENCES grammar;
 CREATE INDEX ON vocab (word);
 CREATE INDEX ON vocab (reading);
 CREATE INDEX ON vocab (jmdict_id);
@@ -83,6 +86,7 @@ TABLE_COMMENTS = {
     "supplement_word": "Juku's reviewed supplement: common words in no JLPT list; they have no level.",
     "sentence": "Example sentences in which every content word maps to one word (reading practice).",
     "sentence_word": "Which words each reading-practice sentence contains.",
+    "grammar_position": "Each grammar point's place in OpenJLPT's own (teaching) order, from 1.",
     "sentence_breakdown": (
         "Each example sentence (words' and grammar points'), as tokens {surface, reading, kind, word_ids} "
         "and the grammar point IDs it may use (matched by pattern, so some senses are possible, not certain)."
