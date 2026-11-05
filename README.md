@@ -116,7 +116,7 @@ uv run juku render-previews --out build/previews
 | `evals/` | Agent evals and their fixture learners: `run_suite.py` runs a suite on the real Shiori, `chat/` holds Q1's 40 tasks and the chat rubric, `memory/` holds MEM1's 15 tasks (agent-eval-harness's format), `pipeline/` the weekly pipeline's 10 learners and the planted bad outputs `load/` holds the load test (FF10): `run.py`, Locust and `results.md`. |
 | `migrations/` | Alembic for the `app` database, one branch per owner (`monitoring`, `data`, `app`) |
 | `guardrails.yaml` | Every limit Juku enforces, in one reviewed file, including the fitness functions' status and thresholds |
-| `ops/` | Deployment: `compose.yaml`, the laptop rehearsal (`rehearse.sh`, `rehearsal/`), the managed database's roles and set-up script, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
+| `ops/` | Deployment (`docs/deploy.md`): `compose.yaml`, the laptop rehearsal (`rehearse.sh`, `rehearsal/`), Arthur's local use (`local/juku.sh`), the managed database's roles and set-up script, the crontab, Grafana's dashboards and alerts, and the gateway's routes for Juku |
 | `docs/planning/` | Specs and plans: phase 1–2, slice plan, scale path, standard checks, spike write-ups |
 | `docs/adr/` | Architecture decisions (ADR-001 to ADR-027) and their index |
 

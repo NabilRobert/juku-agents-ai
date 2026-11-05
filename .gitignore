@@ -35,8 +35,9 @@ build/
 node_modules/
 .lighthouseci/
 
-# Server secrets, made by ops/make-secrets.sh
-ops/secrets/
+# Server secrets, made by ops/make-secrets.sh. No trailing slash: in local use, ops/secrets is a link to
+# ~/.juku/secrets (docs/deploy.md), and "ops/secrets/" would match only a folder, not a link.
+ops/secrets
 ops/.env
 ops/gateway-audit/
 

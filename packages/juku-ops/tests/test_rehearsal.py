@@ -38,10 +38,10 @@ def test_only_the_rehearsal_drops_the_secure_cookie_flag() -> None:
     assert "JUKU_SECURE_COOKIES" not in (OPS / "compose.yaml").read_text(encoding="utf-8")
 
 
-def test_the_rehearsal_never_loads_the_real_model_override() -> None:
-    # rehearsal/real-model.yaml is for Arthur's own use, with his OK of the spend; the rehearsal stays at $0.
-    assert (OPS / "rehearsal" / "real-model.yaml").is_file()
-    assert "-f rehearsal/real-model.yaml" not in (OPS / "rehearse.sh").read_text(encoding="utf-8")
+def test_the_rehearsal_never_loads_the_local_use_override() -> None:
+    # local/use.yaml is Arthur's own use, with his OK of the spend; the rehearsal stays at $0.
+    assert (OPS / "local" / "use.yaml").is_file()
+    assert "local/use.yaml" not in (OPS / "rehearse.sh").read_text(encoding="utf-8")
 
 
 def test_the_gateway_config_is_written_from_jukus_own_routes() -> None:

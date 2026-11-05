@@ -1,0 +1,22 @@
+# Arthur's own use of Juku on his Mac (local-use mode), on top of compose.yaml and rehearsal/compose.yaml.
+# Run it with ops/local/juku.sh, never with rehearse.sh: a rehearsal's `up` re-runs the database set-up and
+# empties the model key, and its `down` deletes volumes.
+#
+# - The model's real address again (settings.py's default), with Arthur's OK of the chat spend (2026-11-05:
+#   about $0.0023 a question, at most about $0.07 a day under guardrails.yaml's 20 questions a day). It spends
+#   only with a real key in ops/secrets/juku_model_api_key. rehearse.sh never loads this file, so a rehearsal
+#   still can't spend.
+# - The database on a named volume that compose doesn't own (external), so no `down -v`, recreate or Docker
+#   clean-up of the project deletes or orphans it. juku.sh creates it once; its backups go to ~/Backups/juku.
+services:
+  app:
+    environment:
+      JUKU_MODEL_BASE_URL: https://ai.sumopod.com/v1
+  db:
+    volumes:
+      - learner-data:/var/lib/postgresql/data
+
+volumes:
+  learner-data:
+    name: juku-local-pgdata
+    external: true

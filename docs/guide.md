@@ -546,15 +546,11 @@ import crashed before the gateway's first call, the weekly jobs and the
 owner's commands killed the web app by passing its memory cap, and Safari
 couldn't sign in over the laptop's plain http.
 
-**Use Juku yourself on the laptop, with real chat.** After `up`, copy
-`JUKU_MODEL_API_KEY` from `.env` into `ops/secrets/juku_model_api_key`
-(without printing it), then recreate the app with
-`ops/rehearsal/real-model.yaml` added: `docker compose --env-file
-rehearsal/rehearsal.env -f compose.yaml -f rehearsal/compose.yaml -f
-rehearsal/real-model.yaml up -d --no-deps app`, from `ops/`. Chat then
-spends, within `guardrails.yaml`'s budget (a question cost $0.002 to
-$0.004 on 2026-11-05). The rehearsal never loads that file, and `up`
-empties the key again. Stop the stack with `stop`, never `down`.
+**Use Juku yourself on the laptop.** Local-use mode: `ops/local/juku.sh`
+(start, stop, backup, restore-check, nightly), with the learners' database
+on a volume compose can't delete and encrypted nightly backups in
+`~/Backups/juku`. Everything is in `docs/deploy.md`. Never run
+`ops/rehearse.sh` on that stack.
 
 **Give a service more connections.** Change its share in
 guardrails.yaml's `database` section and the matching `CONNECTION

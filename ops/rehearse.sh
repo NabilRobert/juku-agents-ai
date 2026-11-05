@@ -200,7 +200,7 @@ check() {
     echo "juku invite: a code was issued"
     "${COMPOSE[@]}" run --rm --no-deps -T app juku learners || fail "juku learners"
     check_the_app_was_not_restarted
-    echo "Rehearsal passed. Not covered: a chat answer, which needs the model (rehearsal/real-model.yaml, with Arthur's OK)."
+    echo "Rehearsal passed. Not covered: a chat answer, which needs the model (local-use mode, ops/local/, with Arthur's OK)."
 }
 
 # The rehearsal's secrets go too, so its stand-in signing key isn't left on disk
