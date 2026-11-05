@@ -537,3 +537,12 @@ msgstr "Lanjutkan unit"
 
 msgid "Start the quiz"
 msgstr "Mulai kuis"
+
+msgid "Keiko's note"
+msgstr "Catatan Keiko"
+
+msgid "Keiko is checking your week: her note appears here within the hour."
+msgstr "Keiko sedang memeriksa minggumu: catatannya muncul di sini dalam satu jam."
+
+msgid "Once a week, Keiko writes a short note here on how you're doing on your curriculum."
+msgstr "Seminggu sekali, Keiko menulis catatan singkat di sini tentang kemajuanmu di kurikulum."

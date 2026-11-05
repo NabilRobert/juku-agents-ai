@@ -9,11 +9,13 @@ Sunday in the learner's own timezone.
 
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from juku_data import engine
 from juku_data.engine import Databases
+from juku_data.engine.curriculum_models import CurriculumOverview, UnitStatus
 from juku_data.engine.models import DayActivity, Learner, Mistakes, Plan, Progress, Recommendations
 from juku_data.memory import Memory, get_memory
 from pydantic import BaseModel, ConfigDict
@@ -32,6 +34,46 @@ class WeekActivity(BaseModel):
     days: list[DayActivity]
 
 
+class LevelUnits(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    level: int
+    units_done: int
+    units_total: int
+
+
+class CurriculumFacts(BaseModel):
+    """Where the learner is on the curriculum, for Keiko's weekly check (2026-11-05): code's numbers, kept small."""
+
+    model_config = ConfigDict(frozen=True)
+
+    units_done: int
+    units_total: int
+    levels: list[LevelUnits]
+    current_unit: UnitStatus | None  # None once every unit up to the target is done
+    # The units a week it takes to finish by the exam; None without an exam date or with no weeks left.
+    units_per_week_needed: int | None
+
+
+def curriculum_facts(overview: CurriculumOverview, weeks_left: int | None) -> CurriculumFacts:
+    units = [unit for level in overview.levels for unit in level.units]
+    units_left = overview.units_total - overview.units_done
+    return CurriculumFacts(
+        units_done=overview.units_done,
+        units_total=overview.units_total,
+        levels=[
+            LevelUnits(
+                level=level.level,
+                units_done=sum(unit.status == "done" for unit in level.units),
+                units_total=len(level.units),
+            )
+            for level in overview.levels
+        ],
+        current_unit=next((unit for unit in units if unit.unit_id == overview.current_unit_id), None),
+        units_per_week_needed=math.ceil(units_left / weeks_left) if weeks_left else None,
+    )
+
+
 class WeekFacts(BaseModel):
     """Everything an agent may state, each section citable by its name ([ref:activity]) and each item by its ID."""
 
@@ -45,6 +87,7 @@ class WeekFacts(BaseModel):
     mistakes: Mistakes
     candidates: Recommendations
     plan: Plan
+    curriculum: CurriculumFacts
     memory: Memory
 
 
@@ -67,6 +110,7 @@ async def gather_facts(db: Databases, learner: Learner, now: datetime) -> WeekFa
         days=days,
     )
     progress = await engine.get_progress(db, learner.id)
+    plan = await engine.get_plan(db, learner.id, now.astimezone(ZoneInfo(learner.timezone)).date())
     return WeekFacts(
         week_start=week_start,
         week_end=week_end,
@@ -75,7 +119,8 @@ async def gather_facts(db: Databases, learner: Learner, now: datetime) -> WeekFa
         activity=activity,
         mistakes=await engine.get_mistakes(db, learner.id, now),
         candidates=await engine.recommend_words(db, learner.id),
-        plan=await engine.get_plan(db, learner.id, now.astimezone(ZoneInfo(learner.timezone)).date()),
+        plan=plan,
+        curriculum=curriculum_facts(await engine.get_curriculum(db, learner.id), plan.weeks_left),
         memory=await get_memory(db, learner.id, now),
     )
 

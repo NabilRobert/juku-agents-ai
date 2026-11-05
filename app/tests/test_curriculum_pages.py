@@ -75,3 +75,10 @@ async def test_placement_never_offers_a_level_beyond_the_target(engine_databases
         await signed_in(engine_databases, client)
         props = page_props(await client.get("/rencana/penempatan?level=1"))
     assert props["level"] == 5
+
+
+async def test_a_new_learners_plan_page_says_keiko_is_checking_their_week(engine_databases: Databases) -> None:
+    async with client_for(deps(engine_databases)) as client:
+        await signed_in(engine_databases, client)
+        props = page_props(await client.get("/rencana"))
+    assert props["isCheckQueued"] is True and props["keikoNote"] is None

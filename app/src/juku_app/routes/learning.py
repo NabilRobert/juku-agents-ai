@@ -15,6 +15,7 @@ from juku_data.engine import UnknownWordError
 from pydantic import BaseModel, Field
 
 from juku_app.activity import CALENDAR_WEEKS, active_days
+from juku_app.curriculum_check import queue_check_if_due
 from juku_app.routes.common import Page, form_csrf, header_csrf, page, render, web
 
 # Enough batches for a long session; a client can't ask for an unbounded slice.
@@ -35,7 +36,9 @@ async def home(request: Request, current: Page = Depends(page)) -> HTMLResponse:
     progress = await engine.get_progress(db, current.learner.id)
     recommendations = await engine.recommend_words(db, current.learner.id)
     days = await active_days(db, current.learner, current.today)
-    today = await engine.get_today(db, current.learner.id, current.today, datetime.now(UTC))
+    now = datetime.now(UTC)
+    today = await engine.get_today(db, current.learner.id, current.today, now)
+    await queue_check_if_due(db.app, current.learner.id, now)
     return render(
         request,
         "beranda.html",

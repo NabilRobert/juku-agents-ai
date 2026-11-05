@@ -34,6 +34,10 @@ class KeikoPlan(PipelineModel):
     focus: list[PlanWord] = Field(default_factory=list[PlanWord])
     review_word_ids: list[str] = Field(default_factory=list[str], description="Word IDs from the mistakes queue")
     explanation: str = Field(description="Why, in Indonesian, citing facts as [ref:<id>]")
+    curriculum_note: str = Field(
+        default="",
+        description="2-3 sentences in Indonesian on the learner's curriculum progress, citing [ref:curriculum]",
+    )
     note_proposals: list[NoteProposal] = Field(default_factory=list[NoteProposal])
 
 

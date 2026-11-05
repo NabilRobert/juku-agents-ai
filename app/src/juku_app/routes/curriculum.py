@@ -17,6 +17,7 @@ from juku_data import engine
 from juku_data.engine import PlacementAnswer, UnknownGrammarError, UnknownWordError
 from pydantic import BaseModel, Field
 
+from juku_app.curriculum_check import is_check_queued, latest_note, queue_check_if_due
 from juku_app.routes.common import LEVELS, Page, header_csrf, page, render, web
 
 # A placement test is one level's questions (engine/placement.py: PLACEMENT_QUESTIONS); a few spare.
@@ -41,7 +42,17 @@ async def plan(request: Request, current: Page = Depends(page)) -> HTMLResponse:
     progress = await engine.get_progress(db, current.learner.id)
     made = await engine.get_plan(db, current.learner.id, current.today)
     curriculum = await engine.get_curriculum(db, current.learner.id)
-    return render(request, "rencana.html", page=current, progress=progress, plan=made, curriculum=curriculum)
+    await queue_check_if_due(db.app, current.learner.id, datetime.now(UTC))
+    return render(
+        request,
+        "rencana.html",
+        page=current,
+        progress=progress,
+        plan=made,
+        curriculum=curriculum,
+        keiko_note=await latest_note(db.app, current.learner.id),
+        is_check_queued=await is_check_queued(db.app, current.learner.id),
+    )
 
 
 @router.get("/rencana/unit/{unit_id}")

@@ -60,6 +60,7 @@ def faithful_plan(facts: dict[str, Any]) -> dict[str, Any]:
         "focus": [{"word_id": w["word_id"], "level": w["level"], "reason": f"Kata baru: {w['word']}."} for w in words],
         "review_word_ids": [item["word_id"] for item in facts["mistakes"]["items"]],
         "explanation": f"Minggu ini kamu menjawab {facts['activity']['quiz_answers']} kuis [ref:activity].",
+        "curriculum_note": f"{facts['curriculum']['units_done']} unit selesai [ref:curriculum].",
         "note_proposals": [],
     }
 

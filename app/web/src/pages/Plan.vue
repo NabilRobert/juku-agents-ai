@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// Rencana: the curriculum (Arthur, 2026-11-05: "give me a plan i can follow"), then coverage per level and
-// the pace to the exam (the planner's numbers, unchanged).
+// Rencana: the curriculum (Arthur, 2026-11-05: "give me a plan i can follow") and Keiko's weekly note on it,
+// then coverage per level and the pace to the exam (the planner's numbers, unchanged).
 import CurriculumMap from "../components/CurriculumMap.vue";
+import KeikoNote from "../components/KeikoNote.vue";
 import ProgressBar from "../components/ProgressBar.vue";
 import type { CurriculumOverview, Progress } from "../lib/types";
 
@@ -10,6 +11,9 @@ defineProps<{
   plan: { words_per_week: number | null; weeks_left: number | null; formula: string };
   curriculum: CurriculumOverview;
   curriculumCopy: InstanceType<typeof CurriculumMap>["$props"]["copy"];
+  keikoNote: InstanceType<typeof KeikoNote>["$props"]["note"];
+  isCheckQueued: boolean;
+  keikoCopy: InstanceType<typeof KeikoNote>["$props"]["copy"];
   copy: Record<
     "title" | "wordsYouKnow" | "words" | "level" | "wordsHeading" | "kanji" | "pace" | "perWeek" | "weeks",
     string
@@ -27,6 +31,8 @@ defineProps<{
     </div>
 
     <CurriculumMap :curriculum="curriculum" :copy="curriculumCopy" />
+
+    <KeikoNote :note="keikoNote" :is-queued="isCheckQueued" :copy="keikoCopy" />
 
     <section class="card border-l-4 border-l-orange">
       <h2 class="section-title">{{ copy.pace }}</h2>

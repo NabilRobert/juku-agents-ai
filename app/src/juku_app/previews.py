@@ -137,7 +137,8 @@ def sample_curriculum() -> dict[str, Any]:
         quiz_target=10,
         quiz_done=0,
     )
-    return {"curriculum": curriculum, "today": today}
+    note = {"week_start": "2026-10-26", "body": "Kamu di unit 3, dan 2 dari 45 unit N5 sudah selesai [ref:curriculum]."}
+    return {"curriculum": curriculum, "today": today, "keiko_note": note, "is_check_queued": False}
 
 
 def sample_context() -> dict[str, Any]:

@@ -15,7 +15,8 @@ Every agent call is checked against the reports pool first and recorded
 after (ADR-012).
 
 The hourly cron job (`juku run-weekly --due`) runs each learner whose
-Sunday 18:00 has come in their own timezone, then any queued replans.
+Sunday 18:00 has come in their own timezone, or who queued a curriculum
+check by visiting with no run in the last week, then any queued replans.
 """
 
 from __future__ import annotations
@@ -57,8 +58,11 @@ ISO_WEEKDAY_OFFSET = 1
 
 DUE = """
 SELECT l.public_id FROM learning.learners l
-WHERE extract(isodow FROM :now AT TIME ZONE l.timezone) = :isodow
-  AND extract(hour FROM :now AT TIME ZONE l.timezone) >= :hour
+WHERE (
+      (extract(isodow FROM :now AT TIME ZONE l.timezone) = :isodow
+       AND extract(hour FROM :now AT TIME ZONE l.timezone) >= :hour)
+      OR EXISTS (SELECT 1 FROM app.check_requests c WHERE c.learner_id = l.id)
+  )
   AND NOT EXISTS (
       SELECT 1 FROM app.pipeline_runs r
       WHERE r.learner_id = l.id AND r.kind = 'weekly'
@@ -193,6 +197,7 @@ async def _plan(context: RunScope, facts: WeekFacts) -> KeikoPlan | None:
 
     plan = await _reviewed(context, "keiko", generate, check, given)
     if plan is not None:
+        await records.save_curriculum_note(services.db.app, context.ref, plan.curriculum_note, context.now)
         for proposal in plan.note_proposals:
             await propose_note(
                 services.db, context.learner.id, proposal, proposed_by="keiko", rules=services.rules, now=context.now
@@ -215,6 +220,14 @@ async def _report(context: RunScope, facts: WeekFacts, plan: KeikoPlan) -> str |
 
 
 async def run_weekly(services: PipelineServices, learner: Learner, now: datetime) -> RunOutcome:
+    """The week's run; a check the learner's visit queued is answered by it, whatever its outcome but busy."""
+    outcome = await _run_week(services, learner, now)
+    if outcome.status != "busy":
+        await records.clear_check_request(services.db.app, learner.id)
+    return outcome
+
+
+async def _run_week(services: PipelineServices, learner: Learner, now: datetime) -> RunOutcome:
     week_start, _ = week_of(now, learner.timezone)
     if not await has_current_consent(services.db.app, learner.id):
         await records.record_skip(services.db.app, learner.id, week_start, CONSENT_OUTDATED, now)
@@ -244,7 +257,8 @@ async def run_weekly(services: PipelineServices, learner: Learner, now: datetime
 
 
 async def due_learners(db: Databases, rules: Rules, now: datetime) -> list[Learner]:
-    """Learners whose Sunday 18:00 (the rule file's day and hour) has come in their own timezone, not yet run."""
+    """Learners whose Sunday 18:00 (the rule file's day and hour) has come in their own timezone, or who queued a
+    check by visiting (juku_app.curriculum_check), and whose week hasn't run yet."""
     async with db.app.connect() as connection:
         public_ids = list(
             await connection.scalars(
