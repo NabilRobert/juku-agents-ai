@@ -6,6 +6,7 @@ import { addDays, mondayOf, shadeOf } from "../src/lib/calendar";
 const copy = {
   title: "Aktivitasmu",
   activeDays: "hari aktif",
+  activeDay: "hari aktif (satu)",
   less: "Sedikit",
   more: "Banyak",
   actions: "aktivitas",

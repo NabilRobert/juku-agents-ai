@@ -420,3 +420,6 @@ msgstr "Rab"
 
 msgid "Fri"
 msgstr "Jum"
+
+msgid "active day in the last six months"
+msgstr "hari aktif dalam enam bulan terakhir"

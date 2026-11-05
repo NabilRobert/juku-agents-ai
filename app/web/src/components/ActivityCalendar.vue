@@ -13,7 +13,7 @@ interface ActiveDay {
   questions: number;
 }
 type CalendarCopy = Record<
-  "title" | "activeDays" | "less" | "more" | "actions" | "quizAnswers" | "wordsMarked" | "sentencesRead" | "questions",
+  "title" | "activeDays" | "activeDay" | "less" | "more" | "actions" | "quizAnswers" | "wordsMarked" | "sentencesRead" | "questions",
   string
 > & { weekdays: string[] };
 
@@ -26,6 +26,7 @@ const STEP = 14;
 const LEFT = 26;
 const TOP = 16;
 
+const activeDaysLabel = computed(() => (props.days.length === 1 ? props.copy.activeDay : props.copy.activeDays));
 const byDay = computed(() => new Map(props.days.map((day) => [day.day, day])));
 const busiest = computed(() => Math.max(0, ...props.days.map((day) => day.count)));
 const first = computed(() => addDays(mondayOf(props.today), -7 * (props.weeks - 1)));
@@ -72,13 +73,13 @@ function describe(day: string, activity: ActiveDay | undefined): string {
   <section class="card">
     <div class="flex flex-wrap items-baseline justify-between gap-2">
       <h2 class="section-title">{{ copy.title }}</h2>
-      <p class="muted"><strong class="text-ink">{{ days.length }}</strong> {{ copy.activeDays }}</p>
+      <p class="muted"><strong class="text-ink">{{ days.length }}</strong> {{ activeDaysLabel }}</p>
     </div>
     <svg
       class="mt-3 w-full"
       :viewBox="`0 0 ${LEFT + weeks * STEP} ${TOP + 7 * STEP}`"
       role="img"
-      :aria-label="`${copy.title}: ${days.length} ${copy.activeDays}`"
+      :aria-label="`${copy.title}: ${days.length} ${activeDaysLabel}`"
     >
       <text v-for="month in months" :key="month.week" :x="LEFT + month.week * STEP" y="10" class="fill-ink/60 text-[9px]">
         {{ month.name }}
