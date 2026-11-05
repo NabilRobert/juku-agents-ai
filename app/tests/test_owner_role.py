@@ -15,7 +15,7 @@ from pipeline_helpers import scalar
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 from test_route_table import api_routes, dependency_names
-from web_helpers import client_for, csrf_of, deps, sign_up
+from web_helpers import client_for, csrf_of, deps, page_props, sign_up
 
 # The learner a code signed up: the tests share one database, so nicknames may repeat.
 LEARNER_OF_CODE = """
@@ -120,7 +120,7 @@ async def test_the_owner_issues_codes_from_the_page_and_each_is_audited(engine_d
     async with aclosing(client):
         page = await client.get("/admin/learners")
         issued = await client.post("/admin/learners/codes", data={"csrf": csrf_of(page), "count": "2"})
-    codes = [line.split("<li>")[1] for line in issued.text.split("</li>") if "<li>" in line]
+    codes = page_props(issued)["newCodes"]
     assert issued.status_code == 200 and len(codes) == 2
     for code in codes:
         assert (await redeem(engine_databases.app, code)).learner_id is None
@@ -151,7 +151,7 @@ async def test_the_owner_removes_a_learner_and_it_is_audited(engine_databases: D
         removed = await client.post(
             "/admin/learners/remove", data={"csrf": csrf_of(page), "public_id": other_id, "confirm": other_id}
         )
-    assert removed.status_code == 200 and f"Removed {other_id}" in removed.text
+    assert removed.status_code == 200 and page_props(removed)["removed"] == other_id
     assert await learners_with(engine_databases, other_id) == 0
     audited = await scalar(engine_databases, "SELECT count(*) FROM app.owner_actions WHERE subject = :p", p=other_id)
     assert audited == 1

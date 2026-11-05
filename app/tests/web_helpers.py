@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from cryptography.hazmat.primitives.asymmetric import ed25519
@@ -16,7 +17,8 @@ from juku_data.engine import Databases
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-CSRF = re.compile(r'name="csrf" value="([^"]+)"')
+# Every page's forms post the token from this tag (base.html); the Vue components put it in each form.
+CSRF = re.compile(r'<meta name="csrf-token" content="([^"]+)">')
 
 
 class AllowAll:
@@ -61,7 +63,7 @@ def client_for(web_deps: WebDeps) -> httpx.AsyncClient:
 
 def csrf_of(page: httpx.Response) -> str:
     found = CSRF.search(page.text)
-    assert found, "the form has no CSRF token"
+    assert found, "the page has no CSRF token"
     return found.group(1)
 
 
@@ -92,6 +94,12 @@ def found(pattern: str, page: str) -> str:
     match = re.search(pattern, page, re.S)
     assert match, f"{pattern!r} isn't on the page"
     return match.group(1)
+
+
+def page_props(page: httpx.Response) -> dict[str, Any]:
+    """The props the server gave the page's Vue component: what the page shows (base.html, page-data)."""
+    data = json.loads(found(r'<script type="application/json" id="page-data">(.*?)</script>', page.text))
+    return cast(dict[str, Any], data["props"])
 
 
 def csrf_header(page: httpx.Response) -> dict[str, str]:

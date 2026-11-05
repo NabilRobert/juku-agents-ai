@@ -1,6 +1,5 @@
 """The pages (UI1, FE1): the first visit, consent before anything, the $0 pages, chat, export and deletion."""
 
-import json
 import re
 from pathlib import Path
 
@@ -8,7 +7,7 @@ import pytest
 from juku_app.invites import issue_codes
 from juku_data.engine import Databases
 from sqlalchemy import text
-from web_helpers import client_for, csrf_header, csrf_of, deps, found, sign_up
+from web_helpers import client_for, csrf_header, csrf_of, deps, page_props, sign_up
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "src" / "juku_app" / "templates"
 CATALOGUE = Path(__file__).resolve().parents[1] / "src" / "juku_app" / "locale" / "id" / "LC_MESSAGES" / "messages.po"
@@ -104,7 +103,7 @@ async def test_reading_practice_uses_ruby_for_furigana(engine_databases: Databas
     async with client_for(deps(engine_databases)) as client:
         await sign_up(client, code)
         page = await client.get("/bacaan")
-    assert "<ruby>" in page.text
+    assert any("<ruby>" in shown["ruby"] for shown in page_props(page)["sentences"])
 
 
 async def test_a_quiz_answer_is_graded_and_recorded(engine_databases: Databases) -> None:
@@ -112,7 +111,7 @@ async def test_a_quiz_answer_is_graded_and_recorded(engine_databases: Databases)
     async with client_for(deps(engine_databases)) as client:
         await sign_up(client, code)
         page = await client.get("/kuis")
-        quiz = json.loads(found(r'<script type="application/json" id="quiz-data">(.*?)</script>', page.text))
+        quiz = page_props(page)["quiz"]
         item = quiz["items"][0]
         response = await client.post(
             "/kuis/jawab",
@@ -128,11 +127,11 @@ async def test_marking_a_word_known_is_the_learners_own_click(engine_databases: 
     async with client_for(deps(engine_databases)) as client:
         await sign_up(client, code)
         home = await client.get("/beranda")
-        word_id = found(r'data-word-id="([^"]+)"', home.text)
+        word_id = page_props(home)["words"][0]["word_id"]
         response = await client.post(f"/kata/{word_id}/dikuasai", data={"csrf": csrf_of(home)})
         assert response.status_code == 303
         progress = await client.get("/rencana")
-    assert "1 kata" in progress.text
+    assert page_props(progress)["progress"]["known_words"] == 1
 
 
 async def test_chat_streams_an_answer_as_server_sent_events(engine_databases: Databases, juku_mcp_url: str) -> None:

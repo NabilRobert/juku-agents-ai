@@ -2,56 +2,13 @@
 {% extends "base.html" %}
 {% block title %}Learners{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold">Learners</h1>
-<p class="text-sm"><a href="/beranda">Back to my own learning</a> · <a href="/admin/runs">Run Inspector</a></p>
-
-{% if error %}<p class="mt-2 text-red-700" role="alert">{{ error }}</p>{% endif %}
-{% if removed %}<p class="mt-2" role="status">Removed {{ removed }} ({{ removed_rows }} rows).</p>{% endif %}
-{% if new_codes %}
-<section class="mt-4 border p-2" aria-labelledby="new-codes">
-  <h2 id="new-codes" class="font-bold">New invite codes</h2>
-  <p class="text-sm">Shown once: only their hashes are kept. Give each to one person.</p>
-  <ul class="font-mono text-sm">{% for code in new_codes %}<li>{{ code }}</li>{% endfor %}</ul>
-</section>
-{% endif %}
-
-<form method="post" action="/admin/learners/codes" class="mt-4 space-x-2">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
-  <label>Codes <input type="number" name="count" value="1" min="1" max="{{ max_codes }}" class="w-16 border"></label>
-  <button class="border px-2">Issue invite codes</button>
-</form>
-
-<table class="mt-4 w-full text-sm">
-  <tr><th>Public ID</th><th>Nickname</th><th>Role</th><th>Level</th><th>Joined</th><th>Last active</th><th>Remove</th></tr>
-  {% for learner in learners %}
-  <tr>
-    <td class="font-mono">{{ learner.public_id }}</td><td>{{ learner.nickname }}</td><td>{{ learner.role }}</td>
-    <td>N{{ learner.target_level }}</td><td>{{ learner.created_at.date() }}</td>
-    <td>{{ learner.last_active_at.date() if learner.last_active_at else "-" }}</td>
-    <td>
-      {% if learner.role == "owner" %}-{% else %}
-      <form method="post" action="/admin/learners/remove">
-        <input type="hidden" name="csrf" value="{{ csrf }}">
-        <input type="hidden" name="public_id" value="{{ learner.public_id }}">
-        <input name="confirm" placeholder="type the public ID" aria-label="Type {{ learner.public_id }} to confirm" class="w-32 border">
-        <button class="border px-2">Remove</button>
-      </form>
-      {% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-</table>
-
-<h2 class="mt-6 font-bold">Owner actions</h2>
-<table class="mt-2 w-full text-sm">
-  <tr><th>When</th><th>By</th><th>From</th><th>Action</th><th>Learner</th><th>Detail</th></tr>
-  {% for action in actions %}
-  <tr>
-    <td>{{ action.acted_at }}</td><td>{{ action.owner or "-" }}</td><td>{{ action.place }}</td>
-    <td>{{ action.action }}</td><td>{{ action.subject or "-" }}</td><td class="text-xs">{{ action.detail }}</td>
-  </tr>
-  {% else %}
-  <tr><td colspan="6">None yet.</td></tr>
-  {% endfor %}
-</table>
+{{ json_script("page-data", {"component": "AdminLearners", "props": {
+  "learners": learners,
+  "actions": actions,
+  "maxCodes": max_codes,
+  "newCodes": new_codes | default([]),
+  "error": error | default(""),
+  "removed": removed | default(""),
+  "removedRows": removed_rows | default(0),
+}}) }}
 {% endblock %}

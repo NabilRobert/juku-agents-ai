@@ -4,6 +4,7 @@
 import { ref } from "vue";
 import { postJson } from "../lib/http";
 import { readEvents } from "../lib/sse";
+import type { ChatCopy } from "../lib/types";
 
 interface Done {
   is_verified: boolean;
@@ -12,19 +13,20 @@ interface Done {
 }
 
 const props = defineProps<{
-  copy: { placeholder: string; send: string; unverified: string; helpful: string; unhelpful: string; failed: string };
+  copy: ChatCopy;
   csrf: string;
 }>();
 
 const question = ref("");
+const asked = ref("");
 const answer = ref("");
 const done = ref<Done | null>(null);
 const busy = ref(false);
 const rated = ref(false);
 const failed = ref(false);
 
-async function readAnswer(): Promise<void> {
-  const response = await postJson("/chat/kirim", { question: question.value }, props.csrf);
+async function readAnswer(text: string): Promise<void> {
+  const response = await postJson("/chat/kirim", { question: text }, props.csrf);
   for await (const event of readEvents(response)) {
     if (event.event === "delta") answer.value += event.data;
     if (event.event === "done") done.value = JSON.parse(event.data) as Done;
@@ -34,12 +36,14 @@ async function readAnswer(): Promise<void> {
 async function send(): Promise<void> {
   if (!question.value.trim() || busy.value) return;
   busy.value = true;
+  asked.value = question.value;
+  question.value = "";
   answer.value = "";
   done.value = null;
   rated.value = false;
   failed.value = false;
   try {
-    await readAnswer();
+    await readAnswer(asked.value);
   } catch {
     // Handled below: a dropped connection looks the same as a stream with no last event.
   }
@@ -60,17 +64,32 @@ async function rate(isHelpful: boolean): Promise<void> {
 </script>
 
 <template>
-  <form class="space-y-2" @submit.prevent="send">
-    <textarea v-model="question" :placeholder="copy.placeholder" rows="3" class="w-full rounded border p-2" />
-    <button type="submit" class="rounded border px-3 py-1" :disabled="busy">{{ copy.send }}</button>
+  <div class="flex flex-col gap-2">
+    <p v-if="asked" class="max-w-[85%] self-end rounded-2xl rounded-br-sm bg-ink px-4 py-2.5 whitespace-pre-line text-white shadow-sm">
+      {{ asked }}
+    </p>
+    <article
+      v-if="answer || done || busy"
+      class="max-w-[85%] space-y-2 self-start rounded-2xl rounded-bl-sm border border-gold/40 bg-white px-4 py-2.5 shadow-sm"
+      aria-live="polite"
+    >
+      <p class="whitespace-pre-line">{{ answer }}<span v-if="busy && !answer" class="animate-pulse">…</span></p>
+      <p v-if="done && !done.is_verified" class="text-xs font-semibold text-amber-700">{{ copy.unverified }}</p>
+      <div v-if="done?.message_id && !rated" class="flex gap-2">
+        <button class="helpful btn-quiet py-1" @click="rate(true)">👍 {{ copy.helpful }}</button>
+        <button class="unhelpful btn-quiet py-1" @click="rate(false)">👎 {{ copy.unhelpful }}</button>
+      </div>
+    </article>
+    <p v-if="failed" class="alert" role="alert">{{ copy.failed }}</p>
+  </div>
+  <form class="card sticky bottom-3 mt-4 flex items-end gap-2 p-3" @submit.prevent="send">
+    <textarea
+      v-model="question"
+      :placeholder="copy.placeholder"
+      rows="2"
+      class="field resize-none"
+      @keydown.enter.exact.prevent="send"
+    />
+    <button type="submit" class="btn shrink-0" :disabled="busy">{{ copy.send }}</button>
   </form>
-  <article v-if="answer || done" class="mt-3 space-y-1" aria-live="polite">
-    <p>{{ answer }}</p>
-    <p v-if="done && !done.is_verified" class="text-xs text-amber-700">{{ copy.unverified }}</p>
-    <div v-if="done?.message_id && !rated" class="flex gap-2 text-sm">
-      <button class="helpful underline" @click="rate(true)">{{ copy.helpful }}</button>
-      <button class="unhelpful underline" @click="rate(false)">{{ copy.unhelpful }}</button>
-    </div>
-  </article>
-  <p v-if="failed" class="mt-2 text-sm text-amber-700" role="alert">{{ copy.failed }}</p>
 </template>

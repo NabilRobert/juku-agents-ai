@@ -27,7 +27,7 @@ from pipeline_helpers import (
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from sqlalchemy import text
-from web_helpers import client_for, csrf_of, deps, sign_up
+from web_helpers import client_for, csrf_of, deps, page_props, sign_up
 
 # --- request_replan (SM4): a Keiko run under a chain delegated from Shiori ---
 
@@ -134,10 +134,12 @@ async def test_the_run_inspector_is_for_arthur_only(engine_databases: Databases,
         await arthur.post("/masuk", data={"code": arthur_code, "csrf": csrf_of(page)})
         runs = await arthur.get("/admin/runs")
         detail = await arthur.get(f"/admin/runs/{outcome.run_id}")
-    assert runs.status_code == 200 and f"/admin/runs/{outcome.run_id}" in runs.text
+    assert runs.status_code == 200 and outcome.run_id in [run["id"] for run in page_props(runs)["runs"]]
     assert detail.status_code == 200
-    for part in ("keiko", "nikki", "grade A", "published"):
-        assert part in detail.text
+    shown = page_props(detail)
+    assert shown["run"]["status"] == "published"
+    assert {attempt["agent"] for attempt in shown["attempts"]} == {"keiko", "nikki"}
+    assert "A" in {attempt["grade"] for attempt in shown["attempts"]}
 
 
 async def test_a_learner_reads_their_latest_report(engine_databases: Databases) -> None:

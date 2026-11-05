@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block title %}{{ _("Report") }}{% endblock %}
 {% block content %}
-<h1 class="text-xl font-bold">{{ _("Your weekly report") }}</h1>
-{% if report %}
-<p class="text-xs">{{ _("Week of") }} {{ report.week_start }}</p>
-<p class="mt-2 whitespace-pre-line">{{ report.body }}</p>
-{% else %}
-<p>{{ _("Your first report comes on Sunday evening.") }}</p>
-{% endif %}
+{{ json_script("page-data", {"component": "Report", "props": {
+  "report": report,
+  "copy": {
+    "title": _("Your weekly report"), "weekOf": _("Week of"),
+    "none": _("Your first report comes on Sunday evening."),
+  },
+}}) }}
 {% endblock %}

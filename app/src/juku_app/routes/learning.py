@@ -48,7 +48,7 @@ async def mark_known(request: Request, word_id: str, current: Page = Depends(pag
 @router.get("/kuis")
 async def quiz(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008
     made = await engine.make_quiz(web(request).db, current.learner.id, current.today)
-    return render(request, "kuis.html", page=current, quiz_json=made.model_dump_json())
+    return render(request, "kuis.html", page=current, quiz=made)
 
 
 @router.get("/kuis/data")

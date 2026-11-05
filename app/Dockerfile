@@ -3,17 +3,17 @@
 #   docker build -f app/Dockerfile -t juku-app:local .
 # Read-only filesystem, no capabilities, non-root (ops/compose.yaml).
 
-# 1. The Vue islands (app/web), built to app/src/juku_app/static/dist.
+# 1. The Vue pages (app/web), built to app/src/juku_app/static/dist.
 FROM node:24-alpine AS web
 WORKDIR /build/app/web
 COPY app/web/package.json app/web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY app/web/ ./
-# Tailwind keeps only the classes the templates use, so it reads them.
+# Tailwind keeps only the classes the pages and templates use, so it reads them.
 COPY app/src/juku_app/templates /build/app/src/juku_app/templates
 RUN npm run build
 
-# 2. The Python packages, at uv.lock's versions, with the built islands inside.
+# 2. The Python packages, at uv.lock's versions, with the built pages inside.
 FROM ghcr.io/astral-sh/uv:0.13.1 AS uv
 
 FROM python:3.12-slim AS build

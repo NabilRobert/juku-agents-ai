@@ -1,6 +1,7 @@
 // FE7's budget, checked on every build (FF12's local half; Lighthouse CI is the other):
-// each page's JavaScript (its island, plus the vitals island every page loads, plus
-// their shared chunks) at most 100 KB compressed, and the stylesheet at most 30 KB.
+// each page's JavaScript (the app entry and the vitals script every page loads, the page's
+// own component chunk, and their shared chunks) at most 100 KB compressed, and the
+// stylesheet at most 30 KB.
 import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 
@@ -18,14 +19,16 @@ function chunks(key, seen = new Set()) {
 }
 
 let failed = false;
-const pages = { chat: ["src/islands/chat.ts"], quiz: ["src/islands/quiz.ts"], memory: ["src/islands/memory.ts"], other: [] };
-for (const [page, islands] of Object.entries(pages)) {
+const pages = Object.keys(manifest).filter((key) => key.startsWith("src/pages/"));
+if (pages.length === 0) throw new Error("no page components in the build: is src/main.ts an entry in vite.config.ts?");
+for (const page of pages) {
   const keys = new Set();
-  for (const island of ["src/islands/vitals.ts", ...islands]) chunks(island, keys);
+  for (const entry of ["src/islands/vitals.ts", "src/main.ts", page]) chunks(entry, keys);
   const bytes = [...keys].reduce((total, key) => total + gzipped(manifest[key].file), 0);
   const ok = bytes <= JS_BUDGET;
   failed ||= !ok;
-  console.log(`${ok ? "ok  " : "OVER"} ${page.padEnd(6)} JS ${(bytes / 1024).toFixed(1)} KB of ${JS_BUDGET / 1024} KB`);
+  const name = page.slice("src/pages/".length, -".vue".length);
+  console.log(`${ok ? "ok  " : "OVER"} ${name.padEnd(13)} JS ${(bytes / 1024).toFixed(1)} KB of ${JS_BUDGET / 1024} KB`);
 }
 const css = gzipped(manifest["src/styles.css"].file);
 failed ||= css > CSS_BUDGET;

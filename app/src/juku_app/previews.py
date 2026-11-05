@@ -134,7 +134,7 @@ def sample_context() -> dict[str, Any]:
         "page": SamplePage(SAMPLE_LEARNER, "Ayu", date(2026, 11, 1)),
         "progress": Progress(target_level=5, known_words=130, levels=levels),
         "words": words,
-        "quiz_json": quiz.model_dump_json(),
+        "quiz": quiz,
         "sentences": sentences,
         "plan": plan,
         "messages": [],
