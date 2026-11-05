@@ -154,6 +154,25 @@ async def test_reading_practice_maps_about_as_much_as_spike_4_measured(dict_engi
     assert sentences_mapped / sentences_total >= 0.63
 
 
+async def test_every_example_sentence_has_a_breakdown(dict_engine: AsyncEngine) -> None:
+    missing = await scalar(
+        dict_engine,
+        "SELECT count(*) FROM (SELECT ja FROM ojlpt.vocab_example UNION "
+        "SELECT e ->> 'ja' FROM ojlpt.grammar, jsonb_array_elements(examples) e) shown "
+        "LEFT JOIN ojlpt.sentence_breakdown b USING (ja) WHERE b.ja IS NULL",
+    )
+    assert missing == 0
+
+
+async def test_a_grammar_examples_breakdown_finds_its_own_grammar_point(dict_engine: AsyncEngine) -> None:
+    found = await scalar(
+        dict_engine,
+        "SELECT count(*) FROM ojlpt.grammar g, jsonb_array_elements(g.examples) e "
+        "JOIN ojlpt.sentence_breakdown b ON b.ja = e ->> 'ja' WHERE g.pattern = '〜は' AND b.grammar_ids ? g.id",
+    )
+    assert found == 3  # all three of OpenJLPT's examples for 〜は
+
+
 async def test_the_reader_role_can_read_but_not_write(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         await connection.execute(text("SET ROLE dict_reader"))

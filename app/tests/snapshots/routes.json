@@ -284,6 +284,40 @@
  },
  {
   "methods": [
+   "GET"
+  ],
+  "path": "/kanji/{kanji}",
+  "name": "kanji",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/kata/{word_id}",
+  "name": "word_page",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
    "POST"
   ],
   "path": "/kata/{word_id}/dikuasai",
@@ -494,6 +528,40 @@
   ],
   "path": "/rencana",
   "name": "plan",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/tata-bahasa",
+  "name": "grammar_list",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/tata-bahasa/{grammar_id}",
+  "name": "grammar_point",
   "response_class": "JSONResponse",
   "status_code": null,
   "dependencies": [

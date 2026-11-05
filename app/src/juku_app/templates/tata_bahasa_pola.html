@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ point.pattern }}{% endblock %}
+{% block content %}
+{{ json_script("page-data", {"component": "GrammarPoint", "props": {
+  "point": point,
+  "breakdowns": breakdowns,
+  "copy": {
+    "back": _("All grammar points"), "meaning": _("Meaning"), "formation": _("How it's formed"),
+    "notes": _("Notes"), "examples": _("Examples"),
+  },
+}}) }}
+{% endblock %}

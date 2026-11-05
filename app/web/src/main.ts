@@ -4,6 +4,7 @@
 import { type Component, createApp, h } from "vue";
 import AppShell from "./components/AppShell.vue";
 import { CSRF } from "./lib/csrf";
+import { STUDY } from "./lib/study";
 import { pageJson } from "./lib/http";
 import type { PageData, Shell } from "./lib/types";
 
@@ -17,6 +18,7 @@ async function mount(): Promise<void> {
   const page = (await load()).default;
   createApp({ render: () => h(AppShell, { shell }, () => h(page, data.props)) })
     .provide(CSRF, shell.csrf)
+    .provide(STUDY, shell.study)
     .mount("#app");
 }
 

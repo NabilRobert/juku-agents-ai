@@ -98,12 +98,14 @@ async def test_each_page_renders_for_a_signed_in_learner(engine_databases: Datab
     assert '<html lang="id">' in response.text
 
 
-async def test_reading_practice_uses_ruby_for_furigana(engine_databases: Databases) -> None:
+async def test_reading_practice_gives_each_sentence_its_furigana_and_explanation(engine_databases: Databases) -> None:
     code = (await issue_codes(engine_databases.app, 1))[0]
     async with client_for(deps(engine_databases)) as client:
         await sign_up(client, code)
         page = await client.get("/bacaan")
-    assert any("<ruby>" in shown["ruby"] for shown in page_props(page)["sentences"])
+    shown = page_props(page)
+    assert any(sentence["furigana"] for sentence in shown["sentences"])
+    assert all(sentence["ja"] in shown["breakdowns"] for sentence in shown["sentences"])
 
 
 async def test_a_quiz_answer_is_graded_and_recorded(engine_databases: Databases) -> None:

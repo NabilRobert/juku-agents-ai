@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.word }}{% endblock %}
+{% block content %}
+{{ json_script("page-data", {"component": "Word", "props": {
+  "entry": entry,
+  "breakdowns": breakdowns,
+  "copy": {
+    "meaning": _("Meaning"), "examples": _("How it's used"), "noExamples": _("No example sentences for this word yet."),
+    "iKnowThis": _("I know this word"), "youKnowThis": _("You know this word"),
+  },
+}}) }}
+{% endblock %}

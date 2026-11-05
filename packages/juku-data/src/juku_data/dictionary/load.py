@@ -4,7 +4,8 @@ One call rebuilds the whole dictionary:
 1. read the (already checksummed) SQLite file;
 2. COPY its tables into a fresh `ojlpt_staging` schema, then add keys;
 3. build the derived tables: each word's kanji, its level and commonness,
-   kanji leverage (ADR-010), the supplement words, and the reading index;
+   kanji leverage (ADR-010), the supplement words, the reading index, and
+   every example sentence's breakdown into words and grammar points;
 4. comment every table and view, for the model reading it through
    MCP-backbone (D4);
 5. compare the word IDs with the current `ojlpt` schema and report any
@@ -21,16 +22,23 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from juku_data.dictionary.breakdown import Breakdown, GrammarMatcher, build_breakdowns
 from juku_data.dictionary.pin import OPENJLPT_COMMIT
 from juku_data.dictionary.read_sqlite import OpenJlptRows, read_openjlpt
 from juku_data.dictionary.schema import BASE_TABLES_SQL, DERIVED_SQL, KEYS_SQL, TABLE_COMMENTS, VIEWS_SQL
-from juku_data.dictionary.sentences import DictionaryWord, ReadingIndex, SourceSentence, build_reading_index
+from juku_data.dictionary.sentences import (
+    DictionaryWord,
+    ReadingIndex,
+    SentenceMapper,
+    SourceSentence,
+    build_reading_index,
+)
 from juku_data.dictionary.source import DictionaryError, SourceFiles
 from juku_data.dictionary.supplement import SupplementWord, read_supplement
 
@@ -71,6 +79,28 @@ def _source_sentences(rows: OpenJlptRows) -> list[SourceSentence]:
     for _, _, ja, furigana, en, tatoeba_id in sorted(rows.vocab_example, key=lambda row: (row[2], row[0], row[1])):
         by_text.setdefault(ja, SourceSentence(ja, furigana, en, tatoeba_id))
     return list(by_text.values())
+
+
+def _example_texts(rows: OpenJlptRows) -> list[str]:
+    """Every example sentence a page can show: the words' and the grammar points'."""
+    grammar_examples = [example["ja"] for row in rows.grammar for example in json.loads(row[7])]
+    return [row[2] for row in rows.vocab_example] + grammar_examples
+
+
+@dataclass(frozen=True)
+class SentenceData:
+    index: ReadingIndex
+    breakdowns: list[Breakdown]
+
+
+def _build_sentence_data(rows: OpenJlptRows, supplement: list[SupplementWord]) -> SentenceData:
+    """SudachiPy's work, with one dictionary loaded for both the reading index and the breakdowns."""
+    mapper = SentenceMapper(_dictionary_words(rows, supplement))
+    grammar = GrammarMatcher((row[0], row[1]) for row in rows.grammar)
+    return SentenceData(
+        index=build_reading_index(mapper, _source_sentences(rows)),
+        breakdowns=build_breakdowns(mapper, grammar, _example_texts(rows)),
+    )
 
 
 async def _driver(connection: AsyncConnection) -> Any:
@@ -134,6 +164,23 @@ async def _load_reading_index(connection: AsyncConnection, index: ReadingIndex) 
     )
 
 
+async def _load_breakdowns(connection: AsyncConnection, breakdowns: list[Breakdown]) -> None:
+    records = [
+        (
+            breakdown.ja,
+            json.dumps([asdict(token) for token in breakdown.tokens], ensure_ascii=False),
+            json.dumps(list(breakdown.grammar_ids)),
+        )
+        for breakdown in breakdowns
+    ]
+    await _copy(connection, "sentence_breakdown", records)
+
+
+async def _load_grammar_order(connection: AsyncConnection, rows: OpenJlptRows) -> None:
+    positions = [(grammar_id, position) for position, grammar_id in enumerate(rows.grammar_order, start=1)]
+    await _copy(connection, "grammar_position", positions)
+
+
 async def _copy_source_tables(
     connection: AsyncConnection, rows: OpenJlptRows, supplement: list[SupplementWord]
 ) -> None:
@@ -187,15 +234,15 @@ async def _swap_staging_in(connection: AsyncConnection) -> None:
 async def load_dictionary(
     engine: AsyncEngine, source: SourceFiles, *, commit: str = OPENJLPT_COMMIT, with_reading_index: bool = True
 ) -> LoadReport:
-    """Rebuild the dictionary from `source` and swap it in. `with_reading_index=False` skips SudachiPy (tests)."""
+    """Rebuild the dictionary from `source` and swap it in.
+
+    `with_reading_index=False` skips SudachiPy (tests): no reading index and no breakdowns.
+    """
     started = time.perf_counter()
     rows = read_openjlpt(source.sqlite_path)
     supplement = read_supplement()
-    index = (
-        build_reading_index(_dictionary_words(rows, supplement), _source_sentences(rows))
-        if with_reading_index
-        else ReadingIndex()
-    )
+    sentence_data = _build_sentence_data(rows, supplement) if with_reading_index else SentenceData(ReadingIndex(), [])
+    index = sentence_data.index
     async with engine.begin() as connection:
         await connection.execute(text(f"DROP SCHEMA IF EXISTS {STAGING_SCHEMA} CASCADE"))
         await connection.execute(text(f"CREATE SCHEMA {STAGING_SCHEMA}"))
@@ -203,6 +250,8 @@ async def load_dictionary(
         await _execute_script(connection, BASE_TABLES_SQL)
         await _copy_source_tables(connection, rows, supplement)
         await _load_reading_index(connection, index)
+        await _load_breakdowns(connection, sentence_data.breakdowns)
+        await _load_grammar_order(connection, rows)
         await _record_meta(connection, commit, source, index if with_reading_index else None)
         await _execute_script(connection, KEYS_SQL)
         await _execute_script(connection, DERIVED_SQL)

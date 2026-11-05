@@ -137,22 +137,27 @@ class SentenceMapper:
             matched |= ids
         return matched
 
+    def tokenize(self, ja: str) -> list[Morpheme]:
+        """The sentence as whole words (SudachiPy's mode C), the units the matching works on."""
+        return list(self._whole_words.tokenize(ja))
+
+    def word_ids(self, morpheme: Morpheme) -> set[str]:
+        """The words a content morpheme stands for: one, several for a split compound, none if unclear."""
+        ids = self._matcher.candidates(morpheme)
+        if not ids:
+            return self._match_by_short_units(morpheme) or set()
+        return ids if len(ids) == 1 else set()
+
     def map_sentence(self, ja: str, index: ReadingIndex) -> frozenset[str] | None:
         """The sentence's word IDs if every content word maps to one; otherwise None."""
         word_ids: set[str] = set()
         is_complete = True
-        for morpheme in self._whole_words.tokenize(ja):
+        for morpheme in self.tokenize(ja):
             if is_function_word(morpheme):
                 continue
             index.content_tokens += 1
-            ids = self._matcher.candidates(morpheme)
-            if not ids:
-                ids = self._match_by_short_units(morpheme) or set()
-                if ids:
-                    index.content_tokens_mapped += 1
-                    word_ids |= ids
-                    continue
-            if len(ids) == 1:
+            ids = self.word_ids(morpheme)
+            if ids:
                 index.content_tokens_mapped += 1
                 word_ids |= ids
             else:
@@ -160,9 +165,8 @@ class SentenceMapper:
         return frozenset(word_ids) if is_complete and word_ids else None
 
 
-def build_reading_index(words: Iterable[DictionaryWord], sentences: Iterable[SourceSentence]) -> ReadingIndex:
+def build_reading_index(mapper: SentenceMapper, sentences: Iterable[SourceSentence]) -> ReadingIndex:
     """Map each distinct sentence; keep the ones that map completely, numbered from 1 in input order."""
-    mapper = SentenceMapper(words)
     index = ReadingIndex()
     seen: set[str] = set()
     for source in sentences:

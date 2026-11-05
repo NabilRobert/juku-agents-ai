@@ -157,3 +157,87 @@ class GradedAnswer(EngineModel):
     kind: QuizKind
     is_correct: bool
     correct_option: str
+
+
+class Example(EngineModel):
+    """An example sentence from the dictionary (Tatoeba's or OpenJLPT's), with its furigana if it checks out."""
+
+    ja: str
+    furigana: str | None
+    en: str | None
+
+
+class WordEntry(EngineModel):
+    """One word's page: what it means, and how it's used (its example sentences)."""
+
+    word_id: str
+    word: str
+    reading: str
+    level: int | None  # None for a supplement word, which is in no JLPT list
+    meanings: list[str]
+    is_known: bool
+    examples: list[Example]
+
+
+class GrammarSummary(EngineModel):
+    grammar_id: str
+    pattern: str
+    level: int
+    meaning: str
+
+
+class GrammarPoint(EngineModel):
+    """One sentence structure: how it's formed, what it means, and examples."""
+
+    grammar_id: str
+    pattern: str
+    level: int
+    meaning: str
+    formation: str
+    notes: str | None
+    examples: list[Example]
+
+
+class TokenWord(EngineModel):
+    word_id: str
+    word: str
+    reading: str
+    level: int | None
+    meanings: list[str]
+    is_known: bool
+
+
+class BreakdownToken(EngineModel):
+    surface: str
+    reading: str
+    kind: Literal["word", "grammar", "name", "number", "symbol"]
+    words: list[TokenWord]
+
+
+class SentenceBreakdown(EngineModel):
+    """A sentence explained from the data: its words, and the grammar points it may use (easiest first)."""
+
+    ja: str
+    tokens: list[BreakdownToken]
+    grammar: list[GrammarSummary]
+
+
+class KanjiWord(EngineModel):
+    word_id: str
+    word: str
+    reading: str
+    level: int
+    meaning: str
+    is_known: bool
+
+
+class KanjiEntry(EngineModel):
+    """One kanji: its readings, what it means, and words that use it (the learner's known ones first)."""
+
+    character: str
+    level: int
+    strokes: int | None
+    onyomi: list[str]
+    kunyomi: list[str]
+    meanings: list[str]
+    words: list[KanjiWord]

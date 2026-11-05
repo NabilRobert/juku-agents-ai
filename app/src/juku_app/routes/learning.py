@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from juku_data import engine
 from juku_data.engine import UnknownWordError
@@ -37,12 +37,18 @@ async def home(request: Request, current: Page = Depends(page)) -> HTMLResponse:
 
 
 @router.post("/kata/{word_id}/dikuasai", dependencies=[Depends(form_csrf)])
-async def mark_known(request: Request, word_id: str, current: Page = Depends(page)) -> Response:  # noqa: B008
+async def mark_known(
+    request: Request,
+    word_id: str,
+    current: Page = Depends(page),  # noqa: B008
+    back_to: Literal["home", "word"] = Form("home"),
+) -> Response:
+    """Mark the word known, then go back where the learner clicked: the home page or the word's own page."""
     try:
         await engine.mark_known(web(request).db, current.learner.id, word_id, datetime.now(UTC))
     except UnknownWordError:
         return HTMLResponse("Kata tidak dikenal.", status_code=404)
-    return RedirectResponse("/beranda", status_code=303)
+    return RedirectResponse(f"/kata/{word_id}" if back_to == "word" else "/beranda", status_code=303)
 
 
 @router.get("/kuis")
@@ -72,8 +78,10 @@ async def answer_quiz(request: Request, answer: QuizAnswer, current: Page = Depe
 
 @router.get("/bacaan")
 async def reading(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008
-    sentences = await engine.find_reading_sentences(web(request).db, current.learner.id)
-    return render(request, "bacaan.html", page=current, sentences=sentences.sentences)
+    db = web(request).db
+    sentences = await engine.find_reading_sentences(db, current.learner.id)
+    breakdowns = await engine.explain_sentences(db, current.learner.id, [item.ja for item in sentences.sentences])
+    return render(request, "bacaan.html", page=current, sentences=sentences.sentences, breakdowns=breakdowns)
 
 
 @router.post("/bacaan/{sentence_id}/dibaca", dependencies=[Depends(form_csrf)])

@@ -33,12 +33,12 @@ from juku_app import assets
 from juku_app.budget import BudgetGuard
 from juku_app.chat import ChatServices
 from juku_app.moderation import Moderator
-from juku_app.routes import account, admin, chat, learning, memory, owner, reports, settings, site
+from juku_app.routes import account, admin, chat, learning, memory, owner, reports, settings, site, study
 from juku_app.routes.common import Redirect, WebContext, templates
 from juku_app.shiori import build_shiori, juku_toolset
 
 SESSION_DAYS = 30
-ROUTERS = (account, settings, learning, chat, memory, reports, admin, owner, site)
+ROUTERS = (account, settings, learning, study, chat, memory, reports, admin, owner, site)
 
 
 @dataclass(frozen=True)

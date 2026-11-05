@@ -136,6 +136,7 @@ def sample_context() -> dict[str, Any]:
         "words": words,
         "quiz": quiz,
         "sentences": sentences,
+        "breakdowns": {},  # explanations come from the dict database, which previews don't use
         "plan": plan,
         "messages": [],
         "memory_data": sample_memory(),

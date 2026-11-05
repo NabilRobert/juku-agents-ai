@@ -29,6 +29,8 @@ class OpenJlptRows:
     kanji: list[Row]
     grammar: list[Row]
     pos: list[Row]
+    # The grammar IDs in OpenJLPT's own (teaching) order; the rows above are by ID, for reproducible loads.
+    grammar_order: list[str]
 
     def counts(self) -> dict[str, int]:
         return {
@@ -79,6 +81,9 @@ def read_openjlpt(sqlite_path: Path) -> OpenJlptRows:
             )
         ]
         pos = connection.execute("SELECT code, description FROM pos ORDER BY code").fetchall()
+        grammar_order = [row[0] for row in connection.execute("SELECT id FROM grammar ORDER BY rowid")]
     finally:
         connection.close()
-    return OpenJlptRows(vocab=vocab, vocab_example=vocab_example, kanji=kanji, grammar=grammar, pos=pos)
+    return OpenJlptRows(
+        vocab=vocab, vocab_example=vocab_example, kanji=kanji, grammar=grammar, pos=pos, grammar_order=grammar_order
+    )
