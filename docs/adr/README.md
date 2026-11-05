@@ -29,7 +29,7 @@ there gives the decision, why, and the options considered. This page is the inde
 | [ADR-021](phase-5-architecture-decisions.md#adr-021-memory-not-continual-learning-settled) | Memory, not continual learning | settled |
 | [ADR-022](phase-5-architecture-decisions.md#adr-022-built-for-ten-designed-for-thousands) | Built for ten, designed for thousands | accepted |
 | [ADR-023](phase-5-architecture-decisions.md#adr-023-anti-regression-by-fitness-functions-plus-the-harness-gate) | Anti-regression by fitness functions, plus the harness gate | accepted |
-| [ADR-024](phase-5-architecture-decisions.md#adr-024-the-frontend-is-server-rendered-lazy-and-held-to-a-budget-revised-2026-10-28) | The frontend is server-rendered, lazy, and held to a budget | revised 2026-10-28 |
+| [ADR-024](phase-5-architecture-decisions.md#adr-024-the-frontend-is-server-rendered-lazy-and-held-to-a-budget-revised-2026-11-05) | The frontend is server-rendered, lazy, and held to a budget | revised 2026-11-05 |
 | [ADR-025](phase-5-architecture-decisions.md#adr-025-a-framework-for-every-component-the-folders-frameworks-over-plain-code-rule) | A framework for every component (the folder's "frameworks over plain code" rule) | accepted |
 | [ADR-026](phase-5-architecture-decisions.md#adr-026-the-dictionarys-index-is-mirrored-into-the-app-database-the-load-is-python-over-copy-track-a-2026-10-28) | The dictionary's index is mirrored into the app database; the load is Python over COPY | accepted (built, 2026-10-28) |
 | [ADR-027](phase-5-architecture-decisions.md#adr-027-what-building-jukus-mcp-server-settled-track-b-2026-10-28) | What building Juku's MCP server settled | accepted (built, 2026-10-28) |

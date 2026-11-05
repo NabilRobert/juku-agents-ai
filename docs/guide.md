@@ -58,9 +58,9 @@ sequenceDiagram
 (`app/web/src/lib/http.ts: postJson`). It reads the answer back as
 server-sent events with `app/web/src/lib/sse.ts: readEvents`.
 
-The island is a small Vue app mounted on the chat page only
-(`app/web/src/islands/chat.ts`). The rest of the page is plain HTML from
-the server.
+The island sits inside the chat page's Vue component
+(`app/web/src/pages/Chat.vue`), which `app/web/src/main.ts` mounts with
+the data the server put in the page.
 
 ### 2. The app checks who is asking
 
@@ -306,8 +306,14 @@ or `make check` fails (`juku_testkit/guardrails.py`).
 It reads `<lookup>.<secret>`; only an Argon2 hash of the secret is
 stored.
 
-**Island.** A small Vue app on an otherwise server-rendered page. Juku
-has two: chat and quiz (`app/web/src/islands/`).
+**Island.** The interactive part of a page: chat, quiz and the memory
+page's corrections (`app/web/src/islands/`). Each sits inside its page's
+component.
+
+**Page component.** Every page is a Vue component in `app/web/src/pages/`.
+The server renders a page as JSON data (its template calls
+`assets.py: json_script`), and `app/web/src/main.ts` mounts the component
+named there, inside `components/AppShell.vue`.
 
 **Leitner box.** A word's place in spaced review: a right answer moves
 it up a box (review later), a wrong one back to the first
@@ -397,13 +403,22 @@ does; change it in the same commit if the behaviour changes.
 **Add a page.**
 1. A route in `app/src/juku_app/web.py: create_web_app`, depending on
    `page` so it needs sign-in and consent.
-2. A template in `app/src/juku_app/templates/`, with every phrase
-   wrapped in `_("...")`.
-3. The Indonesian for each phrase in
+2. A template in `app/src/juku_app/templates/` that passes the page's
+   data and its phrases, each wrapped in `_("...")`, to
+   `json_script("page-data", {"component": "Name", "props": {...}})`.
+3. The component, `app/web/src/pages/Name.vue`, drawing those props with
+   Tailwind and the shapes in `app/web/src/styles.css` (`card`, `btn`,
+   `field`, ...). Forms go through `components/PostForm.vue`, which adds
+   the CSRF token.
+4. The Indonesian for each phrase in
    `app/src/juku_app/locale/id/LC_MESSAGES/messages.po`
    (`test_every_phrase_in_the_templates_has_an_indonesian_translation`
    fails until it's there).
-4. A test in `app/tests/test_web.py`.
+5. A test in `app/tests/test_web.py`; `page_props` reads what the page shows.
+
+**Change the colours.** They are the tokens in `app/web/src/styles.css`'s
+`@theme` (ink, gold, amber, orange, lemon, cream). Keep text on the yellows
+and the orange ink-coloured: white on them is too faint to read.
 
 **Add or remove a learner.** As the owner, on `/admin/learners`, or on
 the server with `juku invite --count N` and `juku delete-learner

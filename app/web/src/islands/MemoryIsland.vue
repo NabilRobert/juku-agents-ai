@@ -57,32 +57,32 @@ function unmark(word: KnownWord): Promise<void> {
 
 <template>
   <div class="space-y-6">
-    <p v-if="message" role="status" class="text-sm">{{ message }}</p>
+    <p v-if="message" role="status" class="alert">{{ message }}</p>
     <section>
-      <h2 class="font-bold">{{ copy.notesHeading }}</h2>
-      <p v-if="notes.length === 0" class="text-sm">{{ copy.noNotes }}</p>
-      <article v-for="note in notes" :key="note.note_id" class="note mt-3 border p-3">
-        <p class="font-medium">{{ note.text }}</p>
-        <p class="text-xs">
-          {{ copy.categories[note.category] ?? note.category }} · {{ copy.notedOn }} {{ note.noted_on }} ·
-          {{ note.age_days }} {{ copy.daysAgo }}
+      <h2 class="section-title">{{ copy.notesHeading }}</h2>
+      <p v-if="notes.length === 0" class="muted mt-2">{{ copy.noNotes }}</p>
+      <article v-for="note in notes" :key="note.note_id" class="note card mt-3 border-l-4 border-l-orange">
+        <p class="font-semibold">{{ note.text }}</p>
+        <p class="muted mt-1 text-xs">
+          <span class="chip mr-1">{{ copy.categories[note.category] ?? note.category }}</span>
+          {{ copy.notedOn }} {{ note.noted_on }} · {{ note.age_days }} {{ copy.daysAgo }}
         </p>
-        <ul class="evidence mt-2 text-xs">
+        <ul class="evidence mt-3 space-y-1 rounded-xl bg-cream p-3 text-xs">
           <li v-for="item in note.evidence" :key="item.event_id">{{ describe(item) }}</li>
         </ul>
-        <div class="mt-2 space-x-2">
-          <button type="button" class="remove border px-2" @click="removeNote(note)">{{ copy.remove }}</button>
-          <button type="button" class="mark-wrong border px-2" @click="markWrong(note)">{{ copy.markWrong }}</button>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="button" class="remove btn-quiet" @click="removeNote(note)">{{ copy.remove }}</button>
+          <button type="button" class="mark-wrong btn-quiet" @click="markWrong(note)">{{ copy.markWrong }}</button>
         </div>
       </article>
     </section>
     <section>
-      <h2 class="font-bold">{{ copy.wordsHeading }}</h2>
-      <p v-if="words.length === 0" class="text-sm">{{ copy.noWords }}</p>
-      <ul>
-        <li v-for="word in words" :key="word.word_id" class="known-word mt-1">
-          {{ word.word }} ({{ word.reading }}) ·
-          <button type="button" class="unmark border px-2" @click="unmark(word)">{{ copy.unmark }}</button>
+      <h2 class="section-title">{{ copy.wordsHeading }}</h2>
+      <p v-if="words.length === 0" class="muted mt-2">{{ copy.noWords }}</p>
+      <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+        <li v-for="word in words" :key="word.word_id" class="known-word card flex items-center justify-between gap-2 p-3">
+          <span><span lang="ja" class="text-lg font-bold">{{ word.word }}</span> <span lang="ja" class="muted">{{ word.reading }}</span></span>
+          <button type="button" class="unmark btn-quiet py-1 text-xs" @click="unmark(word)">{{ copy.unmark }}</button>
         </li>
       </ul>
     </section>

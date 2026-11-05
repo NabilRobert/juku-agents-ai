@@ -165,7 +165,7 @@ the consent, memory and deletion screens.
 
 **Decision:**
 - Python 3.12, FastAPI, SQLAlchemy 2 + Alembic, Pydantic, Typer, uv.
-  Pages are server-rendered shells with Vue islands (ADR-024).
+  Every page is a Vue component, given its data by the server (ADR-024).
 - **The agents run on PydanticAI** (approved by Arthur 2026-10-28,
   ADR-025):
   - its MCP client reaches the gateway over Streamable HTTP;
@@ -805,15 +805,22 @@ overstate the work to the audience this portfolio is for.
 - *Manual review only:* it doesn't scale, and it misses slow drift.
 - *Load tests on every commit:* too slow. They run before releases.
 
-### ADR-024: The frontend is server-rendered, lazy, and held to a budget (revised 2026-10-28)
+### ADR-024: The frontend is server-rendered, lazy, and held to a budget (revised 2026-11-05)
 
 **Decision:**
-- Jinja2 page shells, with **Vue 3 + TypeScript islands** mounted only
-  where a page is interactive (chat, quiz, the memory page). There's no
-  client router. Approved by Arthur 2026-10-28 (ADR-025), so the frontend
-  matches his stack. Vitest for tests.
-- Vite building one small bundle per page, with dynamic imports for the
-  heavy pieces.
+- **Every page is a Vue 3 + TypeScript component** (`app/web/src/pages/`),
+  styled with Tailwind in Arthur's palette. Revised 2026-11-05 at Arthur's
+  request, after using the pages ("this is incredibly barebones... vue and
+  tailwind"). Before, only chat, quiz and the memory page were Vue islands
+  inside plain Jinja2 pages.
+- **The server still owns everything but the drawing:** routes, sign-in,
+  CSRF, the forms (plain posts and redirects), and the Indonesian text
+  (each template passes its `_("...")` phrases as props). A Jinja2 template
+  is now a page's data, as JSON (`assets.py: json_script`), and one entry
+  (`src/main.ts`) mounts that page's component. There's still no client
+  router. Vitest for tests.
+- Vite building the shared entry plus one small chunk per page, so a page
+  loads only its own component (about 31 KB of JavaScript in all).
 - Lazy images, and lists loaded 20 at a time.
 - System fonts for Japanese, and `<ruby>` for furigana.
 - Tailwind, with unused classes stripped.
@@ -831,8 +838,14 @@ overstate the work to the audience this portfolio is for.
 - A budget checked in CI is the same anti-regression idea as the fitness
   functions.
 
+**The cost of the revision:** a page now needs JavaScript to show
+anything (the `<noscript>` says so). Its data is still in the HTML, so
+the tests read it there (`web_helpers.py: page_props`).
+
 **Rejected:**
 - *htmx* (this ADR as first written): small, but not in Arthur's stack.
+- *Islands only, with the rest styled in the templates* (the 2026-10-28
+  version): lighter, but Arthur asked for the pages in Vue and Tailwind.
 - *A full Vue or React single-page app:* a large first download and client
   routing, for a handful of simple pages.
 - *Next.js or Nuxt:* a second runtime (Node) next to the Python app, for

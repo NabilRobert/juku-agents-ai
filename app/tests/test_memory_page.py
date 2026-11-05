@@ -1,6 +1,5 @@
 """The "Shiori ingat…" page (MEM-R5): every note with its evidence, and the learner's own corrections."""
 
-import json
 from datetime import UTC, datetime, timedelta
 
 from juku_app.invites import issue_codes
@@ -9,7 +8,7 @@ from juku_data.engine import Databases, mark_known
 from juku_data.engine.api import record_quiz_answer
 from juku_data.memory import NoteProposal, propose_note
 from sqlalchemy import text
-from web_helpers import client_for, csrf_header, deps, found, sign_up
+from web_helpers import client_for, csrf_header, deps, page_props, sign_up
 
 
 async def learner_id_of(db: Databases, nickname: str) -> int:
@@ -69,7 +68,7 @@ async def test_the_page_shows_each_note_with_its_evidence_and_the_known_words(en
         await mark_known(engine_databases, learner_id, await a_word(engine_databases, 301), datetime.now(UTC))
         page = await client.get("/ingat")
     assert page.status_code == 200
-    data = json.loads(found(r'<script type="application/json" id="memory-data">(.*?)</script>', page.text))
+    data = page_props(page)
     [note] = data["notes"]
     assert note["text"] == "Sering salah membaca kata ini."
     assert len(note["evidence"]) == 3

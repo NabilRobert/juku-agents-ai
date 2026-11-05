@@ -163,12 +163,6 @@ msgstr "Mulai"
 msgid "Target level"
 msgstr "Level target"
 
-msgid "The chat needs JavaScript."
-msgstr "Chat memerlukan JavaScript."
-
-msgid "The quiz needs JavaScript."
-msgstr "Kuis memerlukan JavaScript."
-
 msgid "Time zone"
 msgstr "Zona waktu"
 
@@ -228,9 +222,6 @@ msgstr "Ini catatan Shiori tentang cara kamu belajar, masing-masing dengan aktiv
 
 msgid "Words you know:"
 msgstr "Kata yang kamu kuasai:"
-
-msgid "This page needs JavaScript to change your notes."
-msgstr "Halaman ini butuh JavaScript untuk mengubah catatanmu."
 
 msgid "Notes about how you learn"
 msgstr "Catatan tentang cara kamu belajar"
@@ -312,3 +303,6 @@ msgstr "Minggu mulai"
 
 msgid "Your first report comes on Sunday evening."
 msgstr "Laporan pertamamu datang hari Minggu sore."
+
+msgid "Juku needs JavaScript."
+msgstr "Juku memerlukan JavaScript."

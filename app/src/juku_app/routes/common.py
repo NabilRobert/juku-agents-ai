@@ -71,7 +71,13 @@ def templates() -> Jinja2Templates:
     environment.env.add_extension("jinja2.ext.i18n")
     environment.env.install_gettext_callables(i18n.gettext, i18n.ngettext, newstyle=True)  # type: ignore[attr-defined]
     helpers = cast(dict[str, Any], environment.env.globals)  # pyright: ignore[reportUnknownMemberType]
-    helpers.update(island=assets.island, stylesheet=assets.stylesheet, ruby=furigana_to_ruby)
+    helpers.update(
+        island=assets.island,
+        stylesheet=assets.stylesheet,
+        page_app=assets.page_app,
+        json_script=assets.json_script,
+        ruby=furigana_to_ruby,
+    )
     return environment
 
 
