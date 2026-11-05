@@ -410,6 +410,15 @@ grammar understood and its sentences read
 (the plan's pace, 3 to 30 a day), one grammar point, a few sentences and
 the quiz, each with what's done today (`engine/curriculum.py: today_plan`).
 
+**Keiko's curriculum check.** Once a week Keiko writes a short note on
+the plan page about where the learner is on the curriculum, citing
+`[ref:curriculum]` (`pipeline/facts.py: curriculum_facts` gives her the
+numbers; `checks.py: check_plan` holds the note to them). It comes with
+the weekly run: on Sunday from 18:00, or sooner when the learner opens
+Juku with no run in the last 7 days (`curriculum_check.py:
+queue_check_if_due` queues it, the hourly job runs it). The note is in
+`app.curriculum_notes`.
+
 **Placement test.** 15 questions spread across one level, so a learner
 who already knows some starts further along. One mistake is forgiven; the
 second ends the placement at the last unit answered right before it
