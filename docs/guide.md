@@ -439,17 +439,32 @@ the migrations, as `juku_migrator`, and the dictionary load.
 **Rehearse the server's stack on a laptop.** `ops/rehearse.sh up`, then
 `check`, then `down`. It runs `ops/compose.yaml` with
 `ops/rehearsal/compose.yaml` on top: a local Postgres with TLS instead of
-the managed one, no model key, and the gateway's networks made locally.
+the managed one, no model key, and the gateway (Project 4's
+`mcp-gateway:local` image) with its networks. The gateway's config,
+`ops/secrets/gateway.yaml`, is written from
+`ops/gateway/juku-routes.example.yaml` with the rehearsal's caller keys.
 `check` checks Grafana's data source and that the heartbeat alert fires,
-runs every line of `ops/crontab` once exactly as cron would, runs the
-owner's commands, and fails if any of that made the web app restart (a
-sign of its memory cap). `down` deletes its volumes and the secrets it
-made. To add a check, add it to `check` in the script.
+that the gateway refuses a call without a key and lets Shiori's in, runs
+every line of `ops/crontab` once exactly as cron would, runs the owner's
+commands, and fails if any of that made the web app restart (a sign of
+its memory cap). `down` deletes its volumes, so every learner in it, and
+the secrets it made. To add a check, add it to `check` in the script.
 `test_rehearsal.py` keeps the rehearsal from spending, and from changing
-anything the server runs. Its first runs found four deploy bugs: the
+anything the server runs. Its first runs found five deploy bugs: the
 dictionary sync needed a grant the app's role doesn't have, the audit
-import crashed before the gateway's first call, and the weekly jobs and
-the owner's commands killed the web app by passing its memory cap.
+import crashed before the gateway's first call, the weekly jobs and the
+owner's commands killed the web app by passing its memory cap, and Safari
+couldn't sign in over the laptop's plain http.
+
+**Use Juku yourself on the laptop, with real chat.** After `up`, copy
+`JUKU_MODEL_API_KEY` from `.env` into `ops/secrets/juku_model_api_key`
+(without printing it), then recreate the app with
+`ops/rehearsal/real-model.yaml` added: `docker compose --env-file
+rehearsal/rehearsal.env -f compose.yaml -f rehearsal/compose.yaml -f
+rehearsal/real-model.yaml up -d --no-deps app`, from `ops/`. Chat then
+spends, within `guardrails.yaml`'s budget (a question cost $0.002 to
+$0.004 on 2026-11-05). The rehearsal never loads that file, and `up`
+empties the key again. Stop the stack with `stop`, never `down`.
 
 **Give a service more connections.** Change its share in
 guardrails.yaml's `database` section and the matching `CONNECTION
