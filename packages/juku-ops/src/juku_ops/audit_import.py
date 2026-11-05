@@ -6,7 +6,8 @@ every few minutes; each run:
 
 1. verifies the whole file's chain;
 2. checks the last line imported before is still in the file, unchanged
-   (a log that was deleted and restarted, or rewritten, is refused);
+   (a log that was deleted, deleted and restarted, or rewritten, is refused;
+   one not made yet, before its service's first call, is simply empty);
 3. imports the lines after it, keeping only allow-listed metadata fields.
 
 Any problem means nothing is imported, and the run is recorded with the
@@ -132,6 +133,8 @@ def _continuity_problem(report: ChainReport, last: _LastImported | None) -> str 
     """A problem if the line imported last time isn't in the file, unchanged, any more."""
     if last is None:
         return None
+    if report.lines == 0:
+        return f"the log is missing or empty, but {last.line_number} lines were imported from it before: it was deleted"
     if last.line_number <= report.lines and report.line_hashes[last.line_number - 1] == last.line_sha256:
         return None
     return f"line {last.line_number} no longer matches the copy imported earlier: the log was replaced or rewritten"
@@ -168,9 +171,17 @@ def _new_rows(source: AuditSource, report: ChainReport, after_line: int) -> tupl
     return rows, problems
 
 
+def _verified(source: AuditSource, path: Path) -> ChainReport:
+    """The log's chain. A log not made yet (its service has had no call) is empty, not a problem;
+    one that goes missing after an import is caught by the continuity check."""
+    if not path.exists():
+        return ChainReport()
+    return verify_log(path, genesis=source.genesis)
+
+
 async def import_audit_log(engine: AsyncEngine, source: AuditSource, path: Path) -> ImportResult:
     """Verify `path` and import its new lines; record the run either way."""
-    report = verify_log(path, genesis=source.genesis)
+    report = _verified(source, path)
     async with engine.begin() as connection:
         last = await _last_imported(connection, source)
         problems = list(report.problems)
