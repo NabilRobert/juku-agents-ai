@@ -397,6 +397,25 @@ gateway stops (`packages/juku-mcp/attacks/`).
 (PydanticAI's `TestModel` and `FunctionModel`). It makes agent tests free
 and repeatable.
 
+**Curriculum and units.** The path from N5 to the learner's target, as
+about 320 numbered units of 15 words each, with the kanji those words
+bring, the grammar points in teaching order, and up to 5 sentences that
+use only words taught so far. It is built once, when the dictionary is
+loaded (`juku_data/dictionary/curriculum.py: build_curriculum`), into the
+`curriculum_*` tables. A unit is done when its words are known, its
+grammar understood and its sentences read
+(`engine/curriculum.py: _statuses`). The pages are `routes/curriculum.py`.
+
+**Today's lesson.** The home page's card: the current unit's next words
+(the plan's pace, 3 to 30 a day), one grammar point, a few sentences and
+the quiz, each with what's done today (`engine/curriculum.py: today_plan`).
+
+**Placement test.** 15 questions spread across one level, so a learner
+who already knows some starts further along. One mistake is forgiven; the
+second ends the placement at the last unit answered right before it
+(`engine/placement.py: placed_through`). Words up to there are marked
+known, and the result is a `placed` event.
+
 **Span and trace.** A span is one timed step (a tool call, a model call);
 a trace is the tree of spans for one request. OpenTelemetry records them
 (`juku_common/telemetry.py`), with no message content (FF9).
@@ -409,7 +428,8 @@ answer (sse-starlette on the server, `lib/sse.ts` in the browser).
 rewrite a big table (FF4, `make migrations-lint`).
 
 **Summaries.** The tables the engine reads instead of recounting events:
-`learner_state`, `learner_coverage`, `learner_daily_activity`.
+`learner_state`, `learner_coverage`, `learner_daily_activity`,
+`learner_studied` (grammar points understood, sentences read, placement).
 
 **Rehearsal.** The server's compose stack run on a laptop at $0, to find
 deploy problems before the server step (`ops/rehearse.sh`, slice 8).
@@ -459,6 +479,14 @@ formula) and Shiori's answers.
 **Change the colours.** They are the tokens in `app/web/src/styles.css`'s
 `@theme` (ink, gold, amber, orange, lemon, cream). Keep text on the yellows
 and the orange ink-coloured: white on them is too faint to read.
+
+**Change the curriculum.** Unit size, sentences per unit and the order of
+words are constants at the top of
+`packages/juku-data/src/juku_data/dictionary/curriculum.py`
+(`test_curriculum_build.py` shows each rule). The daily targets are in
+`engine/curriculum.py` (`words_a_day`, `SENTENCES_A_DAY`, `QUIZ_A_DAY`),
+and the placement rule in `engine/placement.py`. Reload the dictionary
+(`juku-data load-dictionary`, then `sync-index`) to rebuild the units.
 
 **Change how a sentence's grammar is found.** In
 `packages/juku-data/src/juku_data/dictionary/breakdown.py`:
