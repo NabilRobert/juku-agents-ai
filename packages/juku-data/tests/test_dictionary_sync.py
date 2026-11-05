@@ -8,8 +8,9 @@ from juku_data.dictionary.fetch import fetch_dictionary
 from juku_data.dictionary.pin import OPENJLPT_COMMIT
 from juku_data.dictionary.source import DictionaryError
 from juku_data.dictionary.sync import sync_index
+from juku_testkit.databases import TestDatabase
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 
 async def count(engine: AsyncEngine, sql: str) -> object:
@@ -27,6 +28,21 @@ async def test_the_mirror_holds_every_word_kanji_and_leverage_row(
     assert await count(app_engine, "SELECT count(*) FROM learning.dictionary_kanji") == report.kanji == 2383
     assert await count(app_engine, "SELECT count(*) FROM learning.kanji_leverage") == report.leverage_rows
     assert await count(app_engine, "SELECT openjlpt_commit FROM learning.dictionary_version") == OPENJLPT_COMMIT
+
+
+async def test_the_app_role_can_replace_the_mirror(app_database: TestDatabase, dict_engine: AsyncEngine) -> None:
+    # `juku-data sync-index` runs in the app's container as juku_app; the rehearsal found it couldn't TRUNCATE.
+    as_juku_app = create_async_engine(
+        app_database.sqlalchemy_url, connect_args={"server_settings": {"role": "juku_app"}}
+    )
+    try:
+        report = await sync_index(dict_engine, as_juku_app)
+        await sync_index(dict_engine, as_juku_app)
+        assert await count(as_juku_app, "SELECT current_user") == "juku_app"
+        assert await count(as_juku_app, "SELECT count(*) FROM learning.dictionary_words") == report.words
+        assert await count(as_juku_app, "SELECT count(*) FROM learning.dictionary_version") == 1
+    finally:
+        await as_juku_app.dispose()
 
 
 async def test_a_learner_item_missing_from_the_dictionary_is_reported(
