@@ -38,6 +38,21 @@ def test_only_the_rehearsal_drops_the_secure_cookie_flag() -> None:
     assert "JUKU_SECURE_COOKIES" not in (OPS / "compose.yaml").read_text(encoding="utf-8")
 
 
+def test_the_rehearsal_never_loads_the_real_model_override() -> None:
+    # rehearsal/real-model.yaml is for Arthur's own use, with his OK of the spend; the rehearsal stays at $0.
+    assert (OPS / "rehearsal" / "real-model.yaml").is_file()
+    assert "-f rehearsal/real-model.yaml" not in (OPS / "rehearse.sh").read_text(encoding="utf-8")
+
+
+def test_the_gateway_config_is_written_from_jukus_own_routes() -> None:
+    # One list of who may call which tool: the routes file a test keeps equal to guardrails.yaml.
+    script = (OPS / "rehearse.sh").read_text(encoding="utf-8")
+    assert "gateway/juku-routes.example.yaml >secrets/gateway.yaml" in script
+    gateway = rehearsal()["services"]["mcp-gateway"]
+    assert gateway["image"] == "mcp-gateway:local" and gateway["read_only"] is True
+    assert "ports" not in gateway
+
+
 def test_the_rehearsal_empties_the_model_key() -> None:
     script = (OPS / "rehearse.sh").read_text(encoding="utf-8")
     assert re.search(r"^\s*: >juku_model_api_key$", script, re.MULTILINE)

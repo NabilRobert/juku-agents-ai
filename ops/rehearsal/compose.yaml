@@ -6,10 +6,11 @@
 #   on, with the image's own snakeoil certificate, so the secrets' URLs
 #   (ssl=require) work as they will on the server. Published on loopback
 #   only, for ops/db/setup.sh to reach it from the host.
-# - The gateway's two networks, made here instead of by its deployment,
-#   so the stack starts without it. With no gateway on them, the app can't
-#   reach Juku's MCP server: chat and Keiko's tools wait for the gateway's
-#   container (asked of Project 4, 2026-11-04).
+# - The gateway (Project 4's `mcp-gateway:local` image, built from
+#   mcp-gateway's deploy/, ea466bc) and its two networks, made here instead
+#   of by its own deployment. Its config is ops/secrets/gateway.yaml, which
+#   rehearse.sh writes from gateway/juku-routes.example.yaml and the
+#   rehearsal's own caller keys.
 # - The model is unreachable on purpose: no key, and an address that
 #   refuses connections, so a rehearsal can never spend.
 # - The session cookie without the Secure flag: the laptop serves plain
@@ -29,6 +30,7 @@ networks:
 # Paths are relative to ops/, the first file's folder, as compose resolves them.
 secrets:
   rehearsal_db_superuser_password: {file: ./secrets/rehearsal_db_superuser_password}
+  mcp_gateway_config: {file: ./secrets/gateway.yaml}
 
 services:
   db:
@@ -69,3 +71,21 @@ services:
   grafana:
     depends_on:
       db: {condition: service_healthy}
+
+  # As mcp-gateway's deploy/compose.yaml runs it (read-only, no capabilities, 160 MB), on this stack's networks.
+  mcp-gateway:
+    image: mcp-gateway:local
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=16m"]
+    restart: unless-stopped
+    networks: [gateway-clients, gateway-upstreams]
+    secrets: [mcp_gateway_config]
+    volumes:
+      - ${JUKU_GATEWAY_AUDIT_DIR}:/var/log/mcp-gateway
+    depends_on:
+      # It connects to every upstream at start and exits if one is down.
+      juku-mcp: {condition: service_healthy}
+    mem_limit: 160m
+    memswap_limit: 160m

@@ -4,12 +4,14 @@
 # model key, and the model's address refuses connections.
 #
 #   ops/rehearse.sh up      secrets, dictionary files, images, database, migrations, the stack
-#   ops/rehearse.sh check   the health checks, Grafana's data source and an alert, every cron job once, the owner's commands
-#   ops/rehearse.sh down    stop it and delete its volumes and the secrets it made
+#   ops/rehearse.sh check   the health checks, Grafana's data source and an alert, the gateway, every cron job once,
+#                           the owner's commands
+#   ops/rehearse.sh down    stop it and delete its volumes (every learner in it) and the secrets it made
 #
 # It writes ops/secrets/ through ops/make-secrets.sh, and refuses to if that
-# folder holds secrets it didn't make (no REHEARSAL marker). Heavy: it
-# builds two images and runs four containers, so run it alone.
+# folder holds secrets it didn't make (no REHEARSAL marker). It needs the
+# gateway's image, mcp-gateway:local, built from mcp-gateway's deploy/. Heavy:
+# it builds two images and runs five containers, so run it alone.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -50,6 +52,38 @@ make_rehearsal_secrets() {
         [[ -s juku_keiko_gateway_key ]] || openssl rand -hex 32 >juku_keiko_gateway_key
         : >juku_model_api_key
     )
+    write_gateway_config
+}
+
+# The hash the gateway keeps for a caller: sha256 of the key as the app sends it (whitespace stripped, as
+# pydantic-settings reads a secret file).
+key_hash() { tr -d '[:space:]' <"$1" | shasum -a 256 | cut -d' ' -f1; }
+unheld_key_hash() { openssl rand -hex 32 | shasum -a 256 | cut -d' ' -f1; }
+
+# The gateway's config: Juku's own routes (gateway/juku-routes.example.yaml, which a test keeps equal to
+# guardrails.yaml) with the callers' hashes filled in, then the settings its container needs (mcp-gateway's
+# deploy/gateway.example.yaml). Nikki and Tadashi call no Juku tool, so theirs are hashes of keys nobody holds.
+write_gateway_config() {
+    (
+        umask 077
+        sed -e "s/<sha256 of Shiori's key>/$(key_hash secrets/juku_shiori_gateway_key)/" \
+            -e "s/<sha256 of Keiko's key>/$(key_hash secrets/juku_keiko_gateway_key)/" \
+            -e "s/<sha256 of Nikki's key>/$(unheld_key_hash)/" \
+            -e "s/<sha256 of Tadashi's key>/$(unheld_key_hash)/" \
+            gateway/juku-routes.example.yaml >secrets/gateway.yaml
+        cat >>secrets/gateway.yaml <<'EOF'
+# From mcp-gateway's deploy/gateway.example.yaml: the app calls it by its service name (else HTTP 421),
+# rules-only detection, and the audit log in the folder the app's import-audit job reads.
+allowed_hosts: ["mcp-gateway:*"]
+detector: {rules: true}
+audit: {path: /var/log/mcp-gateway/audit.jsonl, fsync: true}
+EOF
+    )
+}
+
+require_the_gateway_image() {
+    docker image inspect mcp-gateway:local >/dev/null 2>&1 ||
+        fail "no mcp-gateway:local image: build it in mcp-gateway's deploy/ (docker compose build), then rerun"
 }
 
 set_up_database() {
@@ -82,7 +116,7 @@ load_schema_and_dictionary() {
 up() {
     say "secrets"; make_rehearsal_secrets
     say "dictionary files"; fetch_the_dictionary
-    say "images"; "${COMPOSE[@]}" build app juku-mcp
+    say "images"; require_the_gateway_image; "${COMPOSE[@]}" build app juku-mcp
     say "database"; set_up_database
     say "migrations and dictionary"; load_schema_and_dictionary
     say "the stack"; "${COMPOSE[@]}" up -d --wait
@@ -136,11 +170,29 @@ check_the_app_was_not_restarted() {
     echo "the app wasn't restarted"
 }
 
+# The app reaches Juku's MCP server only through the gateway: refused without a key (not 421, the wrong
+# allowed_hosts, nor a connection error), let in with Shiori's. From a container on the app's networks.
+check_the_gateway() {
+    "${COMPOSE[@]}" run --rm --no-deps -T app python - <<'EOF' || fail "the app can't reach Juku's tools through the gateway"
+import httpx, pathlib, sys
+url = "http://mcp-gateway:8000/mcp/juku/"
+hello = {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "rehearsal", "version": "0"}}}
+accept = {"Accept": "application/json, text/event-stream"}
+key = pathlib.Path("/run/secrets/juku_shiori_gateway_key").read_text().strip()
+without, with_key = (httpx.post(url, json=hello, headers=accept | extra).status_code
+                     for extra in ({}, {"Authorization": f"Bearer {key}"}))
+print(f"gateway: {without} without a key, {with_key} with Shiori's")
+sys.exit(0 if (without, with_key) == (401, 200) else 1)
+EOF
+}
+
 check() {
     say "health"
     curl -fsS "$APP_URL/healthz" && echo
     "${COMPOSE[@]}" ps --format '{{.Service}}: {{.Health}}'
     say "Grafana"; check_grafana
+    say "the gateway"; check_the_gateway
     say "cron jobs, once each"
     run_the_crontab_once
     say "the owner's commands, as docs/guide.md gives them"
@@ -148,7 +200,7 @@ check() {
     echo "juku invite: a code was issued"
     "${COMPOSE[@]}" run --rm --no-deps -T app juku learners || fail "juku learners"
     check_the_app_was_not_restarted
-    echo "Rehearsal passed. Not covered until the gateway's container exists: chat and Keiko's tools."
+    echo "Rehearsal passed. Not covered: a chat answer, which needs the model (rehearsal/real-model.yaml, with Arthur's OK)."
 }
 
 # The rehearsal's secrets go too, so its stand-in signing key isn't left on disk
