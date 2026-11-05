@@ -102,6 +102,12 @@ def page_props(page: httpx.Response) -> dict[str, Any]:
     return cast(dict[str, Any], data["props"])
 
 
+def shell_props(page: httpx.Response) -> dict[str, Any]:
+    """What the shell around every page shows: the tabs, and the owner's links (base.html, shell-data)."""
+    data = json.loads(found(r'<script type="application/json" id="shell-data">(.*?)</script>', page.text))
+    return cast(dict[str, Any], data)
+
+
 def csrf_header(page: httpx.Response) -> dict[str, str]:
     """The header the islands send: the token from the page's <meta name="csrf-token">."""
     return {"X-CSRF-Token": found(r'name="csrf-token" content="([^"]+)"', page.text)}

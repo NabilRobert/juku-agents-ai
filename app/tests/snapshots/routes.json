@@ -21,7 +21,12 @@
    [
     "admin",
     [
-     "signed_in"
+     [
+      "page",
+      [
+       "signed_in"
+      ]
+     ]
     ]
    ]
   ]
@@ -39,7 +44,12 @@
    [
     "admin",
     [
-     "signed_in"
+     [
+      "page",
+      [
+       "signed_in"
+      ]
+     ]
     ]
    ]
   ]
@@ -57,7 +67,12 @@
    [
     "admin",
     [
-     "signed_in"
+     [
+      "page",
+      [
+       "signed_in"
+      ]
+     ]
     ]
    ]
   ]
@@ -74,7 +89,12 @@
    [
     "admin",
     [
-     "signed_in"
+     [
+      "page",
+      [
+       "signed_in"
+      ]
+     ]
     ]
    ]
   ]
@@ -91,7 +111,12 @@
    [
     "admin",
     [
-     "signed_in"
+     [
+      "page",
+      [
+       "signed_in"
+      ]
+     ]
     ]
    ]
   ]

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import text
 
-from juku_app.routes.common import admin, web
+from juku_app.routes.common import Page, admin, render, web
 
 # Enough to see the week, small enough to load at once.
 INSPECTOR_ROWS = 50
@@ -32,18 +32,18 @@ RUN_REPORT = "SELECT body, is_fallback FROM app.reports WHERE run_id = :id"
 router = APIRouter()
 
 
-@router.get("/admin/runs", dependencies=[Depends(admin)])
-async def admin_runs(request: Request) -> HTMLResponse:
+@router.get("/admin/runs")
+async def admin_runs(request: Request, current: Page = Depends(admin)) -> HTMLResponse:  # noqa: B008
     """The Run Inspector's index (AG3): the latest runs, and the feedback job's drafts (AG4)."""
     context = web(request)
     async with context.db.app.connect() as connection:
         runs = (await connection.execute(text(LATEST_RUNS), {"limit": INSPECTOR_ROWS})).mappings().all()
         drafts = (await connection.execute(text(LATEST_DRAFTS), {"limit": INSPECTOR_ROWS})).mappings().all()
-    return context.views.TemplateResponse(request, "admin_runs.html", {"runs": runs, "drafts": drafts})
+    return render(request, "admin_runs.html", page=current, runs=runs, drafts=drafts)
 
 
-@router.get("/admin/runs/{run_id}", dependencies=[Depends(admin)])
-async def admin_run(request: Request, run_id: int) -> HTMLResponse:
+@router.get("/admin/runs/{run_id}")
+async def admin_run(request: Request, run_id: int, current: Page = Depends(admin)) -> HTMLResponse:  # noqa: B008
     """One run: its facts, every draft, every review with code's issues, the decision, the report."""
     context = web(request)
     async with context.db.app.connect() as connection:
@@ -53,4 +53,4 @@ async def admin_run(request: Request, run_id: int) -> HTMLResponse:
         attempts = (await connection.execute(text(RUN_ATTEMPTS), {"id": run_id})).mappings().all()
         report = (await connection.execute(text(RUN_REPORT), {"id": run_id})).mappings().first()
     shown = {"run": run, "facts": json.dumps(run["facts"], ensure_ascii=False, indent=1), "attempts": attempts}
-    return context.views.TemplateResponse(request, "admin_run.html", {**shown, "report": report})
+    return render(request, "admin_run.html", page=current, report=report, **shown)

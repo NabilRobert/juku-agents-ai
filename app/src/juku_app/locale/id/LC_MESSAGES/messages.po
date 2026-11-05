@@ -369,3 +369,15 @@ msgstr "Catatan"
 
 msgid "Examples"
 msgstr "Contoh"
+
+msgid "Learners"
+msgstr "Pelajar"
+
+msgid "Run Inspector"
+msgstr "Run Inspector"
+
+msgid "Owner"
+msgstr "Pemilik"
+
+msgid "Invite codes, learners, and the weekly runs."
+msgstr "Kode undangan, pelajar, dan laporan mingguan."

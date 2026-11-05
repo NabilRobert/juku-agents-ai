@@ -4,11 +4,16 @@ import JapaneseText from "../components/JapaneseText.vue";
 import PostForm from "../components/PostForm.vue";
 import type { Word } from "../lib/types";
 
+type HomeCopy =
+  | "hello" | "wordsYouKnow" | "recommendations" | "iKnowThis" | "quiz" | "reading" | "plan" | "examples"
+  | "owner" | "ownerExplain" | "learners" | "runInspector";
+
 defineProps<{
   nickname: string;
   knownWords: number;
   words: Word[];
-  copy: Record<"hello" | "wordsYouKnow" | "recommendations" | "iKnowThis" | "quiz" | "reading" | "plan" | "examples", string>;
+  isOwner: boolean;
+  copy: Record<HomeCopy, string>;
 }>();
 </script>
 
@@ -24,6 +29,17 @@ defineProps<{
         <a href="/bacaan" class="btn-quiet">{{ copy.reading }}</a>
         <a href="/rencana" class="btn-quiet">{{ copy.plan }}</a>
       </div>
+    </section>
+
+    <section v-if="isOwner" class="owner-card card mt-4 flex flex-wrap items-center justify-between gap-3 border-orange/60 bg-ink text-white">
+      <div>
+        <p class="font-bold text-lemon">{{ copy.owner }}</p>
+        <p class="text-sm text-white/70">{{ copy.ownerExplain }}</p>
+      </div>
+      <p class="flex flex-wrap gap-2">
+        <a href="/admin/learners" class="btn">{{ copy.learners }}</a>
+        <a href="/admin/runs" class="btn bg-white hover:bg-lemon">{{ copy.runInspector }}</a>
+      </p>
     </section>
 
     <h2 class="section-title mt-8 mb-3">{{ copy.recommendations }}</h2>

@@ -5,6 +5,7 @@ export interface Shell {
   current: string;
   sections: { slug: string; label: string }[];
   aboutData: string;
+  ownerLinks: { href: string; label: string }[];
   study: StudyCopy;
 }
 

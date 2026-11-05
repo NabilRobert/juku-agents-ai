@@ -41,6 +41,7 @@ class SamplePage:
     learner: Learner
     nickname: str
     today: date
+    is_owner: bool = False
 
 
 def sample_memory() -> dict[str, Any]:
