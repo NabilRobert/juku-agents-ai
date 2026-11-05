@@ -24,7 +24,10 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from juku_data.engine.state import CORRECT_DAYS_TO_KNOW, LAST_BOX, LEITNER_INTERVAL_DAYS
 
 # Event types (learning.event_types).
-MARKED_KNOWN, UNMARKED_KNOWN, QUIZ_MEANING, QUIZ_READING, SENTENCE_READ = 1, 2, 3, 4, 5
+MARKED_KNOWN, UNMARKED_KNOWN, QUIZ_MEANING, QUIZ_READING, SENTENCE_READ, GRAMMAR_STUDIED, PLACED = 1, 2, 3, 4, 5, 6, 7
+# What learner_studied keeps: the first time each sentence was read, each grammar point studied, and each
+# curriculum unit a placement test placed the learner through.
+STUDIED_EVENTS = (SENTENCE_READ, GRAMMAR_STUDIED, PLACED)
 WORD_EVENTS = (MARKED_KNOWN, UNMARKED_KNOWN, QUIZ_MEANING, QUIZ_READING)
 INTERVALS_ARRAY = "ARRAY[" + ", ".join(str(LEITNER_INTERVAL_DAYS[box]) for box in sorted(LEITNER_INTERVAL_DAYS)) + "]"
 
@@ -98,8 +101,9 @@ SELECT e.learner_id, (e.occurred_at AT TIME ZONE l.timezone)::date AS day,
        count(*) FILTER (WHERE e.event_type = {SENTENCE_READ})::integer AS sentences_read
 FROM learning.learning_events e
 JOIN learning.learners l ON l.id = e.learner_id
--- Unmarking a word isn't counted as activity, so a day with only that has no row.
-WHERE e.learner_id = ANY(:learner_ids) AND e.event_type <> {UNMARKED_KNOWN}
+-- Unmarking a word isn't counted as activity, so a day with only that has no row. Nor are studying a
+-- grammar point or a placement (they have no column here): the curriculum counts them in learner_studied.
+WHERE e.learner_id = ANY(:learner_ids) AND e.event_type NOT IN ({UNMARKED_KNOWN}, {GRAMMAR_STUDIED}, {PLACED})
 GROUP BY e.learner_id, day
 """  # noqa: S608
 
@@ -180,6 +184,14 @@ def candidate_query(state_table: str, *, only_words: bool = False) -> str:
     """  # noqa: S608
 
 
+EXPECTED_STUDIED = f"""
+SELECT learner_id, event_type AS kind, item_id, min(occurred_at) AS first_at
+FROM learning.learning_events
+WHERE learner_id = ANY(:learner_ids) AND event_type IN ({", ".join(map(str, STUDIED_EVENTS))})
+GROUP BY learner_id, event_type, item_id
+"""  # noqa: S608
+
+
 @dataclass(frozen=True)
 class Summary:
     """One summary table: its name, the columns compared, and the query giving its expected rows."""
@@ -195,6 +207,7 @@ EXPECTED_TABLE = {
     "learner_coverage": "expected_coverage",
     "learner_candidate": "expected_candidate",
     "learner_daily_activity": "expected_activity",
+    "learner_studied": "expected_studied",
 }
 SUMMARIES = [
     Summary(
@@ -219,6 +232,7 @@ SUMMARIES = [
         "learner_id, day, quiz_answers, quiz_correct, words_marked, sentences_read",
         EXPECTED_ACTIVITY,
     ),
+    Summary("learner_studied", "learner_id, kind, item_id, first_at", EXPECTED_STUDIED),
 ]
 ALL_LEARNERS = "SELECT id FROM learning.learners ORDER BY id"
 DIFFERENCES_SHOWN = 3

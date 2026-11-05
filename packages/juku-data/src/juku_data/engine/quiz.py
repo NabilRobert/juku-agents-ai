@@ -139,14 +139,13 @@ def _options(word: QuizWord, kind: QuizKind, same_level: list[QuizWord], seed: s
     return sorted(chosen, key=lambda option: stable_hash(seed, word.id, option))
 
 
-async def make_quiz(app: AsyncEngine, dictionary: AsyncEngine, learner: Learner, today: date, batch: int) -> Quiz:
-    seed = f"{learner.public_id}:{today.isoformat()}:{batch}"
-    picked = (await _picked_word_ids(app, learner, today))[batch * QUIZ_LENGTH : (batch + 1) * QUIZ_LENGTH]
+async def questions_for(dictionary: AsyncEngine, word_ids: list[str], seed: str) -> list[QuizItem]:
+    """A question for each word, in order, with distractors from its own level (the quiz and the placement test)."""
     async with dictionary.connect() as connection:
         levels = {
             int(level)
             for level in await connection.scalars(
-                text("SELECT DISTINCT level FROM ojlpt.vocab WHERE id = ANY(:ids)"), {"ids": picked}
+                text("SELECT DISTINCT level FROM ojlpt.vocab WHERE id = ANY(:ids)"), {"ids": word_ids}
             )
         }
     by_level: dict[int, list[QuizWord]] = {}
@@ -155,7 +154,7 @@ async def make_quiz(app: AsyncEngine, dictionary: AsyncEngine, learner: Learner,
         by_level.setdefault(word.level, []).append(word)
         by_id[word.id] = word
     items: list[QuizItem] = []
-    for word_id in picked:
+    for word_id in word_ids:
         word = by_id.get(word_id)
         if word is None:  # a supplement word has no level, so no distractors: it isn't quizzed
             continue
@@ -165,7 +164,13 @@ async def make_quiz(app: AsyncEngine, dictionary: AsyncEngine, learner: Learner,
                 word_id=word.id, kind=kind, prompt=word.word, options=_options(word, kind, by_level[word.level], seed)
             )
         )
-    return Quiz(items=items)
+    return items
+
+
+async def make_quiz(app: AsyncEngine, dictionary: AsyncEngine, learner: Learner, today: date, batch: int) -> Quiz:
+    seed = f"{learner.public_id}:{today.isoformat()}:{batch}"
+    picked = (await _picked_word_ids(app, learner, today))[batch * QUIZ_LENGTH : (batch + 1) * QUIZ_LENGTH]
+    return Quiz(items=await questions_for(dictionary, picked, seed))
 
 
 async def correct_option(dictionary: AsyncEngine, word_id: str, kind: QuizKind) -> str | None:
