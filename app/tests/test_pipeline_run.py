@@ -5,6 +5,8 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
+from juku_app.pipeline.crew import KEIKO_INSTRUCTIONS, NIKKI_INSTRUCTIONS
+from juku_app.pipeline.facts import WeekFacts
 from juku_app.pipeline.run import run_weekly
 from juku_common.rules import Rules
 from juku_data.engine import Databases
@@ -13,6 +15,7 @@ from pipeline_helpers import (
     approving_tadashi,
     consented,
     crew_of,
+    faithful_keiko,
     faithful_nikki,
     faithful_plan,
     fixture_learner,
@@ -188,3 +191,36 @@ async def test_an_approved_plans_note_proposals_are_checked_and_stored_as_keikos
     assert refused == "evidence_does_not_show_pattern", (
         "two kinds of quiz don't show one confusion: memory's rules apply"
     )
+
+
+# --- what the agents are told (paid run 2: made-up note categories, citations of fields) ---
+
+
+async def test_keiko_and_her_reviewer_are_shown_the_allowed_note_categories_by_name(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    learner = await fixture_learner(engine_databases, rules)
+    shown: dict[str, Any] = {}
+
+    def keiko(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        shown["keiko"] = prompt_of(messages)["note_categories"]
+        return faithful_keiko(messages, info)
+
+    def tadashi(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        sent = prompt_of(messages)
+        if sent["author"] == "keiko":
+            shown["tadashi"] = sent["given"]["note_categories"]
+        return approving_tadashi(messages, info)
+
+    await run_weekly(
+        services_for(engine_databases, rules, crew_of(keiko=keiko, tadashi=tadashi)),
+        learner,
+        sunday_evening(learner.timezone),
+    )
+    assert shown == {"keiko": rules.memory.allowed_categories, "tadashi": rules.memory.allowed_categories}
+
+
+@pytest.mark.parametrize("instructions", [KEIKO_INSTRUCTIONS, NIKKI_INSTRUCTIONS], ids=["keiko", "nikki"])
+def test_the_writers_instructions_name_every_citable_field(instructions: str) -> None:
+    for field in WeekFacts.model_fields:
+        assert field in instructions

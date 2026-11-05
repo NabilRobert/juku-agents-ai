@@ -44,7 +44,7 @@ from juku_app.consent import has_current_consent
 from juku_app.pipeline import records
 from juku_app.pipeline.approval import decide_approval
 from juku_app.pipeline.checks import check_plan, check_report
-from juku_app.pipeline.crew import Crew, KeikoRun, keiko_prompt, nikki_prompt, tadashi_prompt
+from juku_app.pipeline.crew import Crew, KeikoRun, keiko_given, keiko_prompt, nikki_prompt, tadashi_prompt
 from juku_app.pipeline.facts import WeekFacts, gather_facts, retired_note_ids, week_of
 from juku_app.pipeline.fallback import facts_only_report
 from juku_app.pipeline.outputs import Issue, KeikoPlan, Review
@@ -180,8 +180,10 @@ async def _plan(context: RunScope, facts: WeekFacts) -> KeikoPlan | None:
         via_shiori=context.via_shiori,
     )
 
+    given = keiko_given(facts, services.rules.memory.allowed_categories)
+
     async def generate(revision: dict[str, Any] | None) -> KeikoPlan:
-        prompt = keiko_prompt(facts, revision)
+        prompt = keiko_prompt(given, revision)
         return await _call(
             context, lambda limits, usage: keiko.run(prompt, deps=deps, usage_limits=limits, usage=usage)
         )
@@ -189,7 +191,7 @@ async def _plan(context: RunScope, facts: WeekFacts) -> KeikoPlan | None:
     def check(plan: KeikoPlan, fresh: WeekFacts) -> list[Issue]:
         return check_plan(plan, facts, fresh, services.rules, context.retired)
 
-    plan = await _reviewed(context, "keiko", generate, check, {"facts": facts.model_dump(mode="json")})
+    plan = await _reviewed(context, "keiko", generate, check, given)
     if plan is not None:
         for proposal in plan.note_proposals:
             await propose_note(
