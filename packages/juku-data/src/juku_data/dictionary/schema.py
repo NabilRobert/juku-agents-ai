@@ -23,6 +23,11 @@ CREATE TABLE sentence (
 CREATE TABLE sentence_word (sentence_id integer NOT NULL, word_id text NOT NULL);
 CREATE TABLE sentence_breakdown (ja text NOT NULL, tokens jsonb NOT NULL, grammar_ids jsonb NOT NULL);
 CREATE TABLE grammar_position (id text NOT NULL, position smallint NOT NULL);
+CREATE TABLE curriculum_unit (unit_id smallint NOT NULL, level smallint NOT NULL, number smallint NOT NULL);
+CREATE TABLE curriculum_word (unit_id smallint NOT NULL, word_id text NOT NULL, position smallint NOT NULL);
+CREATE TABLE curriculum_kanji (unit_id smallint NOT NULL, kanji text NOT NULL, position smallint NOT NULL);
+CREATE TABLE curriculum_grammar (unit_id smallint NOT NULL, grammar_id text NOT NULL, position smallint NOT NULL);
+CREATE TABLE curriculum_sentence (unit_id smallint NOT NULL, sentence_id integer NOT NULL, position smallint NOT NULL);
 CREATE TABLE meta (
     openjlpt_commit text NOT NULL, sqlite_sha256 text NOT NULL, loaded_at timestamptz NOT NULL DEFAULT now(),
     sentences_total integer, content_tokens integer, content_tokens_mapped integer);
@@ -40,6 +45,20 @@ ALTER TABLE sentence ADD PRIMARY KEY (sentence_id);
 ALTER TABLE sentence_word ADD PRIMARY KEY (sentence_id, word_id);
 ALTER TABLE sentence_breakdown ADD PRIMARY KEY (ja);
 ALTER TABLE grammar_position ADD PRIMARY KEY (id);
+ALTER TABLE curriculum_unit ADD PRIMARY KEY (unit_id);
+ALTER TABLE curriculum_unit ADD UNIQUE (level, number);
+ALTER TABLE curriculum_word ADD PRIMARY KEY (word_id);
+ALTER TABLE curriculum_word ADD FOREIGN KEY (unit_id) REFERENCES curriculum_unit;
+ALTER TABLE curriculum_word ADD FOREIGN KEY (word_id) REFERENCES vocab;
+ALTER TABLE curriculum_kanji ADD PRIMARY KEY (kanji);
+ALTER TABLE curriculum_kanji ADD FOREIGN KEY (unit_id) REFERENCES curriculum_unit;
+ALTER TABLE curriculum_grammar ADD PRIMARY KEY (grammar_id);
+ALTER TABLE curriculum_grammar ADD FOREIGN KEY (unit_id) REFERENCES curriculum_unit;
+ALTER TABLE curriculum_grammar ADD FOREIGN KEY (grammar_id) REFERENCES grammar;
+ALTER TABLE curriculum_sentence ADD PRIMARY KEY (unit_id, sentence_id);
+ALTER TABLE curriculum_sentence ADD FOREIGN KEY (sentence_id) REFERENCES sentence;
+CREATE INDEX ON curriculum_word (unit_id);
+CREATE INDEX ON curriculum_grammar (unit_id);
 ALTER TABLE grammar_position ADD FOREIGN KEY (id) REFERENCES grammar;
 CREATE INDEX ON vocab (word);
 CREATE INDEX ON vocab (reading);
@@ -87,6 +106,11 @@ TABLE_COMMENTS = {
     "sentence": "Example sentences in which every content word maps to one word (reading practice).",
     "sentence_word": "Which words each reading-practice sentence contains.",
     "grammar_position": "Each grammar point's place in OpenJLPT's own (teaching) order, from 1.",
+    "curriculum_unit": "The curriculum's units, N5 to N2: unit_id is the place in the whole path, number in the level.",
+    "curriculum_word": "Which unit teaches each word (every N5 to N2 word in exactly one), in order.",
+    "curriculum_kanji": "Which unit first teaches each kanji (the first whose words use it).",
+    "curriculum_grammar": "Which unit teaches each grammar point (the level's, in OpenJLPT's order).",
+    "curriculum_sentence": "A unit's reading sentences: all their words taught by that unit, up to five.",
     "sentence_breakdown": (
         "Each example sentence (words' and grammar points'), as tokens {surface, reading, kind, word_ids} "
         "and the grammar point IDs it may use (matched by pattern, so some senses are possible, not certain)."
