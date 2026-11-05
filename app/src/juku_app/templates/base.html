@@ -18,11 +18,18 @@
     "current": page_name | default(""),
     "sections": [
       {"slug": "beranda", "label": _("Home")}, {"slug": "kuis", "label": _("Quiz")},
-      {"slug": "bacaan", "label": _("Reading")}, {"slug": "rencana", "label": _("Plan")},
+      {"slug": "bacaan", "label": _("Reading")}, {"slug": "tata-bahasa", "label": _("Grammar")},
+      {"slug": "rencana", "label": _("Plan")},
       {"slug": "laporan", "label": _("Report")}, {"slug": "chat", "label": _("Chat")},
       {"slug": "ingat", "label": _("Shiori remembers")}, {"slug": "pengaturan", "label": _("Settings")},
     ],
     "aboutData": _("About the data"),
+    "study": {
+      "explain": _("Explain"), "hide": _("Hide"), "words": _("Words in this sentence"),
+      "grammar": _("Grammar this sentence may use"), "grammarNote": _("Found by pattern, so a few may not apply."),
+      "known": _("known"), "kanjiWords": _("Words with this kanji"), "strokes": _("strokes"),
+      "loading": _("Loading…"), "notKanji": _("No details for this character."),
+    },
   }) }}
   {% block content %}{% endblock %}
   {{ page_app() }}

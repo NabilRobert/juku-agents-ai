@@ -107,7 +107,7 @@ uv run juku render-previews --out build/previews
 | Folder | What it does |
 |---|---|
 | `packages/juku-common/` | What every service shares: the rule file loader (`guardrails.yaml`), the hash-chained audit log, and the delegation tokens (signer and verifier) |
-| `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan |
+| `packages/juku-data/` | The dictionary load (`juku-data`), learner state and the learning engine (`juku_data.engine`): progress, Susumu the recommender, quizzes, reading practice, the plan; and studying in context: words' examples, grammar points, sentence breakdowns, kanji |
 | `packages/juku-mcp/` | Juku's MCP server (`juku-mcp serve`): the learner's data, read-only, scoped by the delegation token in each call's `_meta`; `attacks/` holds the SAF1 attack suite and its committed prediction |
 | `packages/juku-ops/` | The jobs cron runs (`juku-ops`): the audit-log importer, the heartbeat, partition upkeep, the nightly state check |
 | `app/` | The web app (`juku serve`): FastAPI pages in Indonesian (Jinja2, Babel), consent and invite codes, the owner page (ADR-029), the budget guard, Shiori's chat (PydanticAI) and its citation check, export and deletion; and the weekly pipeline (`juku run-weekly --due`, `app/src/juku_app/pipeline/`) with the Run Inspector |

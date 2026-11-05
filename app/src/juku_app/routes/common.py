@@ -29,7 +29,6 @@ from sqlalchemy import text
 from juku_app import assets, i18n, owner
 from juku_app.chat import ChatServices
 from juku_app.consent import has_current_consent
-from juku_app.ruby import furigana_to_ruby
 
 TEMPLATES = Path(__file__).parent.parent / "templates"
 TIMEZONES = ("Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura", "Asia/Tokyo")
@@ -76,7 +75,6 @@ def templates() -> Jinja2Templates:
         stylesheet=assets.stylesheet,
         page_app=assets.page_app,
         json_script=assets.json_script,
-        ruby=furigana_to_ruby,
     )
     return environment
 

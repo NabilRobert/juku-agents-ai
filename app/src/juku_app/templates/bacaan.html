@@ -1,13 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ _("Reading") }}{% endblock %}
 {% block content %}
-{# The ruby HTML is built here, by the same escaping helper as before (ruby.py), so the page only places it. #}
-{% set shown = [] %}
-{% for sentence in sentences %}
-  {% set _ignored = shown.append({"sentence": sentence, "ruby": ruby(sentence.furigana) if sentence.furigana else ""}) %}
-{% endfor %}
 {{ json_script("page-data", {"component": "Reading", "props": {
-  "sentences": shown,
+  "sentences": sentences,
+  "breakdowns": breakdowns,
   "copy": {
     "title": _("Reading practice"), "intro": _("You know every word in these sentences but one."),
     "newWord": _("New word"), "read": _("Read"), "empty": _("No sentences yet: learn a few words first."),

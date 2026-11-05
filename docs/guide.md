@@ -280,6 +280,15 @@ only narrow the tools. `jti` is its unique ID, refused the second time.
 as OpenJLPT ships it. The `app` database holds a mirror of the parts the
 engine needs.
 
+**Sentence breakdown.** An example sentence split into its words and the
+grammar points it may use, so a learner can tap "Jelaskan" (explain) under
+it. Built for all 14,140 example sentences when the dictionary loads
+(`packages/juku-data/src/juku_data/dictionary/breakdown.py`), because
+SudachiPy's dictionary is too large for the web app; the app reads the
+`ojlpt.sentence_breakdown` rows (`engine/study.py: explain_sentences`).
+Grammar points are found by their pattern's kana core over whole tokens,
+so a few listed senses may not apply: the page says so.
+
 **EDD (eval-driven development).** Tests are written first and fail
 before the code exists. Commits named `test(...)` come before their
 `feat(...)`.
@@ -293,6 +302,17 @@ has a test marked `@pytest.mark.fitness("FF3")`
 
 **FE7.** The frontend's size budget: the JavaScript each page loads,
 checked by `app/web/scripts/check-budget.mjs` in `make check`.
+
+**Grammar point.** One of OpenJLPT's 526 sentence structures (〜ている,
+〜たことがある), with its meaning, how it's formed, notes and three
+examples. `/tata-bahasa` lists a level's points in OpenJLPT's own order
+(`ojlpt.grammar_position`); `/tata-bahasa/<id>` explains one.
+
+**Kanji popup.** Hovering or tapping a kanji anywhere
+(`app/web/src/components/KanjiChar.vue`) shows its on and kun readings, its
+meaning, and up to eight words that use it, the learner's known ones
+first, so they see how each reading is used. It asks `/kanji/<character>`
+once per page.
 
 **Gateway.** mcp-security-gateway, a separate project that sits in front
 of every MCP server in production: keys, allow-lists, rate limits and its
@@ -419,6 +439,13 @@ does; change it in the same commit if the behaviour changes.
 **Change the colours.** They are the tokens in `app/web/src/styles.css`'s
 `@theme` (ink, gold, amber, orange, lemon, cream). Keep text on the yellows
 and the orange ink-coloured: white on them is too faint to read.
+
+**Change how a sentence's grammar is found.** In
+`packages/juku-data/src/juku_data/dictionary/breakdown.py`:
+`PARTICLE_SENSES` tells apart senses of one particle by SudachiPy's
+subtype (が as subject or "but"); `_spells_at` holds the matching rules.
+`test_breakdown.py` shows each rule. Then reload the dictionary
+(`juku-data load-dictionary`) to rebuild the breakdowns.
 
 **Add or remove a learner.** As the owner, on `/admin/learners`, or on
 the server with `juku invite --count N` and `juku delete-learner

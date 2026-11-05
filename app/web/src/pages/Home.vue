@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // Beranda: the words the learner knows, and the next words worth learning (the recommender's order).
+import JapaneseText from "../components/JapaneseText.vue";
 import PostForm from "../components/PostForm.vue";
 import type { Word } from "../lib/types";
 
@@ -7,7 +8,7 @@ defineProps<{
   nickname: string;
   knownWords: number;
   words: Word[];
-  copy: Record<"hello" | "wordsYouKnow" | "recommendations" | "iKnowThis" | "quiz" | "reading" | "plan", string>;
+  copy: Record<"hello" | "wordsYouKnow" | "recommendations" | "iKnowThis" | "quiz" | "reading" | "plan" | "examples", string>;
 }>();
 </script>
 
@@ -30,12 +31,15 @@ defineProps<{
       <li v-for="word in words" :key="word.word_id" class="card flex flex-col gap-2">
         <div class="flex items-start justify-between gap-2">
           <div>
-            <p lang="ja" class="text-3xl leading-tight font-bold">{{ word.word }}</p>
+            <p class="text-3xl leading-tight font-bold"><JapaneseText :text="word.word" /></p>
             <p lang="ja" class="muted">{{ word.reading }}</p>
           </div>
           <span class="chip">N{{ word.level }}</span>
         </div>
-        <p class="font-medium">{{ word.meanings.slice(0, 2).join("; ") }}</p>
+        <p class="font-medium">
+          {{ word.meanings.slice(0, 2).join("; ") }}
+          <a :href="`/kata/${word.word_id}`" class="ml-1 text-sm whitespace-nowrap">{{ copy.examples }} →</a>
+        </p>
         <p class="muted">{{ word.reason }}</p>
         <PostForm :action="`/kata/${word.word_id}/dikuasai`" class="mt-auto pt-1">
           <button type="submit" class="btn-quiet w-full">✓ {{ copy.iKnowThis }}</button>

@@ -5,6 +5,21 @@ export interface Shell {
   current: string;
   sections: { slug: string; label: string }[];
   aboutData: string;
+  study: StudyCopy;
+}
+
+/** The words the shared study components (kanji popup, sentence explanation) show on every page. */
+export interface StudyCopy {
+  explain: string;
+  hide: string;
+  words: string;
+  grammar: string;
+  grammarNote: string;
+  known: string;
+  kanjiWords: string;
+  strokes: string;
+  loading: string;
+  notKanji: string;
 }
 
 export interface PageData {
@@ -56,4 +71,50 @@ export interface ChatCopy {
   helpful: string;
   unhelpful: string;
   failed: string;
+}
+
+// Studying words in context (juku_data.engine.models: Example ... KanjiEntry).
+export interface Example {
+  ja: string;
+  furigana: string | null;
+  en: string | null;
+}
+
+export interface GrammarSummary {
+  grammar_id: string;
+  pattern: string;
+  level: number;
+  meaning: string;
+}
+
+export interface TokenWord {
+  word_id: string;
+  word: string;
+  reading: string;
+  level: number | null;
+  meanings: string[];
+  is_known: boolean;
+}
+
+export interface BreakdownToken {
+  surface: string;
+  reading: string;
+  kind: "word" | "grammar" | "name" | "number" | "symbol";
+  words: TokenWord[];
+}
+
+export interface SentenceBreakdown {
+  ja: string;
+  tokens: BreakdownToken[];
+  grammar: GrammarSummary[];
+}
+
+export interface KanjiEntry {
+  character: string;
+  level: number;
+  strokes: number | null;
+  onyomi: string[];
+  kunyomi: string[];
+  meanings: string[];
+  words: { word_id: string; word: string; reading: string; level: number; meaning: string; is_known: boolean }[];
 }

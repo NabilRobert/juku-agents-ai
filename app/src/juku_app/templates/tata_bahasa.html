@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Grammar") }}{% endblock %}
+{% block content %}
+{{ json_script("page-data", {"component": "Grammar", "props": {
+  "level": level,
+  "levels": levels,
+  "points": points,
+  "copy": {
+    "title": _("Sentence structures"),
+    "intro": _("The grammar points of each level, in the order they're usually taught. Open one to see how it's formed, with examples."),
+  },
+}}) }}
+{% endblock %}

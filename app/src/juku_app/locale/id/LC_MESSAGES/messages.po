@@ -306,3 +306,66 @@ msgstr "Laporan pertamamu datang hari Minggu sore."
 
 msgid "Juku needs JavaScript."
 msgstr "Juku memerlukan JavaScript."
+
+msgid "Grammar"
+msgstr "Tata bahasa"
+
+msgid "Explain"
+msgstr "Jelaskan"
+
+msgid "Hide"
+msgstr "Tutup"
+
+msgid "Words in this sentence"
+msgstr "Kata dalam kalimat ini"
+
+msgid "Grammar this sentence may use"
+msgstr "Tata bahasa yang mungkin dipakai"
+
+msgid "Found by pattern, so a few may not apply."
+msgstr "Dicari lewat pola, jadi beberapa mungkin tidak berlaku."
+
+msgid "known"
+msgstr "sudah tahu"
+
+msgid "Words with this kanji"
+msgstr "Kata dengan kanji ini"
+
+msgid "strokes"
+msgstr "goresan"
+
+msgid "Loading…"
+msgstr "Memuat…"
+
+msgid "No details for this character."
+msgstr "Tidak ada detail untuk huruf ini."
+
+msgid "Meaning"
+msgstr "Arti"
+
+msgid "How it's used"
+msgstr "Cara memakainya"
+
+msgid "No example sentences for this word yet."
+msgstr "Belum ada contoh kalimat untuk kata ini."
+
+msgid "You know this word"
+msgstr "Kamu sudah tahu kata ini"
+
+msgid "Sentence structures"
+msgstr "Struktur kalimat"
+
+msgid "The grammar points of each level, in the order they're usually taught. Open one to see how it's formed, with examples."
+msgstr "Pola tata bahasa tiap level, dalam urutan yang biasa diajarkan. Buka satu untuk melihat cara membentuknya, beserta contohnya."
+
+msgid "All grammar points"
+msgstr "Semua pola tata bahasa"
+
+msgid "How it's formed"
+msgstr "Cara membentuknya"
+
+msgid "Notes"
+msgstr "Catatan"
+
+msgid "Examples"
+msgstr "Contoh"
