@@ -384,3 +384,39 @@ msgstr "Kode undangan, pelajar, dan laporan mingguan."
 
 msgid "Language"
 msgstr "Bahasa"
+
+msgid "Your activity"
+msgstr "Aktivitasmu"
+
+msgid "active days in the last six months"
+msgstr "hari aktif dalam enam bulan terakhir"
+
+msgid "Less"
+msgstr "Sedikit"
+
+msgid "More"
+msgstr "Banyak"
+
+msgid "actions"
+msgstr "aktivitas"
+
+msgid "quiz answers"
+msgstr "jawaban kuis"
+
+msgid "words marked"
+msgstr "kata ditandai"
+
+msgid "sentences read"
+msgstr "kalimat dibaca"
+
+msgid "questions to Shiori"
+msgstr "pertanyaan ke Shiori"
+
+msgid "Mon"
+msgstr "Sen"
+
+msgid "Wed"
+msgstr "Rab"
+
+msgid "Fri"
+msgstr "Jum"

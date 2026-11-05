@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // Beranda: the words the learner knows, and the next words worth learning (the recommender's order).
+import ActivityCalendar from "../components/ActivityCalendar.vue";
 import JapaneseText from "../components/JapaneseText.vue";
 import PostForm from "../components/PostForm.vue";
 import type { Word } from "../lib/types";
@@ -13,6 +14,7 @@ defineProps<{
   knownWords: number;
   words: Word[];
   isOwner: boolean;
+  activity: InstanceType<typeof ActivityCalendar>["$props"];
   copy: Record<HomeCopy, string>;
 }>();
 </script>
@@ -30,6 +32,8 @@ defineProps<{
         <a href="/rencana" class="btn-quiet">{{ copy.plan }}</a>
       </div>
     </section>
+
+    <ActivityCalendar class="mt-4" v-bind="activity" />
 
     <section v-if="isOwner" class="owner-card card mt-4 flex flex-wrap items-center justify-between gap-3 border-orange/60 bg-ink text-white">
       <div>

@@ -236,6 +236,13 @@ The dictionary is OpenJLPT, pinned to one commit
 weekly pipeline (not built yet). Susumu, the recommender, is plain code
 (`engine/reads.py: recommend_words`).
 
+**Activity calendar.** The home page's GitHub-style squares: one per day
+for half a year, darker the more the learner did that day (quiz answers,
+words marked, sentences read and questions to Shiori, counted in their own
+timezone). `app/src/juku_app/activity.py` counts the days from the daily
+summaries and the learner's own chat rows; `components/ActivityCalendar.vue`
+draws them as plain SVG in Juku's colours.
+
 **Alembic branch.** Each owner's migrations form their own branch:
 `monitoring`, `data` and `app`, in `migrations/versions/`. `alembic
 upgrade heads` applies all three.

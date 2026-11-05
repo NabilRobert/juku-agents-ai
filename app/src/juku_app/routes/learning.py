@@ -14,6 +14,7 @@ from juku_data import engine
 from juku_data.engine import UnknownWordError
 from pydantic import BaseModel, Field
 
+from juku_app.activity import CALENDAR_WEEKS, active_days
 from juku_app.routes.common import Page, form_csrf, header_csrf, page, render, web
 
 # Enough batches for a long session; a client can't ask for an unbounded slice.
@@ -33,7 +34,16 @@ async def home(request: Request, current: Page = Depends(page)) -> HTMLResponse:
     db = web(request).db
     progress = await engine.get_progress(db, current.learner.id)
     recommendations = await engine.recommend_words(db, current.learner.id)
-    return render(request, "beranda.html", page=current, progress=progress, words=recommendations.words)
+    days = await active_days(db, current.learner, current.today)
+    return render(
+        request,
+        "beranda.html",
+        page=current,
+        progress=progress,
+        words=recommendations.words,
+        active_days=days,
+        calendar_weeks=CALENDAR_WEEKS,
+    )
 
 
 @router.post("/kata/{word_id}/dikuasai", dependencies=[Depends(form_csrf)])

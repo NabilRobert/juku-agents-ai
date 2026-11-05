@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import shutil
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,7 @@ from juku_data.engine.models import (
 from juku_data.memory import EvidenceEvent, MemoryNote
 
 from juku_app import assets
+from juku_app.activity import CALENDAR_WEEKS, ActiveDay
 from juku_app.routes.common import LEVELS, TIMEZONES, templates
 
 SAMPLE_LEARNER = Learner(
@@ -42,6 +43,18 @@ class SamplePage:
     nickname: str
     today: date
     is_owner: bool = False
+
+
+def sample_activity(today: date) -> list[ActiveDay]:
+    """A few weeks of practice ending today, busier on weekends, for the home page's calendar."""
+    days: list[ActiveDay] = []
+    for back in range(0, 40, 2):
+        count = 3 + (back % 7) * 2
+        day = today - timedelta(days=back)
+        days.append(
+            ActiveDay(day=day, count=count, quiz_answers=count - 1, words_marked=1, sentences_read=0, questions=0)
+        )
+    return sorted(days, key=lambda active: active.day)
 
 
 def sample_memory() -> dict[str, Any]:
@@ -138,6 +151,8 @@ def sample_context() -> dict[str, Any]:
         "quiz": quiz,
         "sentences": sentences,
         "breakdowns": {},  # explanations come from the dict database, which previews don't use
+        "active_days": sample_activity(date(2026, 11, 1)),
+        "calendar_weeks": CALENDAR_WEEKS,
         "plan": plan,
         "messages": [],
         "memory_data": sample_memory(),
