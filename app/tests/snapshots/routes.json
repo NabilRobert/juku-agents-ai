@@ -158,6 +158,18 @@
  },
  {
   "methods": [
+   "POST"
+  ],
+  "path": "/bahasa",
+  "name": "choose_language",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "form_csrf"
+  ]
+ },
+ {
+  "methods": [
    "GET"
   ],
   "path": "/beranda",

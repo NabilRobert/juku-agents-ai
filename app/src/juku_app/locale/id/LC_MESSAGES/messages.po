@@ -381,3 +381,6 @@ msgstr "Pemilik"
 
 msgid "Invite codes, learners, and the weekly runs."
 msgstr "Kode undangan, pelajar, dan laporan mingguan."
+
+msgid "Language"
+msgstr "Bahasa"

@@ -5,6 +5,8 @@ export interface Shell {
   current: string;
   sections: { slug: string; label: string }[];
   aboutData: string;
+  language: "id" | "en";
+  languageLabel: string;
   ownerLinks: { href: string; label: string }[];
   study: StudyCopy;
 }

@@ -1,7 +1,7 @@
 {# The document every page shares. The page itself is a Vue component (app/web/src/pages/), mounted on #app by
    src/main.ts: this template gives it the shell's data, and each page's template gives it the page's (page-data). #}
 <!doctype html>
-<html lang="id">
+<html lang="{{ language | default('id') }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -25,6 +25,8 @@
       {"slug": "ingat", "label": _("Shiori remembers")}, {"slug": "pengaturan", "label": _("Settings")},
     ],
     "aboutData": _("About the data"),
+    "language": language | default("id"),
+    "languageLabel": _("Language"),
     "ownerLinks": [
       {"href": "/admin/learners", "label": _("Learners")}, {"href": "/admin/runs", "label": _("Run Inspector")},
     ] if page is defined and page and page.is_owner else [],

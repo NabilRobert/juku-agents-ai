@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // The frame around every page: the ink header with Juku's mark and, once signed in, the section tabs.
 import type { Shell } from "../lib/types";
+import LanguageSwitch from "./LanguageSwitch.vue";
 
 defineProps<{ shell: Shell }>();
 
@@ -39,6 +40,7 @@ function isCurrent(href: string): boolean {
           >{{ link.label }}</a
         >
       </nav>
+      <LanguageSwitch :language="shell.language" :label="shell.languageLabel" />
     </div>
     <div class="h-1 bg-linear-to-r from-lemon via-amber to-orange"></div>
   </header>

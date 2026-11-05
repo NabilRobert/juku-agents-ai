@@ -108,8 +108,9 @@ async def header_csrf(request: Request) -> None:
 def render(request: Request, name: str, **context: Any) -> HTMLResponse:
     # The page's name, for real-user timings (FE8): "beranda" for /beranda.
     page_name = request.url.path.strip("/").split("/")[0] or "root"
+    language = i18n.use_language(request.session.get("language"))
     return web(request).views.TemplateResponse(
-        request, name, {"csrf": csrf_token(request), "page_name": page_name, **context}
+        request, name, {"csrf": csrf_token(request), "page_name": page_name, "language": language, **context}
     )
 
 
