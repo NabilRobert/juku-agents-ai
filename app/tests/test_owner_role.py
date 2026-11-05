@@ -100,6 +100,15 @@ async def test_the_owner_is_also_a_learner(engine_databases: Databases) -> None:
         assert (await client.get("/kuis")).status_code == 200
 
 
+async def test_a_new_learner_can_find_their_public_id_to_become_owner(engine_databases: Databases) -> None:
+    # The first owner can't open the owner page yet, so `juku learners` is where set-role's ID comes from.
+    client, public_id = await signed_up(engine_databases, "Calon pemilik")
+    await client.aclose()
+    listed = {row["public_id"]: row for row in await owner.learners(engine_databases.app)}
+    assert listed[public_id]["nickname"] == "Calon pemilik"
+    assert listed[public_id]["role"] == "learner"
+
+
 async def make_owner(db: Databases, nickname: str) -> tuple[httpx.AsyncClient, str]:
     client, public_id = await signed_up(db, nickname)
     await owner.set_role(db.app, owner.COMMAND_LINE, public_id, "owner")

@@ -406,7 +406,9 @@ does; change it in the same commit if the behaviour changes.
 the server with `juku invite --count N` and `juku delete-learner
 PUBLIC_ID`. Both go through `owner.py`, so each is audited. To make
 someone owner (or undo it), `juku set-role PUBLIC_ID owner` (or
-`learner`); there's no page for that on purpose. A new owner-only page
+`learner`); there's no page for that on purpose. `juku learners` lists
+every learner's public ID and role, which is how the first owner finds
+their own. A new owner-only page
 depends on `admin` (`routes/common.py`), and
 `test_every_owner_route_refuses_a_learner` covers it automatically.
 

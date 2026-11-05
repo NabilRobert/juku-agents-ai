@@ -3,6 +3,7 @@
     juku serve                     the web app (in its container)
     juku invite --count 10         make invite codes; they're shown once, and only their hashes are kept
     juku delete-learner PUBLIC_ID  "Hapus data saya" for someone who has lost their code
+    juku learners                  every learner's public ID, role and nickname
     juku set-role PUBLIC_ID owner  make a learner the owner (ADR-029); `learner` undoes it
     juku render-previews           static copies of the pages, for Lighthouse CI (FF12)
 
@@ -234,6 +235,13 @@ def delete_learner(public_id: str) -> None:
     """Delete everything about one learner, on their request."""
     removed = run_owner_action(lambda app_engine: owner.remove_learner(app_engine, owner.COMMAND_LINE, public_id))
     typer.echo("deleted: " + ", ".join(f"{table} {count}" for table, count in removed.items()))
+
+
+@app.command("learners")
+def list_learners() -> None:
+    """List every learner's public ID, role and nickname: how the first owner finds their own ID for set-role."""
+    for learner in run_owner_action(owner.learners):
+        typer.echo(f"{learner['public_id']}  {learner['role']:<7}  {learner['nickname']}")
 
 
 @app.command("set-role")

@@ -124,9 +124,14 @@ async def set_role(engine: AsyncEngine, actor: Actor, public_id: str, role: Role
         await _record(connection, actor, "set_role", public_id, {"from": learner["role"], "to": role})
 
 
+async def learners(engine: AsyncEngine) -> list[RowMapping]:
+    """Every learner, oldest first: the owner page's list, and `juku learners` for the first owner's own ID."""
+    async with engine.connect() as connection:
+        return list((await connection.execute(text(LEARNERS))).mappings().all())
+
+
 async def learners_and_actions(engine: AsyncEngine) -> tuple[list[RowMapping], list[RowMapping]]:
     """What the owner page shows: every learner, and the latest owner actions."""
     async with engine.connect() as connection:
-        learners = (await connection.execute(text(LEARNERS))).mappings().all()
         actions = (await connection.execute(text(ACTIONS), {"limit": RECENT_ACTIONS})).mappings().all()
-    return list(learners), list(actions)
+    return await learners(engine), list(actions)
