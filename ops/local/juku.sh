@@ -7,7 +7,8 @@
 #   ops/local/juku.sh backup           an encrypted dump of the learners' database into ~/Backups/juku
 #   ops/local/juku.sh restore-check    restore the latest backup into a scratch database, compare, drop it
 #   ops/local/juku.sh nightly          backup, then restore-check: what the nightly job runs
-#   ops/local/juku.sh install-nightly  run `nightly` every night at 03:00 (a LaunchAgent; Arthur runs this)
+#   ops/local/juku.sh weekly           the weekly reports and Keiko's curriculum checks that are due
+#   ops/local/juku.sh install-schedule `nightly` at 03:00 and `weekly` every hour (LaunchAgents; Arthur runs this)
 #   ops/local/juku.sh compose ...      any other docker compose command, with the right files
 #
 # There is no `down`: it would stop the stack and, with -v, delete what a rehearsal made. To stop, use stop.
@@ -22,8 +23,11 @@ KEY=$KEY_DIR/juku-backup-age-key.txt
 # Two weeks of nightly backups; older ones are deleted after a new one is written.
 KEEP_DAYS=14
 LEARNER_TABLES="learning.learners learning.learning_events app.chat_messages"
-AGENT=com.juku.nightly-backup
-AGENT_PLIST=$HOME/Library/LaunchAgents/$AGENT.plist
+AGENTS_DIR=$HOME/Library/LaunchAgents
+NIGHTLY_AT='<key>StartCalendarInterval</key><dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>'
+# Hourly, as ops/crontab runs it on the server: a learner's week runs once its Sunday 18:00 has come, or
+# once they open Juku with no run in the last 7 days (app/src/juku_app/curriculum_check.py).
+HOURLY='<key>StartInterval</key><integer>3600</integer>'
 
 fail() { echo "juku: $*" >&2; exit 1; }
 
@@ -83,13 +87,27 @@ restore_check() {
     echo "restore check passed"
 }
 
-# launchd runs a missed 03:00 job when the Mac wakes, unlike cron. Its log goes next to the backups.
-install_nightly() {
-    sed -e "s|@JUKU_SH@|$PWD/local/juku.sh|" -e "s|@LOG@|$BACKUPS/nightly.log|" -e "s|@AGENT@|$AGENT|" \
-        local/nightly-backup.plist >"$AGENT_PLIST"
-    launchctl bootout "gui/$(id -u)/$AGENT" 2>/dev/null || true
-    launchctl bootstrap "gui/$(id -u)" "$AGENT_PLIST"
-    echo "installed $AGENT_PLIST: ops/local/juku.sh nightly runs at 03:00; log: $BACKUPS/nightly.log"
+# The model calls run in a one-off container of the app's image, as on the server (ops/crontab). Skipped
+# quietly while the stack is stopped: the next hour tries again.
+weekly() {
+    [[ -n $(db_container) ]] || { echo "weekly: the stack isn't running; skipped"; return 0; }
+    "${COMPOSE[@]}" run --rm --no-deps -T app juku run-weekly --due
+}
+
+# launchd runs a missed job when the Mac wakes, unlike cron. The logs go next to the backups.
+install_agent() {
+    local name=$1 command=$2 schedule=$3 plist="$AGENTS_DIR/com.juku.$1.plist"
+    mkdir -p "$BACKUPS"
+    sed -e "s|@JUKU_SH@|$PWD/local/juku.sh|" -e "s|@LOG@|$BACKUPS/$name.log|" -e "s|@AGENT@|com.juku.$name|" \
+        -e "s|@COMMAND@|$command|" -e "s|@SCHEDULE@|$schedule|" local/launch-agent.plist >"$plist"
+    launchctl bootout "gui/$(id -u)/com.juku.$name" 2>/dev/null || true
+    launchctl bootstrap "gui/$(id -u)" "$plist"
+    echo "installed $plist: ops/local/juku.sh $command; log: $BACKUPS/$name.log"
+}
+
+install_schedule() {
+    install_agent nightly-backup nightly "$NIGHTLY_AT"
+    install_agent weekly-run weekly "$HOURLY"
 }
 
 case "${1:-}" in
@@ -99,7 +117,8 @@ status) "${COMPOSE[@]}" ps --format '{{.Service}}: {{.State}} {{.Health}}' ;;
 backup) backup ;;
 restore-check) restore_check ;;
 nightly) backup && restore_check ;;
-install-nightly) install_nightly ;;
+weekly) weekly ;;
+install-schedule) install_schedule ;;
 compose) shift; "${COMPOSE[@]}" "$@" ;;
-*) echo "usage: ops/local/juku.sh start|stop|status|backup|restore-check|nightly|install-nightly|compose ..." >&2; exit 2 ;;
+*) echo "usage: ops/local/juku.sh start|stop|status|backup|restore-check|nightly|weekly|install-schedule|compose ..." >&2; exit 2 ;;
 esac
