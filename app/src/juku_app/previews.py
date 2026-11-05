@@ -15,6 +15,14 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+from juku_data.engine.curriculum_models import (
+    CurriculumLevel,
+    CurriculumOverview,
+    TodayPlan,
+    UnitGrammar,
+    UnitStatus,
+    UnitWord,
+)
 from juku_data.engine.models import (
     KnownWord,
     Learner,
@@ -83,6 +91,53 @@ def sample_memory() -> dict[str, Any]:
     )
     words = [KnownWord(word_id=f"k{number}", word="水", reading="みず") for number in range(10)]
     return {"notes": [note.model_dump(mode="json")], "words": [word.model_dump(mode="json") for word in words]}
+
+
+def sample_unit(number: int, status: str) -> UnitStatus:
+    words_known = {"done": 15, "current": 6, "later": 0}[status]
+    return UnitStatus.model_validate(
+        {
+            "unit_id": number,
+            "level": 5,
+            "number": number,
+            "words_total": 15,
+            "words_known": words_known,
+            "grammar_total": 2,
+            "grammar_studied": 2 if status == "done" else 0,
+            "sentences_total": 5,
+            "sentences_read": 5 if status == "done" else 0,
+            "status": status,
+        }
+    )
+
+
+def sample_curriculum() -> dict[str, Any]:
+    """N5's 45 units, two done and one under way, and today's lesson from the third: the plan page and Home."""
+    units = [
+        sample_unit(number, "done" if number < 3 else "current" if number == 3 else "later") for number in range(1, 46)
+    ]
+    curriculum = CurriculumOverview(
+        target_level=5, units_total=45, units_done=2, current_unit_id=3, levels=[CurriculumLevel(level=5, units=units)]
+    )
+    new_words = [
+        UnitWord(word_id=f"u{number}", word="水", reading="みず", meanings=["water"], is_known=False)
+        for number in range(9)
+    ]
+    today = TodayPlan(
+        unit=units[2],
+        new_words=new_words,
+        words_target=10,
+        words_done=1,
+        grammar=UnitGrammar(grammar_id="g1", pattern="は", meaning="topic marker", is_studied=False),
+        grammar_done=0,
+        sentences=[],
+        sentences_target=3,
+        sentences_done=0,
+        reviews_due=4,
+        quiz_target=10,
+        quiz_done=0,
+    )
+    return {"curriculum": curriculum, "today": today}
 
 
 def sample_context() -> dict[str, Any]:
@@ -159,7 +214,7 @@ def sample_context() -> dict[str, Any]:
         "known_total": 130,
         "timezones": TIMEZONES,
         "levels": LEVELS,
-    }
+    } | sample_curriculum()
 
 
 PAGES = ("beranda", "kuis", "bacaan", "rencana", "chat", "ingat", "pengaturan", "tentang_data")

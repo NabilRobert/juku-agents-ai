@@ -423,3 +423,117 @@ msgstr "Jum"
 
 msgid "active day in the last six months"
 msgstr "hari aktif dalam enam bulan terakhir"
+
+msgid "Your curriculum"
+msgstr "Kurikulummu"
+
+msgid "units done"
+msgstr "unit selesai"
+
+msgid "Unit"
+msgstr "Unit"
+
+msgid "Current"
+msgstr "Sekarang"
+
+msgid "Done"
+msgstr "Selesai"
+
+msgid "Open unit"
+msgstr "Buka unit"
+
+msgid "Take the placement test"
+msgstr "Ikuti tes penempatan"
+
+msgid "Already know some Japanese? A short test places you further along."
+msgstr "Sudah tahu sebagian bahasa Jepang? Tes singkat menempatkanmu lebih jauh."
+
+msgid "Curriculum complete up to your target."
+msgstr "Kurikulum sampai targetmu sudah selesai."
+
+msgid "Sentences"
+msgstr "Kalimat"
+
+msgid "I understand"
+msgstr "Saya paham"
+
+msgid "Understood"
+msgstr "Sudah paham"
+
+msgid "I've read it"
+msgstr "Sudah saya baca"
+
+msgid "Previous unit"
+msgstr "Unit sebelumnya"
+
+msgid "Next unit"
+msgstr "Unit berikutnya"
+
+msgid "Unit done!"
+msgstr "Unit selesai!"
+
+msgid "words known"
+msgstr "kata dikuasai"
+
+msgid "grammar points"
+msgstr "pola tata bahasa"
+
+msgid "No sentences in this unit yet: its words come into sentences in later units."
+msgstr "Unit ini belum punya kalimat: kata-katanya muncul dalam kalimat di unit berikutnya."
+
+msgid "Placement test"
+msgstr "Tes penempatan"
+
+msgid "One question from across this level. Answer what you know, and press I don't know rather than guess: one mistake is forgiven."
+msgstr "Soal dari seluruh level ini. Jawab yang kamu tahu, dan tekan Saya tidak tahu daripada menebak: satu kesalahan dimaafkan."
+
+msgid "I don't know"
+msgstr "Saya tidak tahu"
+
+msgid "Question"
+msgstr "Soal"
+
+msgid "See my placement"
+msgstr "Lihat penempatanku"
+
+msgid "You passed this level."
+msgstr "Kamu lulus level ini."
+
+msgid "Placed through unit"
+msgstr "Ditempatkan sampai unit"
+
+msgid "Not placed: start from the beginning of this level."
+msgstr "Belum ditempatkan: mulai dari awal level ini."
+
+msgid "Test the next level"
+msgstr "Tes level berikutnya"
+
+msgid "Go to my curriculum"
+msgstr "Ke kurikulumku"
+
+msgid "Today"
+msgstr "Hari ini"
+
+msgid "new words"
+msgstr "kata baru"
+
+msgid "grammar point"
+msgstr "pola tata bahasa"
+
+msgid "sentences to read"
+msgstr "kalimat untuk dibaca"
+
+msgid "reviews due"
+msgstr "ulangan jatuh tempo"
+
+msgid "quiz questions"
+msgstr "soal kuis"
+
+msgid "Today's lesson is done. Well done!"
+msgstr "Pelajaran hari ini selesai. Kerja bagus!"
+
+msgid "Continue unit"
+msgstr "Lanjutkan unit"
+
+msgid "Start the quiz"
+msgstr "Mulai kuis"

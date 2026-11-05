@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Unit") }} {{ unit.unit.number }} · N{{ unit.unit.level }}{% endblock %}
+{% block content %}
+{{ json_script("page-data", {"component": "Unit", "props": {
+  "detail": unit,
+  "breakdowns": breakdowns,
+  "copy": {
+    "unit": _("Unit"), "back": _("Your curriculum"), "words": _("Words"), "kanji": _("Kanji"),
+    "grammar": _("Grammar"), "sentences": _("Sentences"), "iKnowThis": _("I know this word"),
+    "youKnowThis": _("You know this word"), "examples": _("How it's used"), "understand": _("I understand"),
+    "understood": _("Understood"), "read": _("Read"), "markRead": _("I've read it"), "previous": _("Previous unit"),
+    "next": _("Next unit"), "unitDone": _("Unit done!"), "wordsKnown": _("words known"),
+    "grammarStudied": _("grammar points"), "sentencesRead": _("sentences read"), "failed": _("That didn't work. Please try again."),
+    "noSentences": _("No sentences in this unit yet: its words come into sentences in later units."),
+  },
+}}) }}
+{% endblock %}

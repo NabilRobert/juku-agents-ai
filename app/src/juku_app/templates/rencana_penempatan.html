@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Placement test") }}{% endblock %}
+{% block content %}
+{{ json_script("page-data", {"component": "Placement", "props": {
+  "level": level,
+  "nextLevel": next_level,
+  "questions": questions.items,
+  "copy": {
+    "title": _("Placement test"),
+    "explain": _("One question from across this level. Answer what you know, and press I don't know rather than guess: one mistake is forgiven."),
+    "dontKnow": _("I don't know"), "question": _("Question"), "submit": _("See my placement"),
+    "passed": _("You passed this level."), "placedThrough": _("Placed through unit"),
+    "notPlaced": _("Not placed: start from the beginning of this level."), "nextLevel": _("Test the next level"),
+    "toCurriculum": _("Go to my curriculum"), "correct": _("right"), "failed": _("That didn't work. Please try again."),
+  },
+}}) }}
+{% endblock %}
