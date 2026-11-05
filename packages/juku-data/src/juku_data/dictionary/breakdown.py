@@ -15,6 +15,7 @@ share a core (に for time, place, destination...) all match: the page lists the
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
@@ -82,36 +83,67 @@ def _kind(morpheme: Morpheme) -> str:
     return "grammar" if is_function_word(morpheme) else "word"
 
 
-def _spells_at(morphemes: Sequence[Morpheme], start: int, segment: str, subtype: str | None) -> int | None:
+@dataclass(frozen=True)
+class _Unit:
+    """One token as the matching reads it. SudachiPy's per-call accessors are slow, so each is read once."""
+
+    surface: str
+    dictionary_form: str
+    is_grammar: bool
+    subtype: str
+
+
+class _Sentence:
+    """A tokenized sentence, with where each first character starts a token (surface or dictionary form).
+
+    Matching only tries the positions a segment's first character can start at: the build matches 526
+    patterns against 14,140 sentences when the dictionary loads, and trying every position took 40 s.
+    """
+
+    def __init__(self, morphemes: Sequence[Morpheme]) -> None:
+        self.units: list[_Unit] = []
+        self.starts: dict[str, list[int]] = defaultdict(list)
+        for index, morpheme in enumerate(morphemes):
+            part_of_speech = morpheme.part_of_speech()
+            unit = _Unit(
+                morpheme.surface(), morpheme.dictionary_form(), part_of_speech[0] in GRAMMAR_POS, part_of_speech[1]
+            )
+            self.units.append(unit)
+            for first in {unit.surface[:1], unit.dictionary_form[:1]}:
+                self.starts[first].append(index)
+
+
+def _spells_at(units: Sequence[_Unit], start: int, segment: str, subtype: str | None) -> int | None:
     """The index after the tokens from `start` that spell `segment` exactly, or None.
 
     `subtype`, if given, is the particle subtype a one-token match must have (PARTICLE_SENSES).
     """
     spelled = ""
-    for end in range(start, len(morphemes)):
-        morpheme = morphemes[end]
-        if spelled + morpheme.dictionary_form() == segment or spelled + morpheme.surface() == segment:
+    for end in range(start, len(units)):
+        unit = units[end]
+        if spelled + unit.dictionary_form == segment or spelled + unit.surface == segment:
             is_one_character = end == start and len(segment) == 1
-            is_grammar_token = morpheme.part_of_speech()[0] in GRAMMAR_POS
             # A one-character core must be a particle or auxiliary: the noun 方 isn't the pattern 〜方.
-            if is_one_character and not is_grammar_token:
+            if is_one_character and not unit.is_grammar:
                 return None
-            if subtype and end == start and morpheme.part_of_speech()[1] != subtype:
+            if subtype and end == start and unit.subtype != subtype:
                 return None
             return end + 1
-        spelled += morpheme.surface()
+        spelled += unit.surface
         if not segment.startswith(spelled):
             return None
     return None
 
 
-def _uses(morphemes: Sequence[Morpheme], segments: tuple[str, ...], subtype: str | None) -> bool:
+def _uses(sentence: _Sentence, segments: tuple[str, ...], subtype: str | None) -> bool:
     """Whether the segments appear in order, each spelled by whole tokens."""
     position = 0
     for segment in segments:
         found = None
-        for start in range(position, len(morphemes)):
-            found = _spells_at(morphemes, start, segment, subtype)
+        for start in sentence.starts.get(segment[0], ()):
+            if start < position:
+                continue
+            found = _spells_at(sentence.units, start, segment, subtype)
             if found is not None:
                 break
         if found is None:
@@ -129,9 +161,10 @@ class GrammarMatcher:
         ]
 
     def matches(self, morphemes: Sequence[Morpheme]) -> tuple[str, ...]:
+        sentence = _Sentence(morphemes)
         found: list[str] = []
         for grammar_id, ways, subtype in self._ways:
-            if any(_uses(morphemes, segments, subtype) for segments in ways):
+            if any(_uses(sentence, segments, subtype) for segments in ways):
                 found.append(grammar_id)
         return tuple(found)
 
