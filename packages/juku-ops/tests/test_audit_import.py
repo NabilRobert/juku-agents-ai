@@ -132,6 +132,23 @@ async def test_a_file_that_no_longer_matches_what_was_imported_is_refused(engine
     assert result.lines_imported == 0
 
 
+async def test_a_log_not_written_yet_imports_nothing_and_is_intact(engine: AsyncEngine, tmp_path: Path) -> None:
+    # The gateway makes its log on its first call; until then the 5-minute job must not fail (the rehearsal's did).
+    result = await import_audit_log(engine, GATEWAY, tmp_path / "gateway-audit.jsonl")
+    assert result.is_intact
+    assert (result.lines_total, result.lines_imported) == (0, 0)
+
+
+async def test_a_log_deleted_after_an_import_is_refused(engine: AsyncEngine, tmp_path: Path) -> None:
+    path = tmp_path / "gateway-audit.jsonl"
+    write_gateway_log(path, calls=1)
+    await import_audit_log(engine, GATEWAY, path)
+    path.unlink()
+    result = await import_audit_log(engine, GATEWAY, path)
+    assert result.problems == ["the log is missing or empty, but 3 lines were imported from it before: it was deleted"]
+    assert await scalar(engine, "SELECT count(*) FROM monitoring.audit_imports WHERE NOT is_intact") == 1
+
+
 async def test_juku_mcp_refusals_keep_their_category_and_chain_but_not_their_detail(
     engine: AsyncEngine, tmp_path: Path
 ) -> None:

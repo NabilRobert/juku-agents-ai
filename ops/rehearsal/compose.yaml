@@ -1,0 +1,71 @@
+# The server's stack, rehearsed on a laptop (slice 8): ops/compose.yaml
+# with this file on top, run by ops/rehearse.sh. Never used on the server.
+#
+# What it adds or changes, and nothing else:
+# - `db`, a local Postgres 16 standing in for the managed database. TLS is
+#   on, with the image's own snakeoil certificate, so the secrets' URLs
+#   (ssl=require) work as they will on the server. Published on loopback
+#   only, for ops/db/setup.sh to reach it from the host.
+# - The gateway's two networks, made here instead of by its deployment,
+#   so the stack starts without it. With no gateway on them, the app can't
+#   reach Juku's MCP server: chat and Keiko's tools wait for the gateway's
+#   container (asked of Project 4, 2026-11-04).
+# - The model is unreachable on purpose: no key, and an address that
+#   refuses connections, so a rehearsal can never spend.
+# - The session cookie without the Secure flag: the laptop serves plain
+#   http, and Safari drops a Secure cookie there (Chrome makes an exception
+#   for 127.0.0.1), so every form failed its CSRF check as "Formulir
+#   kedaluwarsa" (found 2026-11-05). The server serves https and keeps it.
+name: juku-rehearsal
+
+networks:
+  gateway-clients:
+    external: false
+    name: juku-rehearsal-gateway-clients
+  gateway-upstreams:
+    external: false
+    name: juku-rehearsal-gateway-upstreams
+
+# Paths are relative to ops/, the first file's folder, as compose resolves them.
+secrets:
+  rehearsal_db_superuser_password: {file: ./secrets/rehearsal_db_superuser_password}
+
+services:
+  db:
+    image: postgres:16
+    networks: [egress, mcp-db]
+    ports:
+      - "127.0.0.1:${JUKU_REHEARSAL_DB_PORT:-55450}:5432"
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/rehearsal_db_superuser_password
+    secrets: [rehearsal_db_superuser_password]
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem
+      - -c
+      - ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    mem_limit: 256m
+    memswap_limit: 256m
+
+  app:
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      JUKU_MODEL_BASE_URL: http://127.0.0.1:9/v1
+      JUKU_SECURE_COOKIES: "false"
+
+  juku-mcp:
+    depends_on:
+      db: {condition: service_healthy}
+
+  grafana:
+    depends_on:
+      db: {condition: service_healthy}

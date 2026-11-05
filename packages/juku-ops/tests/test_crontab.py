@@ -46,6 +46,14 @@ async def test_every_scheduled_job_is_expected_with_the_same_period(app_engine: 
     assert scheduled_jobs(repo_root() / "ops" / "crontab") == expected
 
 
+def test_the_jobs_that_call_the_model_run_in_their_own_container() -> None:
+    # Inside the app's container, one of them and the web app pass its memory cap, and both are killed.
+    lines = (repo_root() / "ops" / "crontab").read_text(encoding="utf-8").splitlines()
+    model_jobs = [line for line in lines if re.search(r"juku (run-weekly|draft-feedback)", line)]
+    assert len(model_jobs) == 2
+    assert all("$JUKU_COMPOSE run --rm --no-deps -T app juku " in line for line in model_jobs)
+
+
 def test_the_heartbeat_runs_every_minute() -> None:
     lines = (repo_root() / "ops" / "crontab").read_text(encoding="utf-8").splitlines()
     heartbeat_lines = [line for line in lines if line.endswith("juku-ops heartbeat")]

@@ -54,9 +54,10 @@ async def sync_index(dict_engine: AsyncEngine, app_engine: AsyncEngine) -> SyncR
         ).one()
         dictionary_ids = set(await source.scalars(text(KNOWN_IDS)))
     async with app_engine.begin() as target:
-        await target.execute(
-            text(f"TRUNCATE {', '.join(f'learning.{table}' for table, _ in MIRRORS)}, learning.dictionary_version")
-        )
+        # DELETE, not TRUNCATE: this runs as juku_app, which may delete but not truncate. The
+        # tables have no foreign keys between them, and the rows are few, so the order and speed don't matter.
+        for table in [*mirrored, "dictionary_version"]:
+            await target.execute(text(f"DELETE FROM learning.{table}"))  # noqa: S608 (a constant table name)
         for table, records in mirrored.items():
             await _copy(target, table, records)
         await target.execute(
