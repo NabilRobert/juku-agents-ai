@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
-from juku_app.pipeline.crew import KEIKO_INSTRUCTIONS, NIKKI_INSTRUCTIONS
+from juku_app.pipeline.crew import KEIKO_INSTRUCTIONS, NIKKI_INSTRUCTIONS, TADASHI_INSTRUCTIONS
 from juku_app.pipeline.facts import WeekFacts
 from juku_app.pipeline.run import run_weekly
 from juku_common.rules import Rules
@@ -284,3 +284,8 @@ async def test_keiko_and_her_reviewer_are_shown_the_allowed_note_categories_by_n
 def test_the_writers_instructions_name_every_citable_field(instructions: str) -> None:
     for field in WeekFacts.model_fields:
         assert field in instructions
+
+
+def test_tadashi_is_told_a_citation_is_shown_by_the_app_not_a_placeholder() -> None:
+    """Paid run 3: he sent back 9 drafts for citing [ref:week_start], the form the writers are told to use."""
+    assert "[ref:week_start]" in TADASHI_INSTRUCTIONS and "bukan tempat kosong" in TADASHI_INSTRUCTIONS
