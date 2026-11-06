@@ -10,18 +10,21 @@ Sunday in the learner's own timezone.
 from __future__ import annotations
 
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from juku_data import engine
 from juku_data.engine import Databases
 from juku_data.engine.curriculum_models import CurriculumOverview, UnitStatus
 from juku_data.engine.models import DayActivity, Learner, Mistakes, Plan, Progress, Recommendations
-from juku_data.memory import Memory, get_memory
+from juku_data.memory import EvidenceEvent, Memory, get_memory, recent_evidence
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import text
 
 DAYS_IN_WEEK = 7
+# The week's newest activity rows Keiko may rest a note on (paid run 3: she was asked for evidence IDs and given
+# none). Each is about 45 tokens; the 30 add about 1,400 to each of the run's four requests, well under FF6.
+EVIDENCE_ROWS_SHOWN = 30
 
 
 class WeekActivity(BaseModel):
@@ -89,6 +92,7 @@ class WeekFacts(BaseModel):
     plan: Plan
     curriculum: CurriculumFacts
     memory: Memory
+    evidence: list[EvidenceEvent]
 
 
 def week_of(now: datetime, timezone: str) -> tuple[date, date]:
@@ -122,7 +126,12 @@ async def gather_facts(db: Databases, learner: Learner, now: datetime) -> WeekFa
         plan=plan,
         curriculum=curriculum_facts(await engine.get_curriculum(db, learner.id), plan.weeks_left),
         memory=await get_memory(db, learner.id, now),
+        evidence=await recent_evidence(db, learner.id, _start_of(week_start, learner.timezone), EVIDENCE_ROWS_SHOWN),
     )
+
+
+def _start_of(day: date, timezone: str) -> datetime:
+    return datetime.combine(day, time(), ZoneInfo(timezone))
 
 
 async def retired_note_ids(db: Databases, learner_id: int) -> frozenset[str]:

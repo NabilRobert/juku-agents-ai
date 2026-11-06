@@ -433,6 +433,13 @@ Inspector: `output_refused` (an agent gave no valid output after its
 retries), `request_limit` (a call hit its limits), `budget_spent` (the
 reports pool is spent) or `not_approved` (every draft was sent back).
 
+**Memory notes.** Short notes about how a learner learns ("often misses
+N5 readings"), shown to Shiori. Keiko proposes them in the weekly run.
+Each one must rest on at least 3 real activity rows, by event ID, or
+`juku_data/memory/store.py: propose_note` refuses it. Keiko gets the
+week's newest 30 rows, with their IDs, in `facts.evidence`
+(`memory/store.py: recent_evidence`).
+
 **Placement test.** 15 questions spread across one level, so a learner
 who already knows some starts further along. One mistake is forgiven; the
 second ends the placement at the last unit answered right before it

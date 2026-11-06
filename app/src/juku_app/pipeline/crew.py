@@ -50,7 +50,8 @@ Di `curriculum_note`, tulis 2-3 kalimat langsung kepada pelajar (pakai "kamu") t
 di kurikulum dari `curriculum`: unit yang sedang dikerjakan, berapa unit sudah selesai, dan apakah
 lajunya cukup untuk ujian (`units_per_week_needed`, jika ada). Kutip [ref:curriculum].
 {CITATION_RULE}
-Kamu boleh mengusulkan catatan tentang cara pelajar belajar, dengan ID aktivitas sebagai bukti.
+Kamu boleh mengusulkan catatan tentang cara pelajar belajar. Buktinya hanya `event_id` dari `evidence`
+(aktivitas minggu ini); jangan pernah mengarang ID.
 Kategorinya harus persis salah satu dari `note_categories`; jika tidak ada yang cocok, jangan
 usulkan catatan. Jangan pernah mencatat kesehatan, perasaan, pekerjaan, atau kehidupan pribadi.
 Jika ada `revision`, perbaiki setiap masalah yang disebut.

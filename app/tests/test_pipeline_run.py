@@ -224,6 +224,35 @@ async def test_an_approved_plans_note_proposals_are_checked_and_stored_as_keikos
     )
 
 
+async def test_a_note_keiko_rests_on_the_activity_she_was_given_is_stored(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    """Paid run 3: Keiko was asked for evidence IDs but given none, so every note she proposed was refused."""
+    loaded = await load_memory_fixture(
+        engine_databases, rules, "nur", suffix=f"-{uuid.uuid4().hex[:6]}", source="pipeline"
+    )
+    await consented(engine_databases, loaded.learner)
+
+    def keiko(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        facts = prompt_of(messages)["facts"]
+        plan = faithful_plan(facts)
+        wrong = [row["event_id"] for row in facts["evidence"] if row["is_correct"] is False]
+        plan["note_proposals"] = [
+            {"category": "avoided_level", "text": "Sering salah di kata N5.", "evidence_event_ids": wrong}
+        ]
+        return structured(info, plan)
+
+    await run_weekly(
+        services_for(engine_databases, rules, crew_of(keiko=keiko)), loaded.learner, sunday_evening("Asia/Jayapura")
+    )
+    stored = await scalar(
+        engine_databases,
+        "SELECT count(*) FROM learning.memory_notes WHERE learner_id = :l AND proposed_by = 'keiko'",
+        l=loaded.learner.id,
+    )
+    assert stored == 1
+
+
 # --- what the agents are told (paid run 2: made-up note categories, citations of fields) ---
 
 

@@ -18,6 +18,7 @@ from juku_data.memory.store import (
     get_memory,
     mark_note_wrong,
     propose_note,
+    recent_evidence,
     remove_note,
 )
 
@@ -33,5 +34,6 @@ __all__ = [
     "get_memory",
     "mark_note_wrong",
     "propose_note",
+    "recent_evidence",
     "remove_note",
 ]
