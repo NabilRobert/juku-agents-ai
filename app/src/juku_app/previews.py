@@ -22,6 +22,7 @@ from juku_data.engine.curriculum_models import (
     UnitGrammar,
     UnitStatus,
     UnitWord,
+    WeekDay,
 )
 from juku_data.engine.models import (
     KnownWord,
@@ -136,6 +137,10 @@ def sample_curriculum() -> dict[str, Any]:
         reviews_due=4,
         quiz_target=10,
         quiz_done=0,
+        week=[
+            WeekDay(day=date(2026, 11, 2) + timedelta(days=offset), done=done, target=24, is_future=offset > 3)
+            for offset, done in enumerate([24, 13, 0, 1, 0, 0, 0])
+        ],
     )
     note = {"week_start": "2026-10-26", "body": "Kamu di unit 3, dan 2 dari 45 unit N5 sudah selesai [ref:curriculum]."}
     return {"curriculum": curriculum, "today": today, "keiko_note": note, "is_check_queued": False}

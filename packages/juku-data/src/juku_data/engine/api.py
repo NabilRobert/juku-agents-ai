@@ -13,7 +13,7 @@ from datetime import date, datetime
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from juku_data.engine import curriculum, learners, placement, quiz, reads, study, writes
+from juku_data.engine import curriculum, learners, placement, quiz, reads, study, week, writes
 from juku_data.engine.curriculum_models import CurriculumOverview, TodayPlan, UnitDetail
 from juku_data.engine.learners import LearnerNotFoundError
 from juku_data.engine.models import (
@@ -222,7 +222,8 @@ async def get_unit(db: Databases, learner_id: int, unit_id: int) -> UnitDetail |
 async def get_today(db: Databases, learner_id: int, today: date, now: datetime) -> TodayPlan:
     learner = await _learner(db, learner_id)
     plan = await reads.get_plan(db.app, learner, today)
-    return await curriculum.today_plan(db.app, db.dictionary, learner, plan.words_per_week, today, now)
+    lesson = await curriculum.today_plan(db.app, db.dictionary, learner, plan.words_per_week, today, now)
+    return lesson.model_copy(update={"week": await week.week_days(db.app, learner, lesson, today)})
 
 
 async def mark_grammar_studied(db: Databases, learner_id: int, grammar_id: str, at: datetime) -> None:

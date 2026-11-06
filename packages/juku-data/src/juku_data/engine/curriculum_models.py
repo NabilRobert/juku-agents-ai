@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
+
+from pydantic import Field
 
 from juku_data.engine.models import EngineModel
 
@@ -66,6 +69,15 @@ class UnitDetail(EngineModel):
     next_unit_id: int | None
 
 
+class WeekDay(EngineModel):
+    """One day of this week's strip on Home (engine/week.py): the day's lesson done against its target."""
+
+    day: date
+    done: int
+    target: int
+    is_future: bool
+
+
 class TodayPlan(EngineModel):
     """Today's lesson from the current unit, each part with its target and what's done so far today."""
 
@@ -81,3 +93,4 @@ class TodayPlan(EngineModel):
     reviews_due: int
     quiz_target: int
     quiz_done: int
+    week: list[WeekDay] = Field(default_factory=list[WeekDay])  # filled in by engine/week.py

@@ -409,6 +409,13 @@ grammar understood and its sentences read
 **Today's lesson.** The home page's card: the current unit's next words
 (the plan's pace, 3 to 30 a day), one grammar point, a few sentences and
 the quiz, each with what's done today (`engine/curriculum.py: today_plan`).
+Each part ticks when it reaches its target. Due reviews link to the quiz.
+
+**This week's strip.** Under today's lesson, Monday to Sunday, a ring
+per day that fills as that day's lesson is done and ticks when all of it
+is (`engine/week.py: week_days`, drawn by `WeekStrip.vue`). Each part
+counts only up to its own target, so a long quiz doesn't stand in for the
+words. Past days use today's target, because the pace isn't stored.
 
 **Keiko's curriculum check.** Once a week Keiko writes a short note on
 the plan page about where the learner is on the curriculum, citing
