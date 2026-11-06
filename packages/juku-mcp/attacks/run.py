@@ -44,6 +44,8 @@ sys.path.insert(0, str(HERE))
 from suite import ALL_SHIORI_TOOLS, Target, World, planted_instruction, run_suite  # noqa: E402
 
 ALL_KEIKO_TOOLS = [tool for tool in ALL_SHIORI_TOOLS if tool not in ("search_words", "request_replan")]
+# The gateway's audit log, in the work folder: verified here, and read by Flight School (evals/flight_school_server.py).
+GATEWAY_AUDIT_LOG = "gateway-audit.jsonl"
 
 
 def gateway_config(work: Path, juku_url: str, agent_keys: dict[str, str]) -> Path:
@@ -59,7 +61,7 @@ def gateway_config(work: Path, juku_url: str, agent_keys: dict[str, str]) -> Pat
             agent: {"routes": {"juku": {"tools": {tool: {} for tool in tools}}}} for agent, tools in policies.items()
         },
         "detector": {"rules": True},
-        "audit": {"path": str(work / "gateway-audit.jsonl"), "fsync": False},
+        "audit": {"path": str(work / GATEWAY_AUDIT_LOG), "fsync": False},
     }
     path = work / "gateway.yaml"
     path.write_text(yaml.safe_dump(config), encoding="utf-8")
@@ -209,7 +211,7 @@ async def main(gateway_src: Path, gateway_python: Path, work: Path) -> None:
         chains = {
             "juku-direct": verify_log(work / "juku-direct.jsonl", genesis=JUKU_MCP_GENESIS).is_intact,
             "juku-gateway": verify_log(work / "juku-gateway.jsonl", genesis=JUKU_MCP_GENESIS).is_intact,
-            "gateway": verify_log(work / "gateway-audit.jsonl", genesis=GATEWAY_GENESIS).is_intact,
+            "gateway": verify_log(work / GATEWAY_AUDIT_LOG, genesis=GATEWAY_GENESIS).is_intact,
         }
         for report in reports:
             report["audit_chains_intact"] = chains

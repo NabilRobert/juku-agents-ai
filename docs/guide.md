@@ -622,6 +622,14 @@ build/evals/try-1` writes the report, and `agent-eval compare <old> <new>`
 is the regression gate. A real run spends money: it needs `--real`,
 `--budget` and `--purpose`, and Arthur's OK (ADR-028).
 
+**Let AI Flight School test Shiori.** `uv run python
+evals/flight_school_server.py` starts the eval stack with the pinned
+gateway, loads Flight School's five learners (four existing fixtures and
+`evals/flight-school/learners/wulan.yaml`, whose one note is planted text),
+and prints the chat URL and the gateway's audit log for `flightschool
+run`. Shiori runs on a scripted model (`scripted_shiori`), so it's $0 and
+proves the plumbing only. Stop it with Ctrl-C; its databases go with it.
+
 **Add an eval task.** Add it to `evals/chat/suite.yaml` or
 `evals/memory/suite.yaml`, with its gold answer from `reference_sql`.
 `packages/juku-mcp/tests/suite_checks.py` checks each task at $0: it's
