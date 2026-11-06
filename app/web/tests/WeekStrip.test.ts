@@ -14,6 +14,11 @@ describe("WeekStrip", () => {
     expect(days[1]!.attributes("aria-label")).toBe("Tue: 13 / 24");
   });
 
+  it("draws no progress on a day with nothing done", () => {
+    const days = mount(WeekStrip, { props: { week, title: "This week", weekdays } }).findAll("li");
+    expect(days.map((day) => day.findAll("circle.stroke-orange").length)).toEqual([1, 1, 0, 1, 0, 0, 0]);
+  });
+
   it("dims the days still to come", () => {
     const days = mount(WeekStrip, { props: { week, title: "This week", weekdays } }).findAll("li");
     expect(days.map((day) => day.classes().includes("opacity-40"))).toEqual([false, false, false, false, true, true, true]);

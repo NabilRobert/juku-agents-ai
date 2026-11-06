@@ -19,7 +19,9 @@ const isDone = (day: WeekDay): boolean => day.target > 0 && day.done >= day.targ
         <span class="muted">{{ weekdays[index] }}</span>
         <svg viewBox="0 0 36 36" class="mx-auto size-8" aria-hidden="true">
           <circle cx="18" cy="18" r="15.9" fill="none" class="stroke-ink/10" stroke-width="4" />
-          <circle cx="18" cy="18" r="15.9" fill="none" class="stroke-orange" stroke-width="4" stroke-linecap="round"
+          <!-- Left out at 0: a round line cap draws a dot even on a zero-length dash. -->
+          <circle v-if="day.done > 0" cx="18" cy="18" r="15.9" fill="none" class="stroke-orange" stroke-width="4"
+            stroke-linecap="round"
             :pathLength="RING_LENGTH" :stroke-dasharray="`${percent(day)} ${RING_LENGTH}`" transform="rotate(-90 18 18)" />
           <text v-if="isDone(day)" x="18" y="23" text-anchor="middle" class="fill-orange text-sm font-bold">✓</text>
         </svg>
