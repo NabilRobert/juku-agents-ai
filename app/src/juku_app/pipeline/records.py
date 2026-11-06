@@ -169,6 +169,33 @@ async def publish_report(app: AsyncEngine, run: RunRef, body: str, is_fallback: 
         await connection.execute(text(FINISH), {"status": status, "now": now, "id": run.run_id})
 
 
+async def save_curriculum_note(app: AsyncEngine, run: RunRef, body: str, now: datetime) -> None:
+    """Keiko's approved note on the curriculum, once per week, kept as long as the report it came with."""
+    async with app.begin() as connection:
+        await connection.execute(
+            text(
+                "INSERT INTO app.curriculum_notes (learner_id, run_id, week_start, body, created_at, expires_at) "
+                "VALUES (:learner, :run, :week, :body, :now, :expires) "
+                "ON CONFLICT (learner_id, week_start) DO NOTHING"
+            ),
+            {
+                "learner": run.learner_id,
+                "run": run.run_id,
+                "week": run.week,
+                "body": body,
+                "now": now,
+                "expires": now + TEXT_RETENTION,
+            },
+        )
+
+
+async def clear_check_request(app: AsyncEngine, learner_id: int) -> None:
+    async with app.begin() as connection:
+        await connection.execute(
+            text("DELETE FROM app.check_requests WHERE learner_id = :learner"), {"learner": learner_id}
+        )
+
+
 async def finish_run(app: AsyncEngine, run_id: int, status: str, now: datetime) -> None:
     async with app.begin() as connection:
         await connection.execute(text(FINISH), {"status": status, "now": now, "id": run_id})

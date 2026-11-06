@@ -1,9 +1,11 @@
 <script setup lang="ts">
-// Beranda: the words the learner knows, and the next words worth learning (the recommender's order).
+// Beranda: today's lesson from the curriculum, the words the learner knows, and the next words worth learning
+// (the recommender's order).
 import ActivityCalendar from "../components/ActivityCalendar.vue";
 import RecommendationList from "../components/RecommendationList.vue";
+import TodayCard from "../components/TodayCard.vue";
 import { ref } from "vue";
-import type { Word } from "../lib/types";
+import type { TodayPlan, Word } from "../lib/types";
 
 type HomeCopy =
   | "hello" | "wordsYouKnow" | "recommendations" | "iKnowThis" | "quiz" | "reading" | "plan" | "examples"
@@ -14,6 +16,8 @@ const props = defineProps<{
   knownWords: number;
   words: Word[];
   isOwner: boolean;
+  today: TodayPlan;
+  todayCopy: InstanceType<typeof TodayCard>["$props"]["copy"];
   activity: InstanceType<typeof ActivityCalendar>["$props"];
   copy: Record<HomeCopy, string>;
 }>();
@@ -34,6 +38,8 @@ const known = ref(props.knownWords);
         <a href="/rencana" class="btn-quiet">{{ copy.plan }}</a>
       </div>
     </section>
+
+    <TodayCard class="mt-4" :today="today" :copy="todayCopy" />
 
     <ActivityCalendar class="mt-4" v-bind="activity" />
 

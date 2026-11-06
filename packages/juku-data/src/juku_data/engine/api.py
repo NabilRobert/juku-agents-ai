@@ -10,9 +10,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, datetime
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from juku_data.engine import learners, quiz, reads, study, writes
+from juku_data.engine import curriculum, learners, placement, quiz, reads, study, writes
+from juku_data.engine.curriculum_models import CurriculumOverview, TodayPlan, UnitDetail
 from juku_data.engine.learners import LearnerNotFoundError
 from juku_data.engine.models import (
     GradedAnswer,
@@ -32,6 +34,7 @@ from juku_data.engine.models import (
     SentenceBreakdown,
     WordEntry,
 )
+from juku_data.engine.placement import PlacementAnswer, PlacementResult
 from juku_data.engine.recompute import MARKED_KNOWN, UNMARKED_KNOWN, rebuild_learners, verify_learners
 from juku_data.engine.writes import UnknownWordError
 
@@ -39,7 +42,7 @@ RECENT_ACTIVITY_DAYS = 7
 # The memory page lists this many known words, latest first; the rest are counted.
 KNOWN_WORDS_SHOWN = 50
 
-__all__ = ["LearnerNotFoundError", "UnknownWordError"]
+__all__ = ["LearnerNotFoundError", "PlacementAnswer", "UnknownWordError"]
 
 
 @dataclass(frozen=True)
@@ -197,3 +200,47 @@ async def verify_state(db: Databases, learner_ids: list[int] | None = None) -> l
     """FF3: every difference between the summaries and a recompute (all learners if none are named)."""
     async with db.app.begin() as connection:
         return await verify_learners(connection, learner_ids)
+
+
+class UnknownGrammarError(LookupError):
+    """The grammar ID isn't one of OpenJLPT's grammar points."""
+
+
+async def _learner(db: Databases, learner_id: int) -> Learner:
+    async with db.app.connect() as connection:
+        return await learners.load_learner(connection, learner_id)
+
+
+async def get_curriculum(db: Databases, learner_id: int) -> CurriculumOverview:
+    return await curriculum.curriculum_overview(db.app, db.dictionary, await _learner(db, learner_id))
+
+
+async def get_unit(db: Databases, learner_id: int, unit_id: int) -> UnitDetail | None:
+    return await curriculum.unit_detail(db.app, db.dictionary, await _learner(db, learner_id), unit_id)
+
+
+async def get_today(db: Databases, learner_id: int, today: date, now: datetime) -> TodayPlan:
+    learner = await _learner(db, learner_id)
+    plan = await reads.get_plan(db.app, learner, today)
+    return await curriculum.today_plan(db.app, db.dictionary, learner, plan.words_per_week, today, now)
+
+
+async def mark_grammar_studied(db: Databases, learner_id: int, grammar_id: str, at: datetime) -> None:
+    async with db.dictionary.connect() as connection:
+        exists = await connection.scalar(
+            text("SELECT EXISTS (SELECT 1 FROM ojlpt.grammar WHERE id = :id)"), {"id": grammar_id}
+        )
+    if not exists:
+        raise UnknownGrammarError(f"{grammar_id!r} isn't a grammar point")
+    async with db.app.begin() as connection:
+        await writes.apply_grammar_studied(connection, learner_id, grammar_id, at)
+
+
+async def get_placement_questions(db: Databases, learner_id: int, level: int) -> Quiz:
+    return await placement.placement_questions(db.dictionary, await _learner(db, learner_id), level)
+
+
+async def place_learner(
+    db: Databases, learner_id: int, level: int, answers: list[PlacementAnswer], at: datetime
+) -> PlacementResult:
+    return await placement.place(db.app, db.dictionary, await _learner(db, learner_id), level, answers, at)

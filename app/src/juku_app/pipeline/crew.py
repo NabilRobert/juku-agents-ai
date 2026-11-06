@@ -46,6 +46,9 @@ Kamu menerima fakta minggu ini dalam JSON. Pilih fokus minggu depan:
 - kata baru hanya dari `candidates`, dengan level persis seperti di sana;
 - kata untuk diulang hanya dari `mistakes`.
 Jelaskan alasannya singkat dalam bahasa Indonesia. Setiap angka harus ada di fakta.
+Di `curriculum_note`, tulis 2-3 kalimat langsung kepada pelajar (pakai "kamu") tentang kemajuannya
+di kurikulum dari `curriculum`: unit yang sedang dikerjakan, berapa unit sudah selesai, dan apakah
+lajunya cukup untuk ujian (`units_per_week_needed`, jika ada). Kutip [ref:curriculum].
 {CITATION_RULE}
 Kamu boleh mengusulkan catatan tentang cara pelajar belajar, dengan ID aktivitas sebagai bukti.
 Kategorinya harus persis salah satu dari `note_categories`; jika tidak ada yang cocok, jangan

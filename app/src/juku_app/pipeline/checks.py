@@ -15,6 +15,7 @@ blocked if:
 - a plan's word isn't one of the engine's candidates, or isn't at the
   level the plan says; a review word isn't in the mistakes queue;
 - a plan proposes a note outside memory's allowed categories;
+- a plan has no note on the curriculum, or its note fails the number and citation checks;
 - the report is longer than the rule file allows.
 Each issue is high severity, with its `kind` naming the check.
 """
@@ -164,7 +165,14 @@ def check_plan(
         for proposal in plan.note_proposals
         if proposal.category not in rules.memory.allowed_categories
     ]
-    return issues + _number_issues(plan.explanation, facts) + _citation_issues(plan.explanation, facts, fresh, retired)
+    written = [plan.explanation]
+    if plan.curriculum_note.strip():
+        written.append(plan.curriculum_note)
+    else:
+        issues.append(_issue("missing_curriculum_note", "the plan has no note on the curriculum"))
+    for text in written:
+        issues += _number_issues(text, facts) + _citation_issues(text, facts, fresh, retired)
+    return issues
 
 
 def check_report(

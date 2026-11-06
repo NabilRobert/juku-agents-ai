@@ -20,7 +20,8 @@ database on a protected volume).
 | `ops/local/juku.sh backup` | An encrypted dump of the learners' database |
 | `ops/local/juku.sh restore-check` | Restores the latest backup into a scratch database, compares it, drops it |
 | `ops/local/juku.sh nightly` | `backup`, then `restore-check` |
-| `ops/local/juku.sh install-nightly` | Runs `nightly` every night at 03:00 (see below) |
+| `ops/local/juku.sh weekly` | The weekly reports and Keiko's curriculum checks that are due |
+| `ops/local/juku.sh install-schedule` | Runs `nightly` at 03:00 and `weekly` every hour (see below) |
 | `ops/local/juku.sh compose ...` | Any other compose command, with the right files |
 
 The app is at http://127.0.0.1:58080 and Grafana at http://127.0.0.1:53000.
@@ -49,17 +50,24 @@ volume isn't one a `down` can delete.
   checkout doesn't take them along. The real model key is
   `juku_model_api_key` there.
 
-### The nightly backup
+### The schedule: nightly backup and weekly runs
 
-`ops/local/juku.sh install-nightly` installs a LaunchAgent
-(`~/Library/LaunchAgents/com.juku.nightly-backup.plist`, from
-`ops/local/nightly-backup.plist`) that runs `nightly` at 03:00. launchd runs a
-missed night when the Mac wakes. Its log is `~/Backups/juku/nightly.log`; a
-failed restore check ends it with an error there. Arthur installs it himself,
-since it's a standing job on his Mac. To remove it:
+`ops/local/juku.sh install-schedule` installs two LaunchAgents in
+`~/Library/LaunchAgents`, both from the template `ops/local/launch-agent.plist`:
+
+- `com.juku.nightly-backup` runs `nightly` at 03:00. A failed restore check
+  ends it with an error in `~/Backups/juku/nightly-backup.log`.
+- `com.juku.weekly-run` runs `weekly` every hour, as `ops/crontab` does on the
+  server: each learner's weekly report on Sunday from 18:00, and Keiko's
+  curriculum check for a learner who opens Juku with no run in the last 7
+  days. It calls the model (about $0.03–0.04 a learner a week), and skips
+  quietly while the stack is stopped. Log: `~/Backups/juku/weekly-run.log`.
+
+launchd runs a missed job when the Mac wakes. Arthur installs them himself,
+since they're standing jobs on his Mac. To remove one:
 
 ```bash
-launchctl bootout gui/$(id -u)/com.juku.nightly-backup && rm ~/Library/LaunchAgents/com.juku.nightly-backup.plist
+launchctl bootout gui/$(id -u)/com.juku.weekly-run && rm ~/Library/LaunchAgents/com.juku.weekly-run.plist
 ```
 
 ### Restoring for real

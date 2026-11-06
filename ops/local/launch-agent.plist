@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The nightly backup of Juku's learner database on Arthur's Mac. juku.sh install-nightly fills in the
-     placeholders and installs it in ~/Library/LaunchAgents; this file is only the template. -->
+<!-- One of Juku's scheduled jobs on Arthur's Mac: the nightly backup, or the hourly weekly-run check.
+     juku.sh install-schedule fills in the placeholders and installs one copy per job in
+     ~/Library/LaunchAgents; this file is only the template. -->
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key><string>@AGENT@</string>
   <key>ProgramArguments</key>
-  <array><string>/bin/bash</string><string>@JUKU_SH@</string><string>nightly</string></array>
-  <key>StartCalendarInterval</key>
-  <dict><key>Hour</key><integer>3</integer><key>Minute</key><integer>0</integer></dict>
+  <array><string>/bin/bash</string><string>@JUKU_SH@</string><string>@COMMAND@</string></array>
+  @SCHEDULE@
   <!-- Docker and age are in Homebrew's folder, which a LaunchAgent's PATH doesn't include by default. -->
   <key>EnvironmentVariables</key>
   <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>

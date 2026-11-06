@@ -173,6 +173,36 @@ async def test_a_grammar_examples_breakdown_finds_its_own_grammar_point(dict_eng
     assert found == 3  # all three of OpenJLPT's examples for 〜は
 
 
+async def test_the_curriculum_teaches_every_n5_to_n2_word_once(dict_engine: AsyncEngine) -> None:
+    untaught = await scalar(
+        dict_engine,
+        "SELECT count(*) FROM ojlpt.vocab v LEFT JOIN ojlpt.curriculum_word c ON c.word_id = v.id "
+        "WHERE v.level >= 2 AND c.word_id IS NULL",
+    )
+    in_n1 = await scalar(
+        dict_engine,
+        "SELECT count(*) FROM ojlpt.curriculum_word c JOIN ojlpt.vocab v ON v.id = c.word_id WHERE v.level = 1",
+    )
+    assert (untaught, in_n1) == (0, 0)
+
+
+async def test_the_curriculum_runs_n5_to_n2_with_at_most_five_sentences_a_unit(dict_engine: AsyncEngine) -> None:
+    first_of_each = await scalar(
+        dict_engine,
+        "SELECT string_agg(level::text, ',' ORDER BY first) FROM "
+        "(SELECT level, min(unit_id) AS first FROM ojlpt.curriculum_unit GROUP BY level) levels",
+    )
+    most = await scalar(
+        dict_engine, "SELECT max(n) FROM (SELECT count(*) AS n FROM ojlpt.curriculum_sentence GROUP BY unit_id) s"
+    )
+    first_grammar = await scalar(
+        dict_engine,
+        "SELECT g.pattern FROM ojlpt.curriculum_grammar c JOIN ojlpt.grammar g ON g.id = c.grammar_id "
+        "WHERE c.unit_id = 1 AND c.position = 1",
+    )
+    assert (first_of_each, most, first_grammar) == ("5,4,3,2", 5, "〜は")
+
+
 async def test_the_reader_role_can_read_but_not_write(dict_engine: AsyncEngine) -> None:
     async with dict_engine.connect() as connection:
         await connection.execute(text("SET ROLE dict_reader"))

@@ -121,3 +121,81 @@ export interface KanjiEntry {
   meanings: string[];
   words: { word_id: string; word: string; reading: string; level: number; meaning: string; is_known: boolean }[];
 }
+
+// The curriculum (juku_data.engine.curriculum_models).
+export interface UnitStatus {
+  unit_id: number;
+  level: number;
+  number: number;
+  words_total: number;
+  words_known: number;
+  grammar_total: number;
+  grammar_studied: number;
+  sentences_total: number;
+  sentences_read: number;
+  status: "done" | "current" | "later";
+}
+
+export interface CurriculumOverview {
+  target_level: number;
+  units_total: number;
+  units_done: number;
+  current_unit_id: number | null;
+  levels: { level: number; units: UnitStatus[] }[];
+}
+
+export interface UnitWord {
+  word_id: string;
+  word: string;
+  reading: string;
+  meanings: string[];
+  is_known: boolean;
+}
+
+export interface UnitGrammar {
+  grammar_id: string;
+  pattern: string;
+  meaning: string;
+  is_studied: boolean;
+}
+
+export interface UnitSentence {
+  sentence_id: number;
+  ja: string;
+  furigana: string | null;
+  en: string | null;
+  is_read: boolean;
+}
+
+export interface UnitDetail {
+  unit: UnitStatus;
+  words: UnitWord[];
+  kanji: string[];
+  grammar: UnitGrammar[];
+  sentences: UnitSentence[];
+  previous_unit_id: number | null;
+  next_unit_id: number | null;
+}
+
+export interface TodayPlan {
+  unit: UnitStatus | null;
+  new_words: UnitWord[];
+  words_target: number;
+  words_done: number;
+  grammar: UnitGrammar | null;
+  grammar_done: number;
+  sentences: UnitSentence[];
+  sentences_target: number;
+  sentences_done: number;
+  reviews_due: number;
+  quiz_target: number;
+  quiz_done: number;
+}
+
+export interface PlacementResult {
+  level: number;
+  correct: number;
+  total: number;
+  placed_through_unit_id: number;
+  passed_level: boolean;
+}

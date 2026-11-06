@@ -22,7 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from juku_data.engine.learners import lock_learner
 from juku_data.engine.models import Learner
 from juku_data.engine.recompute import (
+    GRAMMAR_STUDIED,
     MARKED_KNOWN,
+    PLACED,
     QUIZ_MEANING,
     QUIZ_READING,
     SENTENCE_READ,
@@ -248,7 +250,34 @@ async def apply_word_event(  # noqa: PLR0913 (one word event's fields)
         await _count_activity(connection, learner, at, "words_marked", correct=False)
 
 
+async def _record_studied(connection: AsyncConnection, learner_id: int, kind: int, item_id: str, at: datetime) -> None:
+    """learner_studied keeps the first time; least() keeps it right if an earlier event arrives late."""
+    await connection.execute(
+        text(
+            "INSERT INTO learning.learner_studied (learner_id, kind, item_id, first_at) "
+            "VALUES (:learner, :kind, :item, :at) ON CONFLICT (learner_id, kind, item_id) "
+            "DO UPDATE SET first_at = least(learning.learner_studied.first_at, excluded.first_at)"
+        ),
+        {"learner": learner_id, "kind": kind, "item": item_id, "at": at},
+    )
+
+
 async def apply_sentence_read(connection: AsyncConnection, learner_id: int, sentence_id: int, at: datetime) -> None:
     learner = await lock_learner(connection, learner_id)
     await _append_event(connection, learner, SENTENCE_READ, str(sentence_id), None, at)
     await _count_activity(connection, learner, at, "sentences_read", correct=False)
+    await _record_studied(connection, learner_id, SENTENCE_READ, str(sentence_id), at)
+
+
+async def apply_grammar_studied(connection: AsyncConnection, learner_id: int, grammar_id: str, at: datetime) -> None:
+    """The learner marked a grammar point understood (the curriculum's "Saya paham")."""
+    learner = await lock_learner(connection, learner_id)
+    await _append_event(connection, learner, GRAMMAR_STUDIED, grammar_id, None, at)
+    await _record_studied(connection, learner_id, GRAMMAR_STUDIED, grammar_id, at)
+
+
+async def apply_placement(connection: AsyncConnection, learner_id: int, unit_id: int, at: datetime) -> None:
+    """A placement test placed the learner through this curriculum unit (its words are marked known apart)."""
+    learner = await lock_learner(connection, learner_id)
+    await _append_event(connection, learner, PLACED, str(unit_id), None, at)
+    await _record_studied(connection, learner_id, PLACED, str(unit_id), at)

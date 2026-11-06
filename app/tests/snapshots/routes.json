@@ -596,6 +596,112 @@
  },
  {
   "methods": [
+   "POST"
+  ],
+  "path": "/rencana/kalimat/{sentence_id}/dibaca",
+  "name": "sentence_read",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/rencana/kata/{word_id}/dikuasai",
+  "name": "word_known",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/rencana/penempatan",
+  "name": "placement",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/rencana/penempatan/{level}",
+  "name": "place",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "POST"
+  ],
+  "path": "/rencana/tata-bahasa/{grammar_id}/paham",
+  "name": "grammar_understood",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   "header_csrf",
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
+   "GET"
+  ],
+  "path": "/rencana/unit/{unit_id}",
+  "name": "unit",
+  "response_class": "JSONResponse",
+  "status_code": null,
+  "dependencies": [
+   [
+    "page",
+    [
+     "signed_in"
+    ]
+   ]
+  ]
+ },
+ {
+  "methods": [
    "GET"
   ],
   "path": "/tata-bahasa",

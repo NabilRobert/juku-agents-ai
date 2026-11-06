@@ -5,9 +5,10 @@ from datetime import UTC, date, datetime
 import pytest
 from juku_app.pipeline.approval import decide_approval
 from juku_app.pipeline.checks import check_plan, check_report
-from juku_app.pipeline.facts import WeekActivity, WeekFacts
+from juku_app.pipeline.facts import CurriculumFacts, LevelUnits, WeekActivity, WeekFacts
 from juku_app.pipeline.outputs import Issue, KeikoPlan, PlanWord, Review
 from juku_common.rules import Rules
+from juku_data.engine.curriculum_models import UnitStatus
 from juku_data.engine.models import (
     DayActivity,
     LevelCoverage,
@@ -112,6 +113,24 @@ def sample_facts(*, notes: tuple[str, ...] = ("note-1",), mistakes: tuple[str, .
             words_per_week=None,
             formula="-",
         ),
+        curriculum=CurriculumFacts(
+            units_done=3,
+            units_total=45,
+            levels=[LevelUnits(level=5, units_done=3, units_total=45)],
+            current_unit=UnitStatus(
+                unit_id=4,
+                level=5,
+                number=4,
+                words_total=15,
+                words_known=6,
+                grammar_total=2,
+                grammar_studied=1,
+                sentences_total=5,
+                sentences_read=0,
+                status="current",
+            ),
+            units_per_week_needed=None,
+        ),
         memory=Memory(notes=[note(note_id) for note_id in notes], note="-"),
     )
 
@@ -121,6 +140,7 @@ def plan(**overrides: object) -> KeikoPlan:
         "focus": [PlanWord(word_id="c5", level=5, reason="Kata baru.")],
         "review_word_ids": ["m1"],
         "explanation": "Minggu ini kamu menjawab 12 kuis [ref:activity].",
+        "curriculum_note": "Kamu di unit 4, dan 3 dari 45 unit N5 sudah selesai [ref:curriculum].",
         "note_proposals": [],
     }
     return KeikoPlan.model_validate({**values, **overrides})
@@ -174,6 +194,17 @@ def test_a_plans_explanation_is_held_to_the_facts_too(rules: Rules) -> None:
 
 
 # --- Nikki's report ---
+
+
+def test_a_plan_without_a_note_on_the_curriculum_is_blocked(rules: Rules) -> None:
+    facts = sample_facts()
+    assert kinds(check_plan(plan(curriculum_note=" "), facts, facts, rules)) == {"missing_curriculum_note"}
+
+
+def test_the_curriculum_note_is_held_to_the_facts_too(rules: Rules) -> None:
+    facts = sample_facts()
+    invented = plan(curriculum_note="Kamu sudah menyelesaikan 17 unit.")
+    assert kinds(check_plan(invented, facts, facts, rules)) == {"number_not_in_facts", "missing_citation"}
 
 
 def test_a_report_of_cited_facts_passes(rules: Rules) -> None:

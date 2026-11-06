@@ -29,6 +29,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from juku_data.dictionary.breakdown import Breakdown, GrammarMatcher, build_breakdowns
+from juku_data.dictionary.curriculum import UNRANKED, CurriculumSentence, CurriculumWord, Unit, build_curriculum
 from juku_data.dictionary.pin import OPENJLPT_COMMIT
 from juku_data.dictionary.read_sqlite import OpenJlptRows, read_openjlpt
 from juku_data.dictionary.schema import BASE_TABLES_SQL, DERIVED_SQL, KEYS_SQL, TABLE_COMMENTS, VIEWS_SQL
@@ -181,6 +182,36 @@ async def _load_grammar_order(connection: AsyncConnection, rows: OpenJlptRows) -
     await _copy(connection, "grammar_position", positions)
 
 
+def _curriculum(rows: OpenJlptRows, index: ReadingIndex) -> list[Unit]:
+    frequency = {row[0]: row[4] if row[4] is not None else UNRANKED for row in rows.kanji}
+    level_of = {row[0]: row[4] for row in rows.grammar}
+    return build_curriculum(
+        words=[CurriculumWord(word_id=row[0], spelling=row[1], level=row[5]) for row in rows.vocab],
+        frequency=frequency,
+        grammar_order=[(grammar_id, level_of[grammar_id]) for grammar_id in rows.grammar_order],
+        sentences=[
+            CurriculumSentence(sentence.sentence_id, sentence.word_ids, len(sentence.source.ja))
+            for sentence in index.sentences
+        ],
+    )
+
+
+async def _load_curriculum(connection: AsyncConnection, units: list[Unit]) -> None:
+    await _copy(connection, "curriculum_unit", [(unit.unit_id, unit.level, unit.number) for unit in units])
+    for table, column in (
+        ("curriculum_word", "word_ids"),
+        ("curriculum_kanji", "kanji"),
+        ("curriculum_grammar", "grammar_ids"),
+        ("curriculum_sentence", "sentence_ids"),
+    ):
+        records = [
+            (unit.unit_id, item, position)
+            for unit in units
+            for position, item in enumerate(getattr(unit, column), start=1)
+        ]
+        await _copy(connection, table, records)
+
+
 async def _copy_source_tables(
     connection: AsyncConnection, rows: OpenJlptRows, supplement: list[SupplementWord]
 ) -> None:
@@ -252,6 +283,7 @@ async def load_dictionary(
         await _load_reading_index(connection, index)
         await _load_breakdowns(connection, sentence_data.breakdowns)
         await _load_grammar_order(connection, rows)
+        await _load_curriculum(connection, _curriculum(rows, index))
         await _record_meta(connection, commit, source, index if with_reading_index else None)
         await _execute_script(connection, KEYS_SQL)
         await _execute_script(connection, DERIVED_SQL)

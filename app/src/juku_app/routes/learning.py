@@ -15,6 +15,7 @@ from juku_data.engine import UnknownWordError
 from pydantic import BaseModel, Field
 
 from juku_app.activity import CALENDAR_WEEKS, active_days
+from juku_app.curriculum_check import queue_check_if_due
 from juku_app.routes.common import Page, form_csrf, header_csrf, page, render, web
 
 # Enough batches for a long session; a client can't ask for an unbounded slice.
@@ -35,6 +36,9 @@ async def home(request: Request, current: Page = Depends(page)) -> HTMLResponse:
     progress = await engine.get_progress(db, current.learner.id)
     recommendations = await engine.recommend_words(db, current.learner.id)
     days = await active_days(db, current.learner, current.today)
+    now = datetime.now(UTC)
+    today = await engine.get_today(db, current.learner.id, current.today, now)
+    await queue_check_if_due(db.app, current.learner.id, now)
     return render(
         request,
         "beranda.html",
@@ -42,6 +46,7 @@ async def home(request: Request, current: Page = Depends(page)) -> HTMLResponse:
         progress=progress,
         words=recommendations.words,
         active_days=days,
+        today=today,
         calendar_weeks=CALENDAR_WEEKS,
     )
 
@@ -113,11 +118,3 @@ async def reading(request: Request, current: Page = Depends(page)) -> HTMLRespon
 async def sentence_read(request: Request, sentence_id: int, current: Page = Depends(page)) -> Response:  # noqa: B008
     await engine.record_sentence_read(web(request).db, current.learner.id, sentence_id, datetime.now(UTC))
     return RedirectResponse("/bacaan", status_code=303)
-
-
-@router.get("/rencana")
-async def plan(request: Request, current: Page = Depends(page)) -> HTMLResponse:  # noqa: B008
-    db = web(request).db
-    progress = await engine.get_progress(db, current.learner.id)
-    made = await engine.get_plan(db, current.learner.id, current.today)
-    return render(request, "rencana.html", page=current, progress=progress, plan=made)
