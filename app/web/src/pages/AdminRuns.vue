@@ -8,6 +8,7 @@ interface RunRow {
   week_start: string;
   kind: string;
   status: string;
+  fallback_reason: string | null;
   attempts: number;
   started_at: string;
   finished_at: string | null;
@@ -35,6 +36,7 @@ defineProps<{ runs: RunRow[]; drafts: DraftRow[] }>();
         <td>{{ run.kind }}</td>
         <td>
           <span class="rounded-full px-2 py-0.5 text-xs font-bold" :class="run.status === 'published' ? 'bg-lemon' : 'bg-ink/10'">{{ run.status }}</span>
+          <span v-if="run.fallback_reason" class="fallback-reason muted ml-1 text-xs">{{ run.fallback_reason }}</span>
         </td>
         <td>{{ run.attempts }}</td>
         <td>{{ run.started_at }}</td>

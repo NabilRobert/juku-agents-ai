@@ -13,14 +13,15 @@ from juku_app.routes.common import Page, admin, render, web
 # Enough to see the week, small enough to load at once.
 INSPECTOR_ROWS = 50
 LATEST_RUNS = """
-SELECT r.id, l.public_id, r.week_start, r.kind, r.status, r.attempts, r.started_at, r.finished_at
+SELECT r.id, l.public_id, r.week_start, r.kind, r.status, r.fallback_reason, r.attempts, r.started_at, r.finished_at
 FROM app.pipeline_runs r JOIN learning.learners l ON l.id = r.learner_id ORDER BY r.id DESC LIMIT :limit
 """
 LATEST_DRAFTS = (
     "SELECT week_start, agent, patterns, draft, status FROM app.prompt_feedback ORDER BY id DESC LIMIT :limit"
 )
 ONE_RUN = """
-SELECT r.id, l.public_id, r.week_start, r.kind, r.status, r.attempts, r.started_at, r.finished_at, r.facts
+SELECT r.id, l.public_id, r.week_start, r.kind, r.status, r.fallback_reason, r.attempts, r.started_at, r.finished_at,
+    r.facts
 FROM app.pipeline_runs r JOIN learning.learners l ON l.id = r.learner_id WHERE r.id = :id
 """
 RUN_ATTEMPTS = """

@@ -426,6 +426,13 @@ Juku with no run in the last 7 days (`curriculum_check.py:
 queue_check_if_due` queues it, the hourly job runs it). The note is in
 `app.curriculum_notes`.
 
+**Fallback report.** When the weekly run can't publish a written report,
+the learner gets the facts-only one (`pipeline/fallback.py`). The run
+keeps why, in `app.pipeline_runs.fallback_reason`, shown in the Run
+Inspector: `output_refused` (an agent gave no valid output after its
+retries), `request_limit` (a call hit its limits), `budget_spent` (the
+reports pool is spent) or `not_approved` (every draft was sent back).
+
 **Placement test.** 15 questions spread across one level, so a learner
 who already knows some starts further along. One mistake is forgiven; the
 second ends the placement at the last unit answered right before it

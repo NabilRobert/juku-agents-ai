@@ -18,7 +18,7 @@ interface Attempt {
 }
 
 defineProps<{
-  run: { id: number; kind: string; status: string; public_id: string; week_start: string; attempts: number; started_at: string; finished_at: string | null };
+  run: { id: number; kind: string; status: string; fallback_reason: string | null; public_id: string; week_start: string; attempts: number; started_at: string; finished_at: string | null };
   facts: string;
   attempts: Attempt[];
   report: { body: string; is_fallback: boolean } | null;
@@ -27,7 +27,7 @@ defineProps<{
 
 <template>
   <p class="mb-2"><a href="/admin/runs" class="text-sm">← Run Inspector</a></p>
-  <h1 class="page-title">Run {{ run.id }}: {{ run.kind }}, {{ run.status }}</h1>
+  <h1 class="page-title">Run {{ run.id }}: {{ run.kind }}, {{ run.status }}<template v-if="run.fallback_reason"> ({{ run.fallback_reason }})</template></h1>
   <p class="muted mt-1">
     {{ run.public_id }} · week of {{ run.week_start }} · attempts {{ run.attempts }} · {{ run.started_at }} to
     {{ run.finished_at ?? "-" }}

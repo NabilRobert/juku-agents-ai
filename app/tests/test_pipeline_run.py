@@ -30,6 +30,11 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo
 from sqlalchemy import text
 
+
+async def fallback_reason_of(db: Databases, run_id: int | None) -> str | None:
+    return await scalar(db, "SELECT fallback_reason FROM app.pipeline_runs WHERE id = :id", id=run_id)
+
+
 # --- revisions (AG1) ---
 
 
@@ -127,6 +132,7 @@ async def test_with_the_reports_pool_spent_the_learner_still_gets_the_facts_only
             sunday_evening(learner.timezone),
         )
         assert outcome.status == "fallback"
+        assert await fallback_reason_of(engine_databases, outcome.run_id) == "budget_spent"
     finally:
         async with engine_databases.app.begin() as connection:
             await connection.execute(text("DELETE FROM app.model_calls WHERE pool = 'reports'"))
@@ -156,6 +162,31 @@ async def test_a_model_that_cant_give_a_valid_plan_ends_in_the_facts_only_report
         services_for(engine_databases, rules, crew_of(keiko=chatty)), learner, sunday_evening(learner.timezone)
     )
     assert outcome.status == "fallback"
+    assert await fallback_reason_of(engine_databases, outcome.run_id) == "output_refused"
+
+
+async def test_a_plan_sent_back_every_time_is_recorded_as_not_approved(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    learner = await fixture_learner(engine_databases, rules)
+
+    def strict(_messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return structured(info, {"grade": "D", "issues": [{"reason": "Kurang.", "severity": "high"}], "feedback": ""})
+
+    outcome = await run_weekly(
+        services_for(engine_databases, rules, crew_of(tadashi=strict)), learner, sunday_evening(learner.timezone)
+    )
+    assert outcome.status == "fallback"
+    assert await fallback_reason_of(engine_databases, outcome.run_id) == "not_approved"
+
+
+async def test_a_published_run_has_no_fallback_reason(engine_databases: Databases, rules: Rules) -> None:
+    learner = await fixture_learner(engine_databases, rules)
+    outcome = await run_weekly(
+        services_for(engine_databases, rules, crew_of()), learner, sunday_evening(learner.timezone)
+    )
+    assert outcome.status == "published"
+    assert await fallback_reason_of(engine_databases, outcome.run_id) is None
 
 
 # --- memory: Keiko's proposals go through juku_data.memory (MEM-R2) ---
