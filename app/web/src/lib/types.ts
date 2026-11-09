@@ -190,6 +190,14 @@ export interface TodayPlan {
   reviews_due: number;
   quiz_target: number;
   quiz_done: number;
+  week: WeekDay[];
+}
+
+export interface WeekDay {
+  day: string;
+  done: number;
+  target: number;
+  is_future: boolean;
 }
 
 export interface PlacementResult {

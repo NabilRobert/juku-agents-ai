@@ -10,7 +10,7 @@ const percent = computed(() => (props.total ? Math.min(100, (100 * props.value) 
   <div>
     <div v-if="label" class="flex justify-between text-xs">
       <span>{{ label }}</span>
-      <span class="font-semibold">{{ value }} / {{ total }}</span>
+      <span class="font-semibold">{{ value }} / {{ total }}<span v-if="total && value >= total"> ✓</span></span>
     </div>
     <div
       class="h-2.5 overflow-hidden rounded-full bg-ink/10"

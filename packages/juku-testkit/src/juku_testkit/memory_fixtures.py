@@ -1,4 +1,4 @@
-"""Fixture learners (evals/memory/learners/ and evals/pipeline/learners/), replayed into a test database.
+"""Fixture learners (evals/memory/, evals/pipeline/ and evals/flight-school/ learners), replayed into a test database.
 
 A fixture lists a learner's activity, the notes agents proposed, and what
 the learner and the weekly consolidation did afterwards. `load_memory_fixture`
@@ -31,8 +31,13 @@ from juku_testkit.databases import repo_root
 
 MEMORY_EVALS = repo_root() / "evals" / "memory"
 PIPELINE_EVALS = repo_root() / "evals" / "pipeline"
-# Where each source keeps its learners: MEM1's, and the six the pipeline adds.
-SOURCES = {"memory": MEMORY_EVALS / "learners", "pipeline": PIPELINE_EVALS / "learners"}
+FLIGHT_SCHOOL_EVALS = repo_root() / "evals" / "flight-school"
+# Where each source keeps its learners: MEM1's, the six the pipeline adds, and Flight School's planted one.
+SOURCES = {
+    "memory": MEMORY_EVALS / "learners",
+    "pipeline": PIPELINE_EVALS / "learners",
+    "flight_school": FLIGHT_SCHOOL_EVALS / "learners",
+}
 QUIZ_KINDS: dict[str, QuizKind] = {"quiz_meaning": "meaning", "quiz_reading": "reading"}
 ACCEPTED = "accepted"
 

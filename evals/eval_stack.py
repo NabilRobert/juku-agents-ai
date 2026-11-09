@@ -11,7 +11,7 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
-from eval_gateway import running_gateway
+from eval_gateway import GATEWAY_AUDIT_LOG, running_gateway
 from juku_app.moderation import Verdict
 from juku_common.delegation import Signer
 from juku_common.rules import Rules, load_rules
@@ -46,6 +46,8 @@ class Stack:
     mcp_url: str
     dictionary_url: str = ""
     gateway_keys: dict[str, str] = field(default_factory=dict[str, str])
+    # The gateway's audit log (one line per tool call), which Flight School reads; None without a gateway.
+    gateway_audit_log: Path | None = None
 
 
 def eval_rules(*, with_gateway: bool = False, reports_pool_usd: float = UNCAPPED_USD) -> Rules:
@@ -92,7 +94,8 @@ async def running_stack(rules: Rules, *, gateway_ref: str | None = None) -> Asyn
                     yield Stack(db, rules, signer, juku_url, dict_db.sqlalchemy_url)
                     return
                 async with running_gateway(juku_url, gateway_ref, Path(work)) as (gateway_url, keys):
-                    yield Stack(db, rules, signer, gateway_url, dict_db.sqlalchemy_url, keys)
+                    audit_log = Path(work) / GATEWAY_AUDIT_LOG
+                    yield Stack(db, rules, signer, gateway_url, dict_db.sqlalchemy_url, keys, audit_log)
     finally:
         await db.app.dispose()
         await db.dictionary.dispose()

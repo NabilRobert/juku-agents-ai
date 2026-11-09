@@ -409,6 +409,13 @@ grammar understood and its sentences read
 **Today's lesson.** The home page's card: the current unit's next words
 (the plan's pace, 3 to 30 a day), one grammar point, a few sentences and
 the quiz, each with what's done today (`engine/curriculum.py: today_plan`).
+Each part ticks when it reaches its target. Due reviews link to the quiz.
+
+**This week's strip.** Under today's lesson, Monday to Sunday, a ring
+per day that fills as that day's lesson is done and ticks when all of it
+is (`engine/week.py: week_days`, drawn by `WeekStrip.vue`). Each part
+counts only up to its own target, so a long quiz doesn't stand in for the
+words. Past days use today's target, because the pace isn't stored.
 
 **Keiko's curriculum check.** Once a week Keiko writes a short note on
 the plan page about where the learner is on the curriculum, citing
@@ -418,6 +425,20 @@ the weekly run: on Sunday from 18:00, or sooner when the learner opens
 Juku with no run in the last 7 days (`curriculum_check.py:
 queue_check_if_due` queues it, the hourly job runs it). The note is in
 `app.curriculum_notes`.
+
+**Fallback report.** When the weekly run can't publish a written report,
+the learner gets the facts-only one (`pipeline/fallback.py`). The run
+keeps why, in `app.pipeline_runs.fallback_reason`, shown in the Run
+Inspector: `output_refused` (an agent gave no valid output after its
+retries), `request_limit` (a call hit its limits), `budget_spent` (the
+reports pool is spent) or `not_approved` (every draft was sent back).
+
+**Memory notes.** Short notes about how a learner learns ("often misses
+N5 readings"), shown to Shiori. Keiko proposes them in the weekly run.
+Each one must rest on at least 3 real activity rows, by event ID, or
+`juku_data/memory/store.py: propose_note` refuses it. Keiko gets the
+week's newest 30 rows, with their IDs, in `facts.evidence`
+(`memory/store.py: recent_evidence`).
 
 **Placement test.** 15 questions spread across one level, so a learner
 who already knows some starts further along. One mistake is forgiven; the
@@ -600,6 +621,14 @@ only. `memory` runs the memory suite. Then `uv run agent-eval report
 build/evals/try-1` writes the report, and `agent-eval compare <old> <new>`
 is the regression gate. A real run spends money: it needs `--real`,
 `--budget` and `--purpose`, and Arthur's OK (ADR-028).
+
+**Let AI Flight School test Shiori.** `uv run python
+evals/flight_school_server.py` starts the eval stack with the pinned
+gateway, loads Flight School's five learners (four existing fixtures and
+`evals/flight-school/learners/wulan.yaml`, whose one note is planted text),
+and prints the chat URL and the gateway's audit log for `flightschool
+run`. Shiori runs on a scripted model (`scripted_shiori`), so it's $0 and
+proves the plumbing only. Stop it with Ctrl-C; its databases go with it.
 
 **Add an eval task.** Add it to `evals/chat/suite.yaml` or
 `evals/memory/suite.yaml`, with its gold answer from `reference_sql`.

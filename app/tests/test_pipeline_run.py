@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import Any
 
 import pytest
-from juku_app.pipeline.crew import KEIKO_INSTRUCTIONS, NIKKI_INSTRUCTIONS
+from juku_app.pipeline.crew import KEIKO_INSTRUCTIONS, NIKKI_INSTRUCTIONS, TADASHI_INSTRUCTIONS
 from juku_app.pipeline.facts import WeekFacts
 from juku_app.pipeline.run import run_weekly
 from juku_common.rules import Rules
@@ -29,6 +29,11 @@ from pipeline_helpers import (
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.function import AgentInfo
 from sqlalchemy import text
+
+
+async def fallback_reason_of(db: Databases, run_id: int | None) -> str | None:
+    return await scalar(db, "SELECT fallback_reason FROM app.pipeline_runs WHERE id = :id", id=run_id)
+
 
 # --- revisions (AG1) ---
 
@@ -127,6 +132,7 @@ async def test_with_the_reports_pool_spent_the_learner_still_gets_the_facts_only
             sunday_evening(learner.timezone),
         )
         assert outcome.status == "fallback"
+        assert await fallback_reason_of(engine_databases, outcome.run_id) == "budget_spent"
     finally:
         async with engine_databases.app.begin() as connection:
             await connection.execute(text("DELETE FROM app.model_calls WHERE pool = 'reports'"))
@@ -156,6 +162,31 @@ async def test_a_model_that_cant_give_a_valid_plan_ends_in_the_facts_only_report
         services_for(engine_databases, rules, crew_of(keiko=chatty)), learner, sunday_evening(learner.timezone)
     )
     assert outcome.status == "fallback"
+    assert await fallback_reason_of(engine_databases, outcome.run_id) == "output_refused"
+
+
+async def test_a_plan_sent_back_every_time_is_recorded_as_not_approved(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    learner = await fixture_learner(engine_databases, rules)
+
+    def strict(_messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return structured(info, {"grade": "D", "issues": [{"reason": "Kurang.", "severity": "high"}], "feedback": ""})
+
+    outcome = await run_weekly(
+        services_for(engine_databases, rules, crew_of(tadashi=strict)), learner, sunday_evening(learner.timezone)
+    )
+    assert outcome.status == "fallback"
+    assert await fallback_reason_of(engine_databases, outcome.run_id) == "not_approved"
+
+
+async def test_a_published_run_has_no_fallback_reason(engine_databases: Databases, rules: Rules) -> None:
+    learner = await fixture_learner(engine_databases, rules)
+    outcome = await run_weekly(
+        services_for(engine_databases, rules, crew_of()), learner, sunday_evening(learner.timezone)
+    )
+    assert outcome.status == "published"
+    assert await fallback_reason_of(engine_databases, outcome.run_id) is None
 
 
 # --- memory: Keiko's proposals go through juku_data.memory (MEM-R2) ---
@@ -193,6 +224,35 @@ async def test_an_approved_plans_note_proposals_are_checked_and_stored_as_keikos
     )
 
 
+async def test_a_note_keiko_rests_on_the_activity_she_was_given_is_stored(
+    engine_databases: Databases, rules: Rules
+) -> None:
+    """Paid run 3: Keiko was asked for evidence IDs but given none, so every note she proposed was refused."""
+    loaded = await load_memory_fixture(
+        engine_databases, rules, "nur", suffix=f"-{uuid.uuid4().hex[:6]}", source="pipeline"
+    )
+    await consented(engine_databases, loaded.learner)
+
+    def keiko(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        facts = prompt_of(messages)["facts"]
+        plan = faithful_plan(facts)
+        wrong = [row["event_id"] for row in facts["evidence"] if row["is_correct"] is False]
+        plan["note_proposals"] = [
+            {"category": "avoided_level", "text": "Sering salah di kata N5.", "evidence_event_ids": wrong}
+        ]
+        return structured(info, plan)
+
+    await run_weekly(
+        services_for(engine_databases, rules, crew_of(keiko=keiko)), loaded.learner, sunday_evening("Asia/Jayapura")
+    )
+    stored = await scalar(
+        engine_databases,
+        "SELECT count(*) FROM learning.memory_notes WHERE learner_id = :l AND proposed_by = 'keiko'",
+        l=loaded.learner.id,
+    )
+    assert stored == 1
+
+
 # --- what the agents are told (paid run 2: made-up note categories, citations of fields) ---
 
 
@@ -224,3 +284,8 @@ async def test_keiko_and_her_reviewer_are_shown_the_allowed_note_categories_by_n
 def test_the_writers_instructions_name_every_citable_field(instructions: str) -> None:
     for field in WeekFacts.model_fields:
         assert field in instructions
+
+
+def test_tadashi_is_told_a_citation_is_shown_by_the_app_not_a_placeholder() -> None:
+    """Paid run 3: he sent back 9 drafts for citing [ref:week_start], the form the writers are told to use."""
+    assert "[ref:week_start]" in TADASHI_INSTRUCTIONS and "bukan tempat kosong" in TADASHI_INSTRUCTIONS

@@ -18,6 +18,7 @@ const props = defineProps<{
   isOwner: boolean;
   today: TodayPlan;
   todayCopy: InstanceType<typeof TodayCard>["$props"]["copy"];
+  todayWeekdays: string[];
   activity: InstanceType<typeof ActivityCalendar>["$props"];
   copy: Record<HomeCopy, string>;
 }>();
@@ -39,7 +40,7 @@ const known = ref(props.knownWords);
       </div>
     </section>
 
-    <TodayCard class="mt-4" :today="today" :copy="todayCopy" />
+    <TodayCard class="mt-4" :today="today" :copy="todayCopy" :weekdays="todayWeekdays" />
 
     <ActivityCalendar class="mt-4" v-bind="activity" />
 

@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime
 
 import pytest
 from juku_app.pipeline.approval import decide_approval
-from juku_app.pipeline.checks import check_plan, check_report
+from juku_app.pipeline.checks import check_plan, check_report, fact_numbers
 from juku_app.pipeline.facts import CurriculumFacts, LevelUnits, WeekActivity, WeekFacts
 from juku_app.pipeline.outputs import Issue, KeikoPlan, PlanWord, Review
 from juku_common.rules import Rules
@@ -132,6 +132,18 @@ def sample_facts(*, notes: tuple[str, ...] = ("note-1",), mistakes: tuple[str, .
             units_per_week_needed=None,
         ),
         memory=Memory(notes=[note(note_id) for note_id in notes], note="-"),
+        evidence=[
+            EvidenceEvent(
+                event_id=9876,
+                event_type="quiz_meaning",
+                word_id="m1",
+                word="猫",
+                reading="ねこ",
+                level=5,
+                is_correct=False,
+                occurred_on=date(2026, 11, 3),
+            )
+        ],
     )
 
 
@@ -341,3 +353,7 @@ def test_a_low_grade_or_no_grade_blocks(grade: str | None) -> None:
 
 def test_no_review_at_all_blocks() -> None:
     assert not decide_approval(None, []).is_approved
+
+
+def test_an_evidence_rows_event_id_isnt_a_number_the_writers_may_state() -> None:
+    assert 9876 not in fact_numbers(sample_facts())

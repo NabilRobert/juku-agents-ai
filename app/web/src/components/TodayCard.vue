@@ -1,16 +1,18 @@
 <script setup lang="ts">
 // Today's lesson on Home (engine/curriculum.py: today_plan): the current unit's next words, one grammar
-// point, a few sentences and the quiz, each with its target and what's done today. Following it is the plan.
+// point, a few sentences, the reviews and the quiz, each with its target and what's done today, and this
+// week's strip of days done. Following it is the plan.
 import { computed } from "vue";
 import { useAction } from "../lib/action";
 import type { TodayPlan } from "../lib/types";
 import ProgressBar from "./ProgressBar.vue";
+import WeekStrip from "./WeekStrip.vue";
 
 type TodayCopy =
   | "title" | "unit" | "newWords" | "grammar" | "sentences" | "reviews" | "quiz" | "allDone" | "finished"
-  | "continue" | "understand" | "toQuiz";
+  | "continue" | "understand" | "toQuiz" | "noReviews" | "thisWeek";
 
-const props = defineProps<{ today: TodayPlan; copy: Record<TodayCopy, string> }>();
+const props = defineProps<{ today: TodayPlan; copy: Record<TodayCopy, string>; weekdays: string[] }>();
 const { run, pending, done } = useAction();
 
 const grammarKey = computed(() => `grammar:${props.today.grammar?.grammar_id ?? ""}`);
@@ -22,6 +24,12 @@ const isAllDone = computed(
     props.today.quiz_done >= props.today.quiz_target &&
     (props.today.grammar === null || done.has(grammarKey.value)),
 );
+// The grammar point understood here counts on today's ring at once; today is the week's last day not to come.
+const week = computed(() => {
+  const todayIndex = props.today.week.filter((day) => !day.is_future).length - 1;
+  const extra = done.has(grammarKey.value) && props.today.grammar_done === 0 ? 1 : 0;
+  return props.today.week.map((day, index) => (index === todayIndex ? { ...day, done: day.done + extra } : day));
+});
 </script>
 
 <template>
@@ -57,11 +65,13 @@ const isAllDone = computed(
           {{ copy.understand }}
         </button>
       </div>
-      <p v-if="today.reviews_due" class="muted text-sm">{{ today.reviews_due }} {{ copy.reviews }}</p>
+      <a v-if="today.reviews_due" href="/kuis" class="reviews block text-sm">↻ {{ today.reviews_due }} {{ copy.reviews }}</a>
+      <p v-else class="reviews muted text-sm">✓ {{ copy.noReviews }}</p>
       <p class="flex flex-wrap gap-2">
         <a :href="`/rencana/unit/${today.unit.unit_id}`" class="btn">{{ copy.continue }} →</a>
         <a href="/kuis" class="btn-quiet">{{ copy.toQuiz }}</a>
       </p>
+      <WeekStrip v-if="week.length" :week="week" :title="copy.thisWeek" :weekdays="weekdays" />
     </template>
   </section>
 </template>

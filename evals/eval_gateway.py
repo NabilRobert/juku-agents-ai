@@ -18,6 +18,7 @@ from juku_testkit.serving import free_port
 
 sys.path.insert(0, str(repo_root() / "packages" / "juku-mcp" / "attacks"))
 
+from run import GATEWAY_AUDIT_LOG as GATEWAY_AUDIT_LOG  # re-exported for eval_stack
 from run import gateway_config, start_gateway, wait_for_port
 
 # The commit the attack suite's results come from (packages/juku-mcp/attacks/README.md).

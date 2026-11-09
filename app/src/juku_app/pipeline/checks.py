@@ -70,7 +70,8 @@ def _leaves(value: Any) -> Iterable[Any]:
 def fact_numbers(facts: WeekFacts) -> set[float]:
     """Every number the facts hold, and each share also as a percentage (one decimal at most)."""
     numbers: set[float] = set()
-    for leaf in _leaves(facts.model_dump(mode="json")):
+    # The evidence rows' event IDs are for note proposals, not numbers to state.
+    for leaf in _leaves(facts.model_dump(mode="json", exclude={"evidence"})):
         if isinstance(leaf, bool) or not isinstance(leaf, int | float):
             continue
         numbers.add(float(leaf))

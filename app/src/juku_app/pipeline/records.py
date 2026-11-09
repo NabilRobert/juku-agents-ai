@@ -34,7 +34,10 @@ EXISTING_WEEKLY_RUN = """
 SELECT id, status, claimed_at FROM app.pipeline_runs
 WHERE learner_id = :learner AND week_start = :week AND kind = 'weekly' FOR UPDATE
 """
-TAKE_OVER = "UPDATE app.pipeline_runs SET claimed_at = :now, attempts = attempts + 1 WHERE id = :id"
+# A crashed attempt's fallback reason isn't this attempt's.
+TAKE_OVER = (
+    "UPDATE app.pipeline_runs SET claimed_at = :now, attempts = attempts + 1, fallback_reason = NULL WHERE id = :id"
+)
 FINISH = "UPDATE app.pipeline_runs SET status = :status, finished_at = :now WHERE id = :id"
 
 
@@ -193,6 +196,15 @@ async def clear_check_request(app: AsyncEngine, learner_id: int) -> None:
     async with app.begin() as connection:
         await connection.execute(
             text("DELETE FROM app.check_requests WHERE learner_id = :learner"), {"learner": learner_id}
+        )
+
+
+async def note_fallback_reason(app: AsyncEngine, run_id: int, reason: str) -> None:
+    """Why the run will end in the facts-only report (migration 0006_app); the first reason stays."""
+    async with app.begin() as connection:
+        await connection.execute(
+            text("UPDATE app.pipeline_runs SET fallback_reason = COALESCE(fallback_reason, :reason) WHERE id = :id"),
+            {"reason": reason, "id": run_id},
         )
 
 

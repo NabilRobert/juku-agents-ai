@@ -52,6 +52,16 @@ LEFT JOIN learning.dictionary_words w ON w.word_id = e.item_id
 WHERE e.id = ANY(:ids)
 ORDER BY e.occurred_at, e.id
 """
+# A learner's activity since a time, newest first: what an agent may rest a note on (paid run 3).
+RECENT_EVIDENCE = """
+SELECT e.id, e.learner_id, t.name, e.item_id, w.level, e.result, e.occurred_at
+FROM learning.learning_events e
+JOIN learning.event_types t ON t.id = e.event_type
+LEFT JOIN learning.dictionary_words w ON w.word_id = e.item_id
+WHERE e.learner_id = :learner AND e.occurred_at >= :since
+ORDER BY e.occurred_at DESC, e.id DESC
+LIMIT :limit
+"""
 RECENTLY_REMOVED = """
 SELECT EXISTS (
     SELECT 1 FROM learning.memory_notes
@@ -222,6 +232,17 @@ def _evidence_event(item: dict[str, Any], zone: ZoneInfo) -> EvidenceEvent:
         is_correct=item["is_correct"],
         occurred_on=datetime.fromisoformat(str(item["occurred_at"])).astimezone(zone).date(),
     )
+
+
+async def recent_evidence(db: Databases, learner_id: int, since: datetime, limit: int) -> list[EvidenceEvent]:
+    """The learner's newest activity rows since `since`, at most `limit`, each with the ID a proposal cites."""
+    async with db.app.connect() as connection:
+        zone = ZoneInfo(str(await connection.scalar(text(LEARNER_TIMEZONE), {"learner": learner_id}) or "UTC"))
+        records = await connection.execute(
+            text(RECENT_EVIDENCE), {"learner": learner_id, "since": since, "limit": limit}
+        )
+        rows = [evidence_row(record) for record in records.all()]
+    return [_evidence_event(item, zone) for item in await _snapshot(db, rows)]
 
 
 async def get_memory(db: Databases, learner_id: int, now: datetime) -> Memory:

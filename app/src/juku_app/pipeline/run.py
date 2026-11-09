@@ -51,6 +51,8 @@ from juku_app.pipeline.fallback import facts_only_report
 from juku_app.pipeline.outputs import Issue, KeikoPlan, Review
 
 RunStatus = Literal["published", "fallback", "skipped", "replanned", "busy"]
+# Why a run fell back, kept on the run (migration 0006_app); paid run 3's fallback kept none.
+FallbackReason = Literal["output_refused", "request_limit", "budget_spent", "not_approved"]
 JOB_NAME = "run-weekly"
 CONSENT_OUTDATED = "consent_outdated"
 # ISO weekdays run Monday 1 to Sunday 7; the rule file counts Monday as 0.
@@ -95,7 +97,11 @@ class RunOutcome(BaseModel):
 
 
 class BudgetSpentError(Exception):
-    """The reports pool can't pay for the next call: the run ends with the facts-only report."""
+    """The reports pool can't pay for the next call, or a call hit its limits: the facts-only report."""
+
+    def __init__(self, message: str, reason: FallbackReason) -> None:
+        super().__init__(message)
+        self.reason: FallbackReason = reason
 
 
 @dataclass(frozen=True)
@@ -120,12 +126,12 @@ async def _call(context: RunScope, run_agent: Callable[[UsageLimits, RunUsage], 
     try:
         await guard.check("reports", learner_id, context.now)
     except BudgetRefusedError as refused:
-        raise BudgetSpentError(str(refused)) from refused
+        raise BudgetSpentError(str(refused), "budget_spent") from refused
     usage = RunUsage()
     try:
         return (await run_agent(guard.run_limits("reports"), usage)).output
     except UsageLimitExceeded as stopped:
-        raise BudgetSpentError(str(stopped)) from stopped
+        raise BudgetSpentError(str(stopped), "request_limit") from stopped
     finally:
         await guard.record("reports", learner_id, usage)
 
@@ -154,6 +160,7 @@ async def _reviewed(
             output = await generate(revision)
         except UnexpectedModelBehavior:
             # No valid output even after PydanticAI's retries (no model key, say): the facts-only report.
+            await records.note_fallback_reason(context.services.db.app, context.run_id, "output_refused")
             return None
         shown = output.model_dump(mode="json") if isinstance(output, BaseModel) else output
         fresh = await gather_facts(context.services.db, context.learner, context.now)
@@ -170,6 +177,7 @@ async def _reviewed(
             "issues": [issue.model_dump() for issue in issues],
             "feedback": review.feedback if review else "",
         }
+    await records.note_fallback_reason(context.services.db.app, context.run_id, "not_approved")
     return None
 
 
@@ -249,8 +257,9 @@ async def _run_week(services: PipelineServices, learner: Learner, now: datetime)
     try:
         plan = await _plan(context, facts)
         report = await _report(context, facts, plan) if plan is not None else None
-    except BudgetSpentError:
+    except BudgetSpentError as spent:
         report = None
+        await records.note_fallback_reason(services.db.app, claimed.run_id, spent.reason)
     body = report if report is not None else facts_only_report(facts)
     await records.publish_report(services.db.app, context.ref, body, report is None, now)
     return RunOutcome(run_id=claimed.run_id, status="published" if report is not None else "fallback", report=body)
@@ -298,8 +307,9 @@ async def run_replans(services: PipelineServices, now: datetime) -> list[RunOutc
         await records.save_facts(services.db.app, run_id, facts)
         try:
             plan = await _plan(context, facts)
-        except BudgetSpentError:
+        except BudgetSpentError as spent:
             plan = None
+            await records.note_fallback_reason(services.db.app, run_id, spent.reason)
         status: RunStatus = "replanned" if plan is not None else "fallback"
         await records.finish_run(services.db.app, run_id, status, now)
         async with services.db.app.begin() as connection:
